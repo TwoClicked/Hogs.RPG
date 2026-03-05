@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Discord.Net.Core" Version="3.19.0" />
+    <PackageReference Include="Discord.Net.Interactions" Version="3.19.0" />
+    <PackageReference Include="Discord.Net.Webhook" Version="3.19.0" />
+    <PackageReference Include="Discord.Net.WebSocket" Version="3.19.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Hogs.RPG.Core\Hogs.RPG.Core.csproj" />
+    <ProjectReference Include="..\Hogs.RPG.Data\Hogs.RPG.Data.csproj" />
+    <ProjectReference Include="..\Hogs.RPG.Services\Hogs.RPG.Services.csproj" />
+    <ProjectReference Include="..\Hogs.RPG.Shared\Hogs.RPG.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
