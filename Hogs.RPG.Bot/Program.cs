@@ -1,8 +1,8 @@
 ﻿using Discord;
+using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Bot.Setup;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Threading.Tasks;
 
@@ -12,6 +12,7 @@ namespace Hogs.RPG.Bot
     {
         private DiscordSocketClient _client;
         private IServiceProvider _services;
+        private InteractionService _interactionService;
 
         public static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
@@ -30,12 +31,18 @@ namespace Hogs.RPG.Bot
             // register bot instance
             services.AddSingleton(_client);
 
-            // register project services
+            // register InteractionService
+            services.AddSingleton<InteractionService>(provider =>
+                  new InteractionService(_client));
+
+            // register project services (GoogleSheetsService etc.)
             ServiceConfigurator.Configure(services);
 
             _services = services.BuildServiceProvider();
 
             _client.Log += LogAsync;
+            _client.Ready += ReadyAsync;
+            _client.InteractionCreated += HandleInteractionAsync;
 
             var token = Environment.GetEnvironmentVariable("HOGS_RPG_TOKEN");
 
@@ -51,6 +58,36 @@ namespace Hogs.RPG.Bot
             Console.WriteLine("Hogs RPG Bot started.");
 
             await Task.Delay(-1);
+        }
+
+        private async Task ReadyAsync()
+        {
+            _interactionService = _services.GetRequiredService<InteractionService>();
+
+            Console.WriteLine("[Init] Loading interaction modules...");
+            await _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
+
+            //Console.WriteLine("[Init] Registering slash commands globally...");
+            //await _interactionService.RegisterCommandsGloballyAsync();
+            Console.WriteLine("[Init] Registering HogsServer commands Locally...");
+            await _interactionService.RegisterCommandsToGuildAsync(
+                guildId: 1109193500664287336, // HOGS SERVER DISCORD ID
+                deleteMissing: true); 
+
+            Console.WriteLine("[Init] Slash commands registered.");
+        }
+
+        private async Task HandleInteractionAsync(SocketInteraction interaction)
+        {
+            try
+            {
+                var ctx = new SocketInteractionContext(_client, interaction);
+                await _interactionService.ExecuteCommandAsync(ctx, _services);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Interaction Error] {ex}");
+            }
         }
 
         private Task LogAsync(LogMessage msg)

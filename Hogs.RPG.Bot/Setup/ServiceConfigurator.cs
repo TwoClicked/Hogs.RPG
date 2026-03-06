@@ -1,5 +1,7 @@
 ﻿using Hogs.RPG.Data.GoogleSheets;
 using Hogs.RPG.Data.Interfaces;
+using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hogs.RPG.Bot.Setup
@@ -14,6 +16,9 @@ namespace Hogs.RPG.Bot.Setup
                     "1pA9mu28YmNe7GSchqJyxmdw8ErAjta0Xvm3LUKjpr50"
                 )
             );
+            // registering Services
+            services.AddSingleton<PlayerRepository>();
+            services.AddSingleton<PlayerService>();
         }
     }
 }

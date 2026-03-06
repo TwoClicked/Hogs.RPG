@@ -22,8 +22,4 @@
     <ProjectReference Include="..\Hogs.RPG.Shared\Hogs.RPG.Shared.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Repositories\" />
-  </ItemGroup>
-
 </Project>
