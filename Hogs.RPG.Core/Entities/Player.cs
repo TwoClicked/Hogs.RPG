@@ -20,5 +20,17 @@ namespace Hogs.RPG.Core.Entities
         public int Health { get; set; }
         public string LastHunt { get; set; }
 
+        // Player equiped gear 
+
+        public string MainHand { get; set; }
+        public string OffHand { get; set; }
+        public string Helmet { get; set; }
+        public string Body { get; set; }
+        public string Legs { get; set; }
+        public string Gloves { get; set; }
+        public string Boots { get; set; }
+        public string Ring { get; set; }
+        public string Amulet { get; set; }
+
     }
 }

@@ -1,6 +1,8 @@
 ﻿using Hogs.RPG.Data.GoogleSheets;
 using Hogs.RPG.Data.Interfaces;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.GameplayServices;
+using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,6 +21,19 @@ namespace Hogs.RPG.Bot.Setup
             // registering Services
             services.AddSingleton<PlayerRepository>();
             services.AddSingleton<PlayerService>();
+
+            services.AddSingleton<InventoryRepository>();
+            services.AddSingleton<InventoryService>();
+
+            services.AddSingleton<HuntService>();
+            services.AddSingleton<LevelService>();
+
+            services.AddSingleton<ItemService>();
+
+            services.AddSingleton<CraftingService>();
+
+            services.AddSingleton<EquipService>();
+            services.AddSingleton<EquipmentService>();
         }
     }
 }
