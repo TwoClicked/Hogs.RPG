@@ -105,12 +105,6 @@ namespace Hogs.RPG.Services.GameplayServices
 
                 await _inventoryService.GiveItemAsync(userId, previousItem, 1);
             }
-
-            // Apply new stats
-            player.Attack += item.Attack;
-            player.Defense += item.Defense;
-            player.Health += item.Health;
-
             await _playerRepository.UpdatePlayerAsync(player);
 
             return $"⚔ You equipped **{item.Name}**.";
@@ -180,13 +174,6 @@ namespace Hogs.RPG.Services.GameplayServices
                 return "Nothing is equipped in that slot.";
 
             var item = _equipmentService.GetEquipment(itemId);
-
-            if (item != null)
-            {
-                player.Attack -= item.Attack;
-                player.Defense -= item.Defense;
-                player.Health -= item.Health;
-            }
 
             await _inventoryService.GiveItemAsync(userId, itemId, 1);
 

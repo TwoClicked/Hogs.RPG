@@ -16,6 +16,29 @@ namespace Hogs.RPG.Services.GameplayServices
         private readonly LevelService _levelService;
 
         private readonly Random _random = new();
+
+        private readonly Dictionary<string, string> _rareDrops = new()
+        {
+            { "wolf", "wolf_trophy" },
+            { "boar", "boar_tusk" },
+            { "stag", "stag_antler" },
+            { "raven", "ancient_feather" },
+            { "fox", "shadow_claw" },
+
+            { "bear", "bear_heart" },
+            { "dire_wolf", "alpha_fang" },
+            { "eagle", "storm_talon" },
+
+            { "sabertooth", "saber_relic" },
+            { "griffin", "griffin_core" },
+
+            { "storm_eagle", "storm_relic" },
+            { "ancient_bear", "ancient_core" },
+
+            { "mythic_bear", "mythic_heart" },
+            { "sky_tyrant", "sky_relic" }
+        };
+
         public HuntService(PlayerRepository playerRepository, InventoryService inventoryService, LevelService levelService)
         {
             _playerRepository = playerRepository;
@@ -30,7 +53,6 @@ namespace Hogs.RPG.Services.GameplayServices
             if (player == null)
                 return "You need to use /startadventure first.";
 
-            // Cooldown duration
             var cooldown = TimeSpan.FromMinutes(1);
 
             if (!string.IsNullOrEmpty(player.LastHunt))
@@ -49,15 +71,12 @@ namespace Hogs.RPG.Services.GameplayServices
 
             HuntTarget target;
 
-
-
             if (!string.IsNullOrWhiteSpace(targetId))
             {
                 var key = targetId.Trim().ToLower();
 
                 if (HuntTargetRegistry.All.TryGetValue(key, out target))
                 {
-                    // targeted hunt
                     if (player.Level < target.RequiredLevel)
                     {
                         return $"You must be level {target.RequiredLevel} to hunt **{target.Name}**.";
@@ -65,28 +84,52 @@ namespace Hogs.RPG.Services.GameplayServices
                 }
                 else
                 {
-                    return "Unknown hunt target. Try: wolf, boar, stag, raven, fox.";
+                    return "Unknown hunt target.";
                 }
             }
             else
             {
-                // random hunt
                 var availableTargets = HuntTargetRegistry.All.Values
                     .Where(t => player.Level >= t.RequiredLevel)
                     .ToList();
 
                 if (availableTargets.Count == 0)
-                {
                     return "You are not high enough level to hunt anything yet.";
-                }
 
-                var randomIndex = _random.Next(availableTargets.Count);
-                target = availableTargets[randomIndex];
+                target = availableTargets[_random.Next(availableTargets.Count)];
             }
 
+            // Base rewards
             int xp = _random.Next(target.MinXP, target.MaxXP);
             int gold = _random.Next(target.MinGold, target.MaxGold);
             int dropAmount = _random.Next(target.MinDrop, target.MaxDrop + 1);
+
+            string encounterText = "";
+
+            double roll = _random.NextDouble();
+
+            bool elite = false;
+            bool jackpot = false;
+            bool rareDrop = false;
+            bool treasure = false;
+
+            if (roll < 0.01)
+                treasure = true;
+            else if (roll < 0.04)
+                rareDrop = true;
+            else if (roll < 0.08)
+                jackpot = true;
+            else if (roll < 0.16)
+                elite = true;
+
+            if (elite)
+            {
+                xp = (int)(xp * 1.5);
+                gold = (int)(gold * 1.5);
+                dropAmount += 2;
+
+                encounterText += "\n🔥 Elite creature encountered!";
+            }
 
             player.XP += xp;
             player.Gold += gold;
@@ -95,11 +138,43 @@ namespace Hogs.RPG.Services.GameplayServices
 
             await _inventoryService.GiveItemAsync(userId, target.DropItem, dropAmount);
 
+            if (jackpot)
+            {
+                int bonus = _random.Next(5, 9);
+
+                await _inventoryService.GiveItemAsync(userId, target.DropItem, bonus);
+
+                encounterText += $"\n💰 Jackpot! You found {bonus} extra {target.DropItem}!";
+            }
+
+            if (rareDrop && _rareDrops.ContainsKey(target.Id))
+            {
+                var rareItem = _rareDrops[target.Id];
+
+                await _inventoryService.GiveItemAsync(userId, rareItem, 1);
+
+                encounterText += $"\n✨ Rare Drop! You found **{rareItem}**!";
+            }
+
+            if (treasure)
+            {
+                int treasureGold = _random.Next(120, 220);
+
+                player.Gold += treasureGold;
+
+                encounterText += $"\n💰 Treasure Creature! You gained {treasureGold} bonus gold!";
+            }
+
             player.LastHunt = DateTimeOffset.UtcNow.ToString("o");
 
             await _playerRepository.UpdatePlayerAsync(player);
 
-            return $"{target.Icon} You hunted a {target.Name}!\n\n+{xp} XP\n+{gold} Gold\n+{dropAmount} {target.DropItem}{levelMessage}";
+            return $"{target.Icon} You hunted a {target.Name}!\n\n" +
+                   $"+{xp} XP\n" +
+                   $"+{gold} Gold\n" +
+                   $"+{dropAmount} {target.DropItem}" +
+                   $"{encounterText}" +
+                   $"{levelMessage}";
         }
     }
 }
