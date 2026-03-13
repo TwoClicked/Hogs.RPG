@@ -1,6 +1,7 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.InventoryServices;
+using Hogs.RPG.GameData.Hunts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,91 +16,6 @@ namespace Hogs.RPG.Services.GameplayServices
         private readonly LevelService _levelService;
 
         private readonly Random _random = new();
-
-        private readonly Dictionary<string, HuntTarget> _targets = new()
-        {
-            {
-                "wolf",
-                new HuntTarget
-                {
-                    Id = "wolf",
-                    Name = "Wolf",
-                    Icon = "🐺",
-                    DropItem = "fur",
-                    MinXP = 10,
-                    MaxXP = 18,
-                    MinGold = 5,
-                    MaxGold = 12,
-                    MinDrop = 1,
-                    MaxDrop = 3
-                }
-            },
-            {
-                "boar",
-                new HuntTarget
-                {
-                    Id = "boar",
-                    Name = "Boar",
-                    Icon = "🐗",
-                    DropItem = "leather",
-                    MinXP = 12,
-                    MaxXP = 20,
-                    MinGold = 6,
-                    MaxGold = 14,
-                    MinDrop = 1,
-                    MaxDrop = 2
-                }
-            },
-            {
-                "stag",
-                new HuntTarget
-                {
-                    Id = "stag",
-                    Name = "Stag",
-                    Icon = "🦌",
-                    DropItem = "bone",
-                    MinXP = 11,
-                    MaxXP = 19,
-                    MinGold = 6,
-                    MaxGold = 13,
-                    MinDrop = 1,
-                    MaxDrop = 2
-                }
-            },
-            {
-                "raven",
-                new HuntTarget
-                {
-                    Id = "raven",
-                    Name = "Raven",
-                    Icon = "🐦",
-                    DropItem = "feather",
-                    MinXP = 9,
-                    MaxXP = 16,
-                    MinGold = 4,
-                    MaxGold = 10,
-                    MinDrop = 1,
-                    MaxDrop = 2
-                }
-            },
-            {
-                "fox",
-                new HuntTarget
-                {
-                    Id = "fox",
-                    Name = "Fox",
-                    Icon = "🦊",
-                    DropItem = "fur",
-                    MinXP = 9,
-                    MaxXP = 15,
-                    MinGold = 4,
-                    MaxGold = 9,
-                    MinDrop = 1,
-                    MaxDrop = 2
-                }
-            }
-        };
-
         public HuntService(PlayerRepository playerRepository, InventoryService inventoryService, LevelService levelService)
         {
             _playerRepository = playerRepository;
@@ -133,13 +49,19 @@ namespace Hogs.RPG.Services.GameplayServices
 
             HuntTarget target;
 
+
+
             if (!string.IsNullOrWhiteSpace(targetId))
             {
                 var key = targetId.Trim().ToLower();
 
-                if (_targets.TryGetValue(key, out target))
+                if (HuntTargetRegistry.All.TryGetValue(key, out target))
                 {
                     // targeted hunt
+                    if (player.Level < target.RequiredLevel)
+                    {
+                        return $"You must be level {target.RequiredLevel} to hunt **{target.Name}**.";
+                    }
                 }
                 else
                 {
@@ -149,8 +71,17 @@ namespace Hogs.RPG.Services.GameplayServices
             else
             {
                 // random hunt
-                var randomIndex = _random.Next(_targets.Count);
-                target = _targets.Values.ElementAt(randomIndex);
+                var availableTargets = HuntTargetRegistry.All.Values
+                    .Where(t => player.Level >= t.RequiredLevel)
+                    .ToList();
+
+                if (availableTargets.Count == 0)
+                {
+                    return "You are not high enough level to hunt anything yet.";
+                }
+
+                var randomIndex = _random.Next(availableTargets.Count);
+                target = availableTargets[randomIndex];
             }
 
             int xp = _random.Next(target.MinXP, target.MaxXP);

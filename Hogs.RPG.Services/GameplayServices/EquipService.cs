@@ -1,4 +1,5 @@
-﻿using Hogs.RPG.Data.Repositories;
+﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.InventoryServices;
 using System.Threading.Tasks;
 
@@ -41,47 +42,47 @@ namespace Hogs.RPG.Services.GameplayServices
 
             switch (item.Slot)
             {
-                case "MainHand":
+                case EquipmentSlot.MainHand:
                     previousItem = player.MainHand;
                     player.MainHand = itemId;
                     break;
 
-                case "OffHand":
+                case EquipmentSlot.OffHand:
                     previousItem = player.OffHand;
                     player.OffHand = itemId;
                     break;
 
-                case "Helmet":
+                case EquipmentSlot.Helmet:
                     previousItem = player.Helmet;
                     player.Helmet = itemId;
                     break;
 
-                case "Body":
+                case EquipmentSlot.Body:
                     previousItem = player.Body;
                     player.Body = itemId;
                     break;
 
-                case "Legs":
+                case EquipmentSlot.Legs:
                     previousItem = player.Legs;
                     player.Legs = itemId;
                     break;
 
-                case "Gloves":
+                case EquipmentSlot.Gloves:
                     previousItem = player.Gloves;
                     player.Gloves = itemId;
                     break;
 
-                case "Boots":
+                case EquipmentSlot.Boots:
                     previousItem = player.Boots;
                     player.Boots = itemId;
                     break;
 
-                case "Ring":
+                case EquipmentSlot.Ring:
                     previousItem = player.Ring;
                     player.Ring = itemId;
                     break;
 
-                case "Amulet":
+                case EquipmentSlot.Amulet:
                     previousItem = player.Amulet;
                     player.Amulet = itemId;
                     break;

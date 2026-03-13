@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Hogs.RPG.Core.Entities
+﻿namespace Hogs.RPG.Core.Entities
 {
     public class EquipmentDefinition
     {
@@ -12,12 +6,12 @@ namespace Hogs.RPG.Core.Entities
 
         public string Name { get; set; }
 
-        public string Slot { get; set; }
+        public EquipmentSlot Slot { get; set; }
 
-        public int Attack { get; set; }
+        public int Attack { get; set; } = 0;
 
-        public int Defense { get; set; }
+        public int Defense { get; set; } = 0;
 
-        public int Health { get; set; }
+        public int Health { get; set; } = 0;
     }
 }

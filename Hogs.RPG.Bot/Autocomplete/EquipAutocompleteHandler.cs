@@ -1,7 +1,8 @@
 ﻿using Discord;
 using Discord.Interactions;
-using Hogs.RPG.Services.InventoryServices;
+using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Services.GameplayServices;
+using Hogs.RPG.Services.InventoryServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,13 +35,15 @@ public class EquipAutocompleteHandler : AutocompleteHandler
 
             var icon = equipItem.Slot switch
             {
-                "MainHand" => "🗡",
-                "OffHand" => "🏹",
-                "Body" => "🛡",
-                "Helmet" => "🪖",
-                "Boots" => "🥾",
-                "Ring" => "💍",
-                "Amulet" => "📿",
+                EquipmentSlot.MainHand => "🗡",
+                EquipmentSlot.OffHand => "🏹",
+                EquipmentSlot.Body => "🛡",
+                EquipmentSlot.Helmet => "🪖",
+                EquipmentSlot.Boots => "🥾",
+                EquipmentSlot.Gloves => "🧤",
+                EquipmentSlot.Legs => "👖",
+                EquipmentSlot.Ring => "💍",
+                EquipmentSlot.Amulet => "📿",
                 _ => "⚔"
             };
 

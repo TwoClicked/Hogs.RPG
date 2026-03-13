@@ -15,11 +15,13 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         [SlashCommand("hunt", "Hunt animals for resources")]
-        public async Task Hunt()
+        public async Task Hunt(
+            [Autocomplete(typeof(HuntAutocompleteHandler))]
+            string target = null)
         {
             await DeferAsync();
 
-            var result = await _huntService.HuntAsync(Context.User.Id);
+            var result = await _huntService.HuntAsync(Context.User.Id, target);
 
             await FollowupAsync(result);
         }

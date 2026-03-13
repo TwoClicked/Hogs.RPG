@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Hogs.RPG.Services.GameplayServices;
+using Hogs.RPG.Services.InventoryServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,33 +10,35 @@ namespace Hogs.RPG.Bot.Commands
     public class CraftModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly CraftingService _craftingService;
+        private readonly InventoryService _inventoryService;
 
 
         private readonly Dictionary<string, string> _slotIcons = new()
-        {
-            { "Main Hand", "🗡" },
-            { "Off Hand", "🏹" },
-            { "Helmet", "🪖" },
-            { "Body", "🛡" },
-            { "Legs", "👖" },
-            { "Gloves", "🧤" },
-            { "Boots", "🥾" },
-            { "Ring", "💍" },
-            { "Amulet", "📿" }
-        };
-        public CraftModule(CraftingService craftingService)
+{
+          { "MainHand", "🗡" },
+          { "OffHand", "🏹" },
+          { "Helmet", "🪖" },
+          { "Body", "🛡" },
+          { "Legs", "👖" },
+          { "Gloves", "🧤" },
+          { "Boots", "🥾" },
+          { "Ring", "💍" },
+          { "Amulet", "📿" }
+};
+        public CraftModule(CraftingService craftingService, InventoryService inventoryService)
         {
             _craftingService = craftingService;
+            _inventoryService = inventoryService;
         }
 
         [SlashCommand("craft", "Craft an item")]
-        public async Task Craft(string recipe)
+        public async Task Craft(
+            [Autocomplete(typeof(CraftAutocompleteHandler))]
+                          string recipe)
         {
-            await DeferAsync(ephemeral: true);
-
             var result = await _craftingService.CraftAsync(Context.User.Id, recipe);
 
-            await FollowupAsync(result, ephemeral: true);
+            await RespondAsync(result);
         }
 
 
@@ -45,11 +48,16 @@ namespace Hogs.RPG.Bot.Commands
             await DeferAsync(ephemeral: true);
 
             var recipes = _craftingService.GetAllRecipes();
+            var inventory = await _inventoryService.GetInventoryAsync(Context.User.Id);
 
             // Show categories
             if (string.IsNullOrWhiteSpace(slot))
             {
-                var grouped = recipes.GroupBy(r => r.Slot);
+                var grouped = recipes.GroupBy(r =>
+                {
+                    var item = EquipmentRegistry.All[r.ResultItem];
+                    return item.Slot.ToString();
+                });
 
                 var embed = new EmbedBuilder()
                     .WithTitle("⚒ Crafting Categories")
@@ -70,7 +78,11 @@ namespace Hogs.RPG.Bot.Commands
             var slotKey = slot.Trim().ToLower();
 
             var slotRecipes = recipes
-                .Where(r => r.Slot.ToLower().Replace(" ", "") == slotKey.Replace(" ", ""))
+                .Where(r =>
+                {
+                    var item = EquipmentRegistry.All[r.ResultItem];
+                    return item.Slot.ToString().ToLower() == slotKey;
+                })
                 .ToList();
 
             if (slotRecipes.Count == 0)
@@ -83,7 +95,22 @@ namespace Hogs.RPG.Bot.Commands
 
             foreach (var recipe in slotRecipes)
             {
-                builder.AppendLine($"**{recipe.Name}**");
+                bool canCraft = true;
+
+                foreach (var mat in recipe.Materials)
+                {
+                    var invItem = inventory.Find(i => i.ItemId == mat.Key);
+
+                    if (invItem == null || invItem.Quantity < mat.Value)
+                    {
+                        canCraft = false;
+                        break;
+                    }
+                }
+
+                var icon = canCraft ? "✅" : "❌";
+
+                builder.AppendLine($"{icon} **{recipe.Name}**");
 
                 foreach (var mat in recipe.Materials)
                 {
@@ -93,7 +120,7 @@ namespace Hogs.RPG.Bot.Commands
                 builder.AppendLine();
             }
 
-            var slotName = slotRecipes.First().Slot;
+            var slotName = EquipmentRegistry.All[slotRecipes.First().ResultItem].Slot.ToString();
             var slotIcon = _slotIcons.ContainsKey(slotName) ? _slotIcons[slotName] : "⚒";
 
             var resultEmbed = new EmbedBuilder()
