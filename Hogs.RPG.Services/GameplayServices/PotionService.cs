@@ -49,12 +49,12 @@ namespace Hogs.RPG.Services.GameplayServices
             string autoXp = player.AutoUseXpPotions ? "Enabled" : "Disabled";
 
             return
-                             $@"🧪 **Potion Inventory**
-                                         
-                             XP Potions: {xpPotions}
-                             Health Potions: {healthPotions}
-                             
-                             Auto XP Potion: {autoXp}";
+            $@" **Potion Inventory**
+                        
+            🧪  Xp Potions: {xpPotions}
+            ❤️  Health Potions: {healthPotions}
+            
+            Auto XP Potion: {autoXp}";
         }
     }
 }

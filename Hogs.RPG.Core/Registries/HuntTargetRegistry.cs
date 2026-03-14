@@ -9,16 +9,17 @@ public static class HuntTargetRegistry
 
         //TIER1 HUNTS
         { ForestTargets.Wolf.Id, ForestTargets.Wolf },
-        { ForestTargets.Boar.Id, ForestTargets.Boar },
-        { ForestTargets.Stag.Id, ForestTargets.Stag },
-        { ForestTargets.Raven.Id, ForestTargets.Raven },
+        { ForestTargets.Pig.Id, ForestTargets.Pig },
+        { ForestTargets.Turkey.Id, ForestTargets.Turkey },
+        { ForestTargets.Raccoon.Id, ForestTargets.Raccoon },
         { ForestTargets.Fox.Id, ForestTargets.Fox },
+        { ForestTargets.BloodBoar.Id, ForestTargets.BloodBoar },
 
         //TIER2 HUNTS
         { WildTargets.Eagle.Id, WildTargets.Eagle },
         { WildTargets.Bear.Id, WildTargets.Bear },
         { WildTargets.Bull.Id, WildTargets.Bull },
-        { WildTargets.DireWolf.Id, WildTargets.DireWolf },
+        { WildTargets.Shark.Id, WildTargets.Shark },
         { WildTargets.Lynx.Id, WildTargets.Lynx },
 
         //TIER3 HUNTS

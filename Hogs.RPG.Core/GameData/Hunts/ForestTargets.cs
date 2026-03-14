@@ -19,11 +19,11 @@ public static class ForestTargets
         RequiredLevel = 1
     };
 
-    public static readonly HuntTarget Boar = new()
+    public static readonly HuntTarget Pig = new()
     {
-        Id = "boar",
-        Name = "Boar",
-        Icon = "🐗",
+        Id = "pig",
+        Name = "Pig",
+        Icon = "🐖",
         DropItem = "leather",
         MinXP = 12,
         MaxXP = 20,
@@ -34,11 +34,11 @@ public static class ForestTargets
         RequiredLevel = 1
     };
 
-    public static readonly HuntTarget Stag = new()
+    public static readonly HuntTarget Raccoon = new()
     {
-        Id = "stag",
-        Name = "Stag",
-        Icon = "🦌",
+        Id = "raccoon",
+        Name = "Raccoon",
+        Icon = "🦝",
         DropItem = "bone",
         MinXP = 11,
         MaxXP = 19,
@@ -49,11 +49,11 @@ public static class ForestTargets
         RequiredLevel = 1
     };
 
-    public static readonly HuntTarget Raven = new()
+    public static readonly HuntTarget Turkey = new()
     {
-        Id = "raven",
-        Name = "Raven",
-        Icon = "🐦",
+        Id = "turkey",
+        Name = "Turkey",
+        Icon = "🦃",
         DropItem = "feather",
         MinXP = 9,
         MaxXP = 16,
@@ -69,13 +69,29 @@ public static class ForestTargets
         Id = "fox",
         Name = "Fox",
         Icon = "🦊",
-        DropItem = "Claws",
+        DropItem = "claws",
         MinXP = 9,
         MaxXP = 15,
         MinGold = 4,
         MaxGold = 9,
         MinDrop = 1,
         MaxDrop = 2,
+        RequiredLevel = 1
+    };
+
+    // Sub item for Health Potions (Lowest level
+    public static readonly HuntTarget BloodBoar = new()
+    {
+        Id = "blood_boar",
+        Name = "Blood Boar",
+        Icon = "🐗",
+        MinXP = 28,
+        MaxXP = 38,
+        MinGold = 8,
+        MaxGold = 14,
+        DropItem = "monster_blood",
+        MinDrop = 1,
+        MaxDrop = 5,
         RequiredLevel = 1
     };
 }

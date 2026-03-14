@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
 using System.Text;
@@ -31,41 +32,47 @@ namespace Hogs.RPG.Bot.Commands
         [SlashCommand("inventory", "View your inventory")]
         public async Task Inventory()
         {
-            await DeferAsync(ephemeral: true);
-
             var inventory = await _inventoryService.GetInventoryAsync(Context.User.Id);
 
             if (inventory.Count == 0)
             {
-                await FollowupAsync("🎒 Your inventory is empty.", ephemeral: true);
+                await RespondAsync("Your inventory is empty.");
                 return;
             }
 
-            var items = new StringBuilder();
+            var builder = new StringBuilder();
 
-            foreach (var item in inventory)
+            var grouped = inventory
+                .Where(i => i.Quantity > 0)
+                .Select(i => new
+                {
+                    Item = InventoryItemDefinitions.All[i.ItemId],
+                    Amount = i.Quantity
+                })
+                .GroupBy(i => i.Item.Type);
+
+            foreach (var group in grouped)
             {
-                var definition = _itemService.GetItem(item.ItemId);
+                string header = group.Key switch
+                {
+                    "Material" => "🎒 **Materials**",
+                    "Potion" => "🎒 **Potions**",
+                    "Equipment" => "🎒 **Gear**",
+                    _ => "📦 **Other**"
+                };
 
-                if (definition != null)
+                builder.AppendLine(header);
+                builder.AppendLine(); // ONE empty line after header
+
+                foreach (var entry in group.OrderBy(i => i.Item.Name))
                 {
-                    items.AppendLine($"{definition.Icon} **{definition.Name}** x{item.Quantity}");
+                    builder.AppendLine($"{entry.Item.Icon} {entry.Item.Name} x{entry.Amount}");
                 }
-                else
-                {
-                    items.AppendLine($"• {item.ItemId} x{item.Quantity}");
-                }
+
+                builder.AppendLine(); // space between categories
             }
 
-            var embed = new EmbedBuilder()
-                .WithTitle($"🎒 Your inventory")
-                .WithDescription(items.ToString())
-                .WithColor(Color.DarkBlue)
-                .WithFooter("HOGS RPG")
-                .WithTimestamp(DateTime.UtcNow)
-                .Build();
-
-            await FollowupAsync(embed: embed, ephemeral: true);
+            await RespondAsync(builder.ToString());
         }
 
     }

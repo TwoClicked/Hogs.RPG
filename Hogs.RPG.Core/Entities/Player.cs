@@ -31,5 +31,11 @@ namespace Hogs.RPG.Core.Entities
 
         public List<ActiveBuff> ActiveBuffs { get; set; } = new();
         public bool AutoUseXpPotions { get; set; }
+
+        // Gathering 
+
+        public int Energy { get; set; }
+        public string LastEnergyUpdate { get; set; }
+
     }
 }

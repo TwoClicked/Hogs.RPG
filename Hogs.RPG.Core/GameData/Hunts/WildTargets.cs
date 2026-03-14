@@ -19,11 +19,11 @@ public static class WildTargets
         RequiredLevel = 5
     };
 
-    public static readonly HuntTarget DireWolf = new()
+    public static readonly HuntTarget Shark = new()
     {
-        Id = "dire_wolf",
-        Name = "Dire Wolf",
-        Icon = "🐺",
+        Id = "shark",
+        Name = "Shark",
+        Icon = "🦈",
         DropItem = "fang",
         MinXP = 20,
         MaxXP = 30,

@@ -1,7 +1,10 @@
-﻿using Hogs.RPG.Data.GoogleSheets;
+﻿using Hogs.RPG.Core.GameData.Recipes;
+using Hogs.RPG.Data.GoogleSheets;
 using Hogs.RPG.Data.Interfaces;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.AlchemyServices;
 using Hogs.RPG.Services.GameplayServices;
+using Hogs.RPG.Services.GatheringServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,6 +40,11 @@ namespace Hogs.RPG.Bot.Setup
 
             services.AddSingleton<BuffService>();
             services.AddSingleton<PotionService>();
+
+            services.AddSingleton<EnergyService>();
+            services.AddSingleton<GatherService>();
+
+            services.AddSingleton<AlchemyService>();
         }
     }
 }

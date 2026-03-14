@@ -18,6 +18,7 @@ public static class RecipeRegistry
         { Tier1HunterRecipes.FeatherBand.Id, Tier1HunterRecipes.FeatherBand },
         { Tier1HunterRecipes.RavenCharm.Id, Tier1HunterRecipes.RavenCharm },
 
+
         //TIER2 RECIPES 
         { Tier2RaiderRecipes.FangBlade.Id, Tier2RaiderRecipes.FangBlade },
         { Tier2RaiderRecipes.HideWarcoat.Id, Tier2RaiderRecipes.HideWarcoat },
@@ -61,6 +62,10 @@ public static class RecipeRegistry
         { Tier5MythicRecipes.ColossusLegguards.Id, Tier5MythicRecipes.ColossusLegguards },
         { Tier5MythicRecipes.PendantOfTheWild.Id, Tier5MythicRecipes.PendantOfTheWild },
         { Tier5MythicRecipes.AbyssGauntlets.Id, Tier5MythicRecipes.AbyssGauntlets },
+
+        //ALCHEMY RECIPES
+        { AlchemyRecipes.XpPotion.Id, AlchemyRecipes.XpPotion },
+        { AlchemyRecipes.HealthPotion.Id, AlchemyRecipes.HealthPotion },
 
     };
 }

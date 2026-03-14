@@ -29,6 +29,18 @@ namespace Hogs.RPG.Services.InventoryServices
         {
             await _inventoryRepository.RemoveItemAsync(discordId, itemId, amount);
         }
+
+        public async Task<int> GetItemAmountAsync(ulong discordId, string itemId)
+        {
+            var inventory = await _inventoryRepository.GetInventoryAsync(discordId);
+
+            var item = inventory.FirstOrDefault(x => x.ItemId == itemId);
+
+            if (item == null)
+                return 0;
+
+            return item.Quantity;
+        }
     }
 
 

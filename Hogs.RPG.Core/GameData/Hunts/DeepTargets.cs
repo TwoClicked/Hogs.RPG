@@ -1,6 +1,7 @@
 ﻿namespace Hogs.RPG.GameData.Hunts;
 
 using Hogs.RPG.Core.Entities;
+using System.Net.NetworkInformation;
 
 public static class DeepTargets
 {
@@ -78,4 +79,6 @@ public static class DeepTargets
         MaxDrop = 2,
         RequiredLevel = 10
     };
+
+
 }

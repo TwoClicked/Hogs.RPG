@@ -25,7 +25,7 @@ namespace Hogs.RPG.Data.Repositories
             if (_loaded)
                 return;
 
-            var rows = await _sheets.ReadRangeAsync("Players", "A2:U");
+            var rows = await _sheets.ReadRangeAsync("Players", "A2:W");
 
             foreach (var row in rows)
             {
@@ -51,10 +51,16 @@ namespace Hogs.RPG.Data.Repositories
                     Boots = row.Count > 16 ? row[16]?.ToString() : "",
                     Ring = row.Count > 17 ? row[17]?.ToString() : "",
                     Amulet = row.Count > 18 ? row[18]?.ToString() : "",
-                    AutoUseXpPotions = row.Count > 20 && bool.TryParse(row[20]?.ToString(), out var autoXp)
-                    ? autoXp
-                    : false
 
+                    AutoUseXpPotions = row.Count > 20 && bool.TryParse(row[20]?.ToString(), out var autoXp)
+                        ? autoXp
+                        : false,
+
+                    Energy = row.Count > 21 && int.TryParse(row[21]?.ToString(), out var energy)
+                        ? energy
+                        : 100,
+
+                    LastEnergyUpdate = row.Count > 22 ? row[22]?.ToString() : DateTimeOffset.UtcNow.ToString("o")
                 };
 
                 // Parse Active Buffs
@@ -130,15 +136,17 @@ namespace Hogs.RPG.Data.Repositories
                 player.Amulet ?? "",
 
                 SerializeBuffs(player.ActiveBuffs),
-                player.AutoUseXpPotions
-            });
+                player.AutoUseXpPotions,
+                player.Energy,
+                player.LastEnergyUpdate
+             });
 
             return player;
         }
 
         public async Task UpdatePlayerAsync(Player player)
         {
-            var rows = await _sheets.ReadRangeAsync("Players", "A2:U");
+            var rows = await _sheets.ReadRangeAsync("Players", "A2:W");
 
             int rowIndex = 2;
 
@@ -178,11 +186,13 @@ namespace Hogs.RPG.Data.Repositories
                             player.Amulet,
 
                             SerializeBuffs(player.ActiveBuffs),
-                            player.AutoUseXpPotions
+                            player.AutoUseXpPotions,
+                            player.Energy,
+                            player.LastEnergyUpdate
                         }
                     };
 
-                    await _sheets.UpdateRangeAsync("Players", $"A{rowIndex}:U{rowIndex}", values);
+                    await _sheets.UpdateRangeAsync("Players", $"A{rowIndex}:W{rowIndex}", values);
                     return;
                 }
 
