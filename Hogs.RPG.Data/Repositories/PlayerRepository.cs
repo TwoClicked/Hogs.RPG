@@ -1,5 +1,7 @@
 ﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Data.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,7 +25,7 @@ namespace Hogs.RPG.Data.Repositories
             if (_loaded)
                 return;
 
-            var rows = await _sheets.ReadRangeAsync("Players", "A2:S");
+            var rows = await _sheets.ReadRangeAsync("Players", "A2:U");
 
             foreach (var row in rows)
             {
@@ -48,8 +50,39 @@ namespace Hogs.RPG.Data.Repositories
                     Gloves = row.Count > 15 ? row[15]?.ToString() : "",
                     Boots = row.Count > 16 ? row[16]?.ToString() : "",
                     Ring = row.Count > 17 ? row[17]?.ToString() : "",
-                    Amulet = row.Count > 18 ? row[18]?.ToString() : ""
+                    Amulet = row.Count > 18 ? row[18]?.ToString() : "",
+                    AutoUseXpPotions = row.Count > 20 && bool.TryParse(row[20]?.ToString(), out var autoXp)
+                    ? autoXp
+                    : false
+
                 };
+
+                // Parse Active Buffs
+                if (row.Count > 19 && row[19] != null)
+                {
+                    var buffData = row[19].ToString();
+
+                    if (!string.IsNullOrWhiteSpace(buffData))
+                    {
+                        var buffs = buffData.Split(';');
+
+                        foreach (var buff in buffs)
+                        {
+                            var parts = buff.Split('|');
+
+                            if (parts.Length == 3)
+                            {
+                                player.ActiveBuffs.Add(new ActiveBuff
+                                {
+                                    Type = Enum.Parse<BuffType>(parts[0]),
+                                    Value = double.Parse(parts[1]),
+                                    RemainingUses = int.Parse(parts[2])
+                                });
+                            }
+                        }
+                    }
+                }
+
 
                 _players.Add(player);
             }
@@ -86,15 +119,18 @@ namespace Hogs.RPG.Data.Repositories
                 player.Health,
                 player.LastHunt,
 
-                player.MainHand ??= "",
-                player.OffHand ??= "",
-                player.Helmet ??= "",
-                player.Body ??= "",
-                player.Legs ??= "",
-                player.Gloves ??= "",
-                player.Boots ??= "",
-                player.Ring ??= "",
-                player.Amulet ??= ""
+                player.MainHand ?? "",
+                player.OffHand ?? "",
+                player.Helmet ?? "",
+                player.Body ?? "",
+                player.Legs ?? "",
+                player.Gloves ?? "",
+                player.Boots ?? "",
+                player.Ring ?? "",
+                player.Amulet ?? "",
+
+                SerializeBuffs(player.ActiveBuffs),
+                player.AutoUseXpPotions
             });
 
             return player;
@@ -102,7 +138,7 @@ namespace Hogs.RPG.Data.Repositories
 
         public async Task UpdatePlayerAsync(Player player)
         {
-            var rows = await _sheets.ReadRangeAsync("Players", "A2:S");
+            var rows = await _sheets.ReadRangeAsync("Players", "A2:U");
 
             int rowIndex = 2;
 
@@ -139,16 +175,29 @@ namespace Hogs.RPG.Data.Repositories
                             player.Gloves,
                             player.Boots,
                             player.Ring,
-                            player.Amulet
+                            player.Amulet,
+
+                            SerializeBuffs(player.ActiveBuffs),
+                            player.AutoUseXpPotions
                         }
                     };
 
-                    await _sheets.UpdateRangeAsync("Players", $"A{rowIndex}:S{rowIndex}", values);
+                    await _sheets.UpdateRangeAsync("Players", $"A{rowIndex}:U{rowIndex}", values);
                     return;
                 }
 
                 rowIndex++;
             }
+        }
+
+        private string SerializeBuffs(List<ActiveBuff> buffs)
+        {
+            if (buffs == null || buffs.Count == 0)
+                return "";
+
+            return string.Join(";", buffs.Select(b =>
+                $"{b.Type}|{b.Value}|{b.RemainingUses}"
+            ));
         }
     }
 }

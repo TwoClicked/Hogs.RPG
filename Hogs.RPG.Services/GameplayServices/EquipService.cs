@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.InventoryServices;
 using System.Threading.Tasks;

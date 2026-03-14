@@ -1,7 +1,8 @@
 ﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Data.Repositories;
-using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.GameData.Hunts;
+using Hogs.RPG.Services.InventoryServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,7 @@ namespace Hogs.RPG.Services.GameplayServices
         private readonly PlayerRepository _playerRepository;
         private readonly InventoryService _inventoryService;
         private readonly LevelService _levelService;
+        private readonly BuffService _buffService;
 
         private readonly Random _random = new();
 
@@ -39,11 +41,12 @@ namespace Hogs.RPG.Services.GameplayServices
             { "sky_tyrant", "sky_relic" }
         };
 
-        public HuntService(PlayerRepository playerRepository, InventoryService inventoryService, LevelService levelService)
+        public HuntService(PlayerRepository playerRepository, InventoryService inventoryService, LevelService levelService, BuffService buffService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
             _levelService = levelService;
+            _buffService = buffService;
         }
 
         public async Task<string> HuntAsync(ulong userId, string targetId = null)
@@ -64,7 +67,7 @@ namespace Hogs.RPG.Services.GameplayServices
                     if (timeSinceLastHunt < cooldown)
                     {
                         var remaining = cooldown - timeSinceLastHunt;
-                        return $"You are tired. Try hunting again in {Math.Ceiling(remaining.TotalSeconds)} seconds.";
+                        return $"You are tired. Try hunting again in {Math.Ceiling(remaining.TotalSeconds)} seconds." ;
                     }
                 }
             }
@@ -104,7 +107,43 @@ namespace Hogs.RPG.Services.GameplayServices
             int gold = _random.Next(target.MinGold, target.MaxGold);
             int dropAmount = _random.Next(target.MinDrop, target.MaxDrop + 1);
 
+            // Auto XP Potion Consumption
+            if (player.AutoUseXpPotions)
+            {
+                var inventory = await _inventoryService.GetInventoryAsync(userId);
+
+                var potion = inventory.FirstOrDefault(i => i.ItemId == "xp_potion");
+
+                if (potion != null && potion.Quantity > 0)
+                {
+                    await _inventoryService.TakeItemAsync(userId, "xp_potion", 1);
+
+                    double multiplier = 2;
+
+                    player.ActiveBuffs.Add(new ActiveBuff
+                    {
+                        Type = BuffType.XP,
+                        Value = multiplier,
+                        RemainingUses = 1
+                    });
+                }
+                else
+                {
+                    player.AutoUseXpPotions = false;
+                }
+            }
+
+            // Apply Buffs
+            double xpMultiplier = _buffService.ApplyXpBuff(player);
+            double goldMultiplier = _buffService.ApplyGoldBuff(player);
+
+            xp = (int)(xp * xpMultiplier);
+            gold = (int)(gold * goldMultiplier);
+
             string encounterText = "";
+
+            if (xpMultiplier > 1)
+                encounterText += $"\n✨ XP Potion Activated! ({xpMultiplier}x XP)";
 
             double roll = _random.NextDouble();
 

@@ -1,6 +1,7 @@
 ﻿namespace Hogs.RPG.Core.GameData.Equipment;
 
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Enums;
 
 public static class Tier5Mythic
 {

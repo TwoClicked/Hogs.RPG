@@ -1,4 +1,4 @@
-﻿namespace Hogs.RPG.Core.Entities
+﻿namespace Hogs.RPG.Core.Enums
 {
     public enum EquipmentSlot
     {

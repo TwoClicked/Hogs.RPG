@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace Hogs.RPG.Core.Entities
 {
     public class Player
     {
-
         public int PlayerId { get; set; }
         public ulong DiscordId { get; set; }
         public string Username { get; set; }
@@ -20,7 +15,7 @@ namespace Hogs.RPG.Core.Entities
         public int Health { get; set; }
         public string LastHunt { get; set; }
 
-        // Player equiped gear 
+        // Equipped gear
 
         public string MainHand { get; set; }
         public string OffHand { get; set; }
@@ -32,5 +27,9 @@ namespace Hogs.RPG.Core.Entities
         public string Ring { get; set; }
         public string Amulet { get; set; }
 
+        // Active buffs
+
+        public List<ActiveBuff> ActiveBuffs { get; set; } = new();
+        public bool AutoUseXpPotions { get; set; }
     }
 }

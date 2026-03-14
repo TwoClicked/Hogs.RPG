@@ -34,6 +34,9 @@ namespace Hogs.RPG.Bot.Setup
 
             services.AddSingleton<EquipService>();
             services.AddSingleton<EquipmentService>();
+
+            services.AddSingleton<BuffService>();
+            services.AddSingleton<PotionService>();
         }
     }
 }

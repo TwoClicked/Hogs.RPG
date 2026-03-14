@@ -1,4 +1,6 @@
-﻿namespace Hogs.RPG.Core.Entities
+﻿using Hogs.RPG.Core.Enums;
+
+namespace Hogs.RPG.Core.Entities
 {
     public class EquipmentDefinition
     {

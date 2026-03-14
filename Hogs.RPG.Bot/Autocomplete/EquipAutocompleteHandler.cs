@@ -1,6 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
-using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
 using System;
