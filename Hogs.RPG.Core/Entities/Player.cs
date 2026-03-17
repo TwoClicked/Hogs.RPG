@@ -13,6 +13,7 @@ namespace Hogs.RPG.Core.Entities
         public int Attack { get; set; }
         public int Defense { get; set; }
         public int Health { get; set; }
+        public int MaxHealth { get; set; } // Boss related, As health needs to flex
         public string LastHunt { get; set; }
 
         // Equipped gear
@@ -36,6 +37,9 @@ namespace Hogs.RPG.Core.Entities
 
         public int Energy { get; set; }
         public string LastEnergyUpdate { get; set; }
+
+        // Bosses
+        public string LastBossAttack { get; set; }
 
     }
 }

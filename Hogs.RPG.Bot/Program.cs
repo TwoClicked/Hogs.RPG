@@ -33,7 +33,14 @@ namespace Hogs.RPG.Bot
 
             // register InteractionService
             services.AddSingleton<InteractionService>(provider =>
-                  new InteractionService(_client));
+                new InteractionService(
+                    provider.GetRequiredService<DiscordSocketClient>(),
+                    new InteractionServiceConfig
+                    {
+                        LogLevel = LogSeverity.Info,
+                        DefaultRunMode = RunMode.Async
+                    }));
+
 
             // register project services (GoogleSheetsService etc.)
             ServiceConfigurator.Configure(services);
@@ -64,6 +71,8 @@ namespace Hogs.RPG.Bot
         {
             _interactionService = _services.GetRequiredService<InteractionService>();
 
+            _interactionService.Log += LogAsync;
+
             Console.WriteLine("[Init] Loading interaction modules...");
             await _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
 
@@ -77,12 +86,20 @@ namespace Hogs.RPG.Bot
             Console.WriteLine("[Init] Slash commands registered.");
         }
 
-        private async Task HandleInteractionAsync(SocketInteraction interaction)
+        private async Task HandleInteractionAsync(SocketInteraction arg)
         {
+            Console.WriteLine("🔥 Interaction received"); // DEBUG
+
             try
             {
-                var ctx = new SocketInteractionContext(_client, interaction);
-                await _interactionService.ExecuteCommandAsync(ctx, _services);
+                var ctx = new SocketInteractionContext(_client, arg);
+
+                var result = await _interactionService.ExecuteCommandAsync(ctx, _services);
+
+                if (!result.IsSuccess)
+                {
+                    Console.WriteLine($"❌ Command failed: {result.ErrorReason}");
+                }
             }
             catch (Exception ex)
             {

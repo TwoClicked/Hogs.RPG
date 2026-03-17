@@ -69,7 +69,7 @@ namespace Hogs.RPG.Services.GatheringServices
 
             foreach (var item in gathered)
             {
-                await _inventoryService.GiveItemAsync(userId, item.Key, item.Value);
+                await _inventoryService.GiveItemAsync(userId, item.Key, item.Value); // Will use defer before gather is called, (Response time up to 15Minutes) 
             }
 
             await _energyService.SpendEnergy(player, energy);

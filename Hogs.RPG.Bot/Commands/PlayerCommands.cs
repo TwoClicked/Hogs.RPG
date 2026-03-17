@@ -47,7 +47,9 @@ namespace Hogs.RPG.Bot.Commands
                 Attack = 5,
                 Defense = 5,
                 Health = 100,
-                LastHunt = ""
+                MaxHealth = 100,
+                LastHunt = "",
+                Energy = 100
             };
 
             await _playerRepository.CreatePlayerAsync(newPlayer);

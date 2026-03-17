@@ -3,6 +3,7 @@ using Hogs.RPG.Data.GoogleSheets;
 using Hogs.RPG.Data.Interfaces;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.AlchemyServices;
+using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.GatheringServices;
 using Hogs.RPG.Services.InventoryServices;
@@ -45,6 +46,9 @@ namespace Hogs.RPG.Bot.Setup
             services.AddSingleton<GatherService>();
 
             services.AddSingleton<AlchemyService>();
+
+            services.AddSingleton<BossRepository>();
+            services.AddSingleton<BossService>();
         }
     }
 }

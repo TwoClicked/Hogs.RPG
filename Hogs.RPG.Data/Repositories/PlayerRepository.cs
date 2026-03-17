@@ -25,10 +25,13 @@ namespace Hogs.RPG.Data.Repositories
             if (_loaded)
                 return;
 
-            var rows = await _sheets.ReadRangeAsync("Players", "A2:W");
+            var rows = await _sheets.ReadRangeAsync("Players", "A2:Y");
 
             foreach (var row in rows)
             {
+                if (row.Count < 2 || string.IsNullOrWhiteSpace(row[1]?.ToString()))
+                    continue;
+
                 var player = new Player
                 {
                     PlayerId = int.Parse(row[0].ToString()),
@@ -39,34 +42,46 @@ namespace Hogs.RPG.Data.Repositories
                     Gold = int.Parse(row[5].ToString()),
                     Attack = int.Parse(row[6].ToString()),
                     Defense = int.Parse(row[7].ToString()),
+
                     Health = int.Parse(row[8].ToString()),
-                    LastHunt = row.Count > 9 ? row[9]?.ToString() : "",
+                    MaxHealth = row.Count > 9 && int.TryParse(row[9]?.ToString(), out var maxHp)
+                        ? maxHp
+                        : 25,
 
-                    MainHand = row.Count > 10 ? row[10]?.ToString() : "",
-                    OffHand = row.Count > 11 ? row[11]?.ToString() : "",
-                    Helmet = row.Count > 12 ? row[12]?.ToString() : "",
-                    Body = row.Count > 13 ? row[13]?.ToString() : "",
-                    Legs = row.Count > 14 ? row[14]?.ToString() : "",
-                    Gloves = row.Count > 15 ? row[15]?.ToString() : "",
-                    Boots = row.Count > 16 ? row[16]?.ToString() : "",
-                    Ring = row.Count > 17 ? row[17]?.ToString() : "",
-                    Amulet = row.Count > 18 ? row[18]?.ToString() : "",
+                    LastHunt = row.Count > 10 ? row[10]?.ToString() : "",
 
-                    AutoUseXpPotions = row.Count > 20 && bool.TryParse(row[20]?.ToString(), out var autoXp)
+                    MainHand = row.Count > 11 ? row[11]?.ToString() : "",
+                    OffHand = row.Count > 12 ? row[12]?.ToString() : "",
+                    Helmet = row.Count > 13 ? row[13]?.ToString() : "",
+                    Body = row.Count > 14 ? row[14]?.ToString() : "",
+                    Legs = row.Count > 15 ? row[15]?.ToString() : "",
+                    Gloves = row.Count > 16 ? row[16]?.ToString() : "",
+                    Boots = row.Count > 17 ? row[17]?.ToString() : "",
+                    Ring = row.Count > 18 ? row[18]?.ToString() : "",
+                    Amulet = row.Count > 19 ? row[19]?.ToString() : "",
+
+                    AutoUseXpPotions = row.Count > 21 && bool.TryParse(row[21]?.ToString(), out var autoXp)
                         ? autoXp
                         : false,
 
-                    Energy = row.Count > 21 && int.TryParse(row[21]?.ToString(), out var energy)
+                    Energy = row.Count > 22 && int.TryParse(row[22]?.ToString(), out var energy)
                         ? energy
                         : 100,
 
-                    LastEnergyUpdate = row.Count > 22 ? row[22]?.ToString() : DateTimeOffset.UtcNow.ToString("o")
+                    LastEnergyUpdate = row.Count > 23
+                        ? row[23]?.ToString()
+                        : DateTimeOffset.UtcNow.ToString("o"),
+
+                    // ✅ NEW FIELD
+                    LastBossAttack = row.Count > 24
+                        ? row[24]?.ToString()
+                        : ""
                 };
 
                 // Parse Active Buffs
-                if (row.Count > 19 && row[19] != null)
+                if (row.Count > 20 && row[20] != null)
                 {
-                    var buffData = row[19].ToString();
+                    var buffData = row[20].ToString();
 
                     if (!string.IsNullOrWhiteSpace(buffData))
                     {
@@ -88,7 +103,6 @@ namespace Hogs.RPG.Data.Repositories
                         }
                     }
                 }
-
 
                 _players.Add(player);
             }
@@ -123,6 +137,7 @@ namespace Hogs.RPG.Data.Repositories
                 player.Attack,
                 player.Defense,
                 player.Health,
+                player.MaxHealth,
                 player.LastHunt,
 
                 player.MainHand ?? "",
@@ -138,15 +153,18 @@ namespace Hogs.RPG.Data.Repositories
                 SerializeBuffs(player.ActiveBuffs),
                 player.AutoUseXpPotions,
                 player.Energy,
-                player.LastEnergyUpdate
-             });
+                player.LastEnergyUpdate,
+
+                // ✅ NEW COLUMN Y
+                player.LastBossAttack ?? ""
+            });
 
             return player;
         }
 
         public async Task UpdatePlayerAsync(Player player)
         {
-            var rows = await _sheets.ReadRangeAsync("Players", "A2:W");
+            var rows = await _sheets.ReadRangeAsync("Players", "A2:Y");
 
             int rowIndex = 2;
 
@@ -173,6 +191,7 @@ namespace Hogs.RPG.Data.Repositories
                             player.Attack,
                             player.Defense,
                             player.Health,
+                            player.MaxHealth,
                             player.LastHunt,
 
                             player.MainHand,
@@ -188,11 +207,14 @@ namespace Hogs.RPG.Data.Repositories
                             SerializeBuffs(player.ActiveBuffs),
                             player.AutoUseXpPotions,
                             player.Energy,
-                            player.LastEnergyUpdate
+                            player.LastEnergyUpdate,
+
+                            // ✅ NEW COLUMN Y
+                            player.LastBossAttack
                         }
                     };
 
-                    await _sheets.UpdateRangeAsync("Players", $"A{rowIndex}:W{rowIndex}", values);
+                    await _sheets.UpdateRangeAsync("Players", $"A{rowIndex}:Y{rowIndex}", values);
                     return;
                 }
 
