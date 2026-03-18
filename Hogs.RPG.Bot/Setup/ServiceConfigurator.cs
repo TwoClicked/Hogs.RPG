@@ -6,6 +6,7 @@ using Hogs.RPG.Services.AlchemyServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.GatheringServices;
+using Hogs.RPG.Services.HuntServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +31,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddSingleton<InventoryService>();
 
             services.AddSingleton<HuntService>();
+            services.AddSingleton<HunterStaminaService>();
             services.AddSingleton<LevelService>();
 
             services.AddSingleton<ItemService>();

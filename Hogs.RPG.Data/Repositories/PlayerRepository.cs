@@ -25,7 +25,7 @@ namespace Hogs.RPG.Data.Repositories
             if (_loaded)
                 return;
 
-            var rows = await _sheets.ReadRangeAsync("Players", "A2:Y");
+            var rows = await _sheets.ReadRangeAsync("Players", "A2:AA");
 
             foreach (var row in rows)
             {
@@ -72,10 +72,18 @@ namespace Hogs.RPG.Data.Repositories
                         ? row[23]?.ToString()
                         : DateTimeOffset.UtcNow.ToString("o"),
 
-                    // ✅ NEW FIELD
                     LastBossAttack = row.Count > 24
                         ? row[24]?.ToString()
-                        : ""
+                        : "",
+
+                    // 🆕 NEW FIELDS
+                    HunterStamina = row.Count > 25 && int.TryParse(row[25]?.ToString(), out var stamina)
+                        ? stamina
+                        : 100,
+
+                    LastHunterStaminaUpdate = row.Count > 26
+                        ? row[26]?.ToString()
+                        : DateTimeOffset.UtcNow.ToString("o")
                 };
 
                 // Parse Active Buffs
@@ -155,8 +163,10 @@ namespace Hogs.RPG.Data.Repositories
                 player.Energy,
                 player.LastEnergyUpdate,
 
-                // ✅ NEW COLUMN Y
-                player.LastBossAttack ?? ""
+                player.LastBossAttack ?? "",
+
+                player.HunterStamina,
+                player.LastHunterStaminaUpdate
             });
 
             return player;
@@ -164,7 +174,7 @@ namespace Hogs.RPG.Data.Repositories
 
         public async Task UpdatePlayerAsync(Player player)
         {
-            var rows = await _sheets.ReadRangeAsync("Players", "A2:Y");
+            var rows = await _sheets.ReadRangeAsync("Players", "A2:AA");
 
             int rowIndex = 2;
 
@@ -209,12 +219,14 @@ namespace Hogs.RPG.Data.Repositories
                             player.Energy,
                             player.LastEnergyUpdate,
 
-                            // ✅ NEW COLUMN Y
-                            player.LastBossAttack
+                            player.LastBossAttack,
+
+                            player.HunterStamina,
+                            player.LastHunterStaminaUpdate
                         }
                     };
 
-                    await _sheets.UpdateRangeAsync("Players", $"A{rowIndex}:Y{rowIndex}", values);
+                    await _sheets.UpdateRangeAsync("Players", $"A{rowIndex}:AA{rowIndex}", values);
                     return;
                 }
 

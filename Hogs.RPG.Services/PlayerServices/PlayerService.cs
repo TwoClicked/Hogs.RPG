@@ -28,11 +28,21 @@ namespace Hogs.RPG.Services.PlayerServices
                 Username = username,
                 Level = 1,
                 XP = 0,
-                Gold = 50,
+                Gold = 0,
                 Attack = 5,
-                Defense = 3,
-                Health = 25,
-                LastHunt = ""
+                Defense = 5,
+                Health = 100,
+                MaxHealth = 100,
+
+                // Hunt (legacy + new system)
+                LastHunt = "",
+
+                HunterStamina = 100,
+                LastHunterStaminaUpdate = DateTimeOffset.UtcNow.ToString("o"),
+
+                // Gathering
+                Energy = 100,
+                LastEnergyUpdate = DateTimeOffset.UtcNow.ToString("o")
             };
 
             await _playerRepository.CreatePlayerAsync(newPlayer);

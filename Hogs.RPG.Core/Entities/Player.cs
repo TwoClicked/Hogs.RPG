@@ -14,6 +14,10 @@ namespace Hogs.RPG.Core.Entities
         public int Defense { get; set; }
         public int Health { get; set; }
         public int MaxHealth { get; set; } // Boss related, As health needs to flex
+
+        //Hunt 
+        public int HunterStamina { get; set; }
+        public string LastHunterStaminaUpdate { get; set; }
         public string LastHunt { get; set; }
 
         // Equipped gear

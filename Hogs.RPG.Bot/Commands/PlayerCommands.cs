@@ -48,8 +48,16 @@ namespace Hogs.RPG.Bot.Commands
                 Defense = 5,
                 Health = 100,
                 MaxHealth = 100,
+
+                // Hunt (legacy + new system)
                 LastHunt = "",
-                Energy = 100
+
+                HunterStamina = 100,
+                LastHunterStaminaUpdate = DateTimeOffset.UtcNow.ToString("o"),
+
+                // Gathering
+                Energy = 100,
+                LastEnergyUpdate = DateTimeOffset.UtcNow.ToString("o")
             };
 
             await _playerRepository.CreatePlayerAsync(newPlayer);

@@ -109,7 +109,23 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             { CraftableHuntGear.SkystriderBoots.Id, CraftableHuntGear.SkystriderBoots },
             { CraftableHuntGear.AbyssGauntlets.Id, CraftableHuntGear.AbyssGauntlets },
             { CraftableHuntGear.RavenKingBand.Id, CraftableHuntGear.RavenKingBand },
-            { CraftableHuntGear.PendantOfTheWild.Id, CraftableHuntGear.PendantOfTheWild }
+            { CraftableHuntGear.PendantOfTheWild.Id, CraftableHuntGear.PendantOfTheWild },
+
+             // ===== Hunt Rare Drops =====
+
+            { HuntRareDrops.WolfTrophy.Id, HuntRareDrops.WolfTrophy },
+            { HuntRareDrops.BoarTusk.Id, HuntRareDrops.BoarTusk },
+            { HuntRareDrops.StagAntler.Id, HuntRareDrops.StagAntler },
+            { HuntRareDrops.AncientFeather.Id, HuntRareDrops.AncientFeather },
+            { HuntRareDrops.BearHeart.Id, HuntRareDrops.BearHeart },
+            { HuntRareDrops.AlphaFang.Id, HuntRareDrops.AlphaFang },
+            { HuntRareDrops.StormTalon.Id, HuntRareDrops.StormTalon },
+            { HuntRareDrops.SaberRelic.Id, HuntRareDrops.SaberRelic },
+            { HuntRareDrops.GriffinCore.Id, HuntRareDrops.GriffinCore },
+            { HuntRareDrops.StormRelic.Id, HuntRareDrops.StormRelic },
+            { HuntRareDrops.AncientCore.Id, HuntRareDrops.AncientCore },
+            { HuntRareDrops.MythicHeart.Id, HuntRareDrops.MythicHeart },
+            { HuntRareDrops.SkyRelic.Id, HuntRareDrops.SkyRelic },
         };
     }
 }

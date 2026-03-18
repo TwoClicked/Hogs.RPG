@@ -25,14 +25,29 @@ public class HuntAutocompleteHandler : AutocompleteHandler
         if (player == null)
             return AutocompletionResult.FromSuccess();
 
-        var value = autocompleteInteraction.Data.Current.Value?.ToString()?.ToLower() ?? "";
+        var input = autocompleteInteraction.Data.Current.Value?.ToString()?.ToLower() ?? "";
 
         var hunts = HuntTargetRegistry.All.Values
             .Where(h => player.Level >= h.RequiredLevel)
-            .Where(h => h.Name.ToLower().Contains(value) || h.Id.Contains(value))
+            .Where(h =>
+                string.IsNullOrEmpty(input) ||
+                h.Name.ToLower().Contains(input) ||
+                h.Id.ToLower().Contains(input))
+            .OrderBy(h => h.RequiredLevel)
             .Take(25)
             .Select(h => new AutocompleteResult($"{h.Icon} {h.Name}", h.Id))
             .ToList();
+
+        // Fallback (if nothing matched)
+        if (hunts.Count == 0)
+        {
+            hunts = HuntTargetRegistry.All.Values
+                .Where(h => player.Level >= h.RequiredLevel)
+                .OrderBy(h => h.RequiredLevel)
+                .Take(5)
+                .Select(h => new AutocompleteResult($"{h.Icon} {h.Name}", h.Id))
+                .ToList();
+        }
 
         return AutocompletionResult.FromSuccess(hunts);
     }
