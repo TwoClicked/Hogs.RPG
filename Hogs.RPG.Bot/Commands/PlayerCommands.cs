@@ -97,7 +97,8 @@ namespace Hogs.RPG.Bot.Commands
                 .AddField("Attack", $"🗡 {player.Attack}", true)
                 .AddField("Defense", $"🛡 {player.Defense}", true)
                 .AddField("Health", $"❤️ {player.Health}", true)
-                .AddField("Energy", $"⚡ {player.Energy}", false)
+                .AddField("Energy", $"⚡ {player.Energy}", true)
+                .AddField("Hunter Stamina", $"⚡ {player.HunterStamina}", true)
                 .AddField(
                          "⚒ Equipment",
                          $"🗡 Main Hand: {player.MainHand ?? "None"}\n" +

@@ -55,9 +55,9 @@ namespace Hogs.RPG.Bot.Commands
             {
                 string header = group.Key switch
                 {
-                    "Material" => "🎒 **Materials**",
-                    "Potion" => "🎒 **Potions**",
-                    "Equipment" => "🎒 **Gear**",
+                    "Material" => "🧱 **Materials**",
+                    "Potion" => "🧪 **Potions**",
+                    "Equipment" => "⚔️ **Gear**",
                     _ => "📦 **Other**"
                 };
 
