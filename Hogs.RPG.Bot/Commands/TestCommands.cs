@@ -1,8 +1,10 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.Game;
+using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PlayerServices;
 using System;
 using System.Linq;
@@ -11,40 +13,61 @@ using System.Threading.Tasks;
 
 namespace Hogs.RPG.Bot.Commands
 {
-    [RequireRole(1483528182106685691)]
     public class TestCommands : InteractionModuleBase<SocketInteractionContext>
     {
+        private const ulong ADMIN_ROLE_ID = 1483528182106685691;
+
         private readonly BossRepository _bossRepository;
         private readonly PlayerService _playerService;
         private readonly BossService _bossService;
         private readonly PlayerRepository _playerRepository;
+        private readonly InventoryService _inventoryService;
 
         public TestCommands(
             BossRepository bossRepository,
             BossService bossService,
             PlayerService playerService,
-            PlayerRepository playerRepository)
+            PlayerRepository playerRepository,
+            InventoryService inventoryService)
         {
             _bossRepository = bossRepository;
             _bossService = bossService;
             _playerService = playerService;
             _playerRepository = playerRepository;
+            _inventoryService = inventoryService;
+        }
+
+        // =========================
+        // ADMIN CHECK (INLINE)
+        // =========================
+        private async Task<bool> EnsureAdminAsync()
+        {
+            if (Context.User is not SocketGuildUser user ||
+                !user.Roles.Any(r => r.Id == ADMIN_ROLE_ID))
+            {
+                await RespondAsync("🔒 These are admin-only commands.", ephemeral: true);
+                return false;
+            }
+
+            return true;
         }
 
         // =========================
         // TEST LOAD
         // =========================
 
-        [SlashCommand("testbosses", "Test loading bosses")]
+        [SlashCommand("testbosses", "Test loading bosses (Admin Only)")]
         public async Task TestBosses()
         {
-            await DeferAsync();
+            if (!await EnsureAdminAsync()) return;
+
+            await DeferAsync(ephemeral: true);
 
             var bosses = await _bossRepository.GetAllAsync();
 
             if (bosses.Count == 0)
             {
-                await FollowupAsync("No bosses found.");
+                await FollowupAsync("No bosses found.", ephemeral: true);
                 return;
             }
 
@@ -55,81 +78,119 @@ namespace Hogs.RPG.Bot.Commands
                 builder.AppendLine($"{boss.Name} | HP: {boss.MaxHealth} | Type: {boss.Type}");
             }
 
-            await FollowupAsync(builder.ToString());
+            await FollowupAsync(builder.ToString(), ephemeral: true);
         }
 
         // =========================
         // FORCE WEEKLY
         // =========================
 
-        [SlashCommand("forceweekly", "Force spawn a weekly boss")]
+        [SlashCommand("forceweekly", "Force spawn a weekly boss (Admin Only)")]
         public async Task ForceWeeklyBoss()
         {
+            if (!await EnsureAdminAsync()) return;
+
             await DeferAsync();
 
             var boss = await _bossService.SpawnWeeklyBoss();
 
             if (boss == null)
             {
-                await FollowupAsync("❌ No weekly boss found.");
+                await FollowupAsync("❌ No weekly boss found.", ephemeral: true);
                 return;
             }
 
-            var embed = BuildBossEmbed(boss);
+            var embed = _bossService.BuildBossEmbed(boss);
 
-            await FollowupAsync(
+            var components = new ComponentBuilder()
+                .WithButton("⚔ Attack", $"boss_attack:{boss.Definition.Id}", ButtonStyle.Danger)
+                .WithButton("🧪 Heal", $"boss_heal:{boss.Definition.Id}", ButtonStyle.Success)
+                .Build();
+
+            var msg = await FollowupAsync(
                 "@BossRaid 🔥 A Weekly Boss has been spawned!",
-                embed: embed
+                embed: embed,
+                components: components
             );
+
+            // 🔥 IMPORTANT: store message for updates
+            boss.ChannelId = Context.Channel.Id;
+            boss.MessageId = msg.Id;
         }
 
         // =========================
         // FORCE DAILY
         // =========================
 
-        [SlashCommand("forcedaily", "Force spawn a daily boss")]
+        [SlashCommand("forcedaily", "Force spawn a daily boss (Admin Only)")]
         public async Task ForceDailyBoss(string bossId)
         {
+            if (!await EnsureAdminAsync()) return;
+
             await DeferAsync();
 
             try
             {
-                Console.WriteLine($"🔥 ForceDaily called with ID: {bossId}");
-
                 var boss = await _bossService.SpawnBoss(bossId);
-
-                Console.WriteLine($"🔥 Boss result: {(boss == null ? "NULL" : boss.Definition.Name)}");
 
                 if (boss == null)
                 {
-                    await FollowupAsync($"❌ Boss with ID `{bossId}` not found.");
+                    await FollowupAsync($"❌ Boss with ID `{bossId}` not found.", ephemeral: true);
                     return;
                 }
 
-                var embed = BuildBossEmbed(boss);
+                var embed = _bossService.BuildBossEmbed(boss);
 
-                await FollowupAsync(
+                var components = new ComponentBuilder()
+                    .WithButton("⚔ Attack", $"boss_attack:{boss.Definition.Id}", ButtonStyle.Danger)
+                    .WithButton("🧪 Heal", $"boss_heal:{boss.Definition.Id}", ButtonStyle.Success)
+                    .Build();
+
+                var msg = await FollowupAsync(
                     $"⚔ A Daily Boss has been spawned!\n**ID:** `{bossId}`",
-                    embed: embed
+                    embed: embed,
+                    components: components
                 );
+
+                // 🔥 IMPORTANT
+                boss.ChannelId = Context.Channel.Id;
+                boss.MessageId = msg.Id;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"💥 COMMAND CRASH: {ex}");
-                await FollowupAsync("💥 Something went wrong spawning the boss.");
+                await FollowupAsync("💥 Something went wrong spawning the boss.", ephemeral: true);
             }
         }
-
         // =========================
-        // CLEAR BOSSES (VERY USEFUL)
+        // CLEAR BOSSES
         // =========================
 
-        [SlashCommand("clearbosses", "Remove all active bosses")]
+        [SlashCommand("clearbosses", "Remove all active bosses (Admin Only)")]
         public async Task ClearBosses()
         {
+            if (!await EnsureAdminAsync()) return;
+
             _bossService.ClearAllBosses();
 
-            await RespondAsync("🧹 All active bosses have been cleared.");
+            await RespondAsync("🧹 All active bosses have been cleared.", ephemeral: true);
+        }
+
+
+        // =========================
+        // GIVE ITEM
+        // =========================
+
+        [SlashCommand("giveitem", "Give yourself an item (Admin Only)")]
+        public async Task GiveItem(string itemId, int amount)
+        {
+            if (!await EnsureAdminAsync()) return;
+
+            var userId = Context.User.Id;
+
+            await _inventoryService.GiveItemAsync(userId, itemId, amount);
+
+            await RespondAsync($"You received {amount}x {itemId}", ephemeral: true);
         }
 
         // =========================

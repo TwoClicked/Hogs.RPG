@@ -1,6 +1,7 @@
 ﻿namespace Hogs.RPG.GameData.Hunts;
 
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Enums;
 using System.Net.NetworkInformation;
 
 public static class DeepTargets
@@ -17,7 +18,8 @@ public static class DeepTargets
         MaxGold = 30,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 10
+        RequiredLevel = 10,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget Griffin = new()
@@ -32,7 +34,8 @@ public static class DeepTargets
         MaxGold = 32,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 10
+        RequiredLevel = 10,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget WarElk = new()
@@ -47,7 +50,8 @@ public static class DeepTargets
         MaxGold = 28,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 10
+        RequiredLevel = 10,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget DireBear = new()
@@ -62,7 +66,8 @@ public static class DeepTargets
         MaxGold = 32,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 10
+        RequiredLevel = 10,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget ShadowRaven = new()
@@ -77,7 +82,8 @@ public static class DeepTargets
         MaxGold = 28,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 10
+        RequiredLevel = 10,
+        Category = HuntCategory.Normal
     };
 
 

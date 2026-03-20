@@ -1,10 +1,14 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Discord;
+using Discord.WebSocket;
+using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.PlayerServices;
+using Hogs.RPG.Services.GameplayServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using static Hogs.RPG.Core.Entities.BossDefinition;
 
@@ -15,19 +19,52 @@ namespace Hogs.RPG.Services.Game
         private readonly BossRepository _bossRepository;
         private readonly PlayerService _playerService;
         private readonly PlayerRepository _playerRepository;
+        private readonly StatService _statService;
 
         private readonly Dictionary<string, ActiveBoss> _activeBosses = new();
+        private readonly Dictionary<string, SemaphoreSlim> _locks = new();
+        private readonly Dictionary<ulong, DateTime> _attackCooldowns = new();
 
-        private static readonly Random _rand = new Random();
+        private static readonly Random _rand = new();
 
         public BossService(
             BossRepository bossRepository,
             PlayerService playerService,
-            PlayerRepository playerRepository)
+            PlayerRepository playerRepository,
+            StatService statService)
         {
             _bossRepository = bossRepository;
             _playerService = playerService;
             _playerRepository = playerRepository;
+            _statService = statService;
+        }
+
+        private SemaphoreSlim GetLock(string bossId)
+        {
+            if (!_locks.ContainsKey(bossId))
+                _locks[bossId] = new SemaphoreSlim(1, 1);
+
+            return _locks[bossId];
+        }
+
+        // =========================
+        // COOLDOWN
+        // =========================
+
+        private bool TryCheckCooldown(ulong userId, out int remainingSeconds)
+        {
+            remainingSeconds = 0;
+
+            if (!_attackCooldowns.TryGetValue(userId, out var lastAttack))
+                return true;
+
+            var diff = DateTime.UtcNow - lastAttack;
+
+            if (diff.TotalSeconds >= 10)
+                return true;
+
+            remainingSeconds = (int)(10 - diff.TotalSeconds);
+            return false;
         }
 
         // =========================
@@ -47,7 +84,6 @@ namespace Hogs.RPG.Services.Game
                 return _activeBosses[boss.Id];
 
             var activeBoss = CreateActiveBoss(boss);
-
             _activeBosses[boss.Id] = activeBoss;
 
             return activeBoss;
@@ -59,12 +95,9 @@ namespace Hogs.RPG.Services.Game
                 return _activeBosses[bossId];
 
             var boss = await _bossRepository.GetByIdAsync(bossId);
-
-            if (boss == null)
-                return null;
+            if (boss == null) return null;
 
             var activeBoss = CreateActiveBoss(boss);
-
             _activeBosses[boss.Id] = activeBoss;
 
             return activeBoss;
@@ -111,80 +144,124 @@ namespace Hogs.RPG.Services.Game
                    DateTime.UtcNow < _activeBosses[bossId].ExpireAt;
         }
 
-        public List<ActiveBoss> GetRawBosses()
+        public void ClearAllBosses()
         {
-            return _activeBosses.Values.ToList();
+            _activeBosses.Clear();
+            _locks.Clear();
+            _attackCooldowns.Clear();
+        }
+
+        public List<ActiveBoss> GetExpiredBosses()
+        {
+            return _activeBosses.Values
+                .Where(b => DateTime.UtcNow >= b.ExpireAt)
+                .ToList();
+        }
+
+        public void RemoveBoss(string bossId)
+        {
+            _activeBosses.Remove(bossId);
         }
 
         // =========================
-        // ATTACK SYSTEM
+        // ATTACK (FIXED)
         // =========================
 
-        public (int damageDealt, int selfDamage, int roll, string resultText)
-            AttackBoss(string bossId, ulong userId, int playerAttack, int playerMaxHp)
+        public async Task<(int damage, int selfDamage, string text)>
+            AttackBossAsync(string bossId, ulong userId)
         {
             if (!_activeBosses.ContainsKey(bossId))
-                return (0, 0, 0, "Boss not found.");
+                return (0, 0, "Boss not found.");
+
+            if (!TryCheckCooldown(userId, out int remaining))
+                return (0, 0, $"⏳ Wait {remaining}s before attacking again.");
 
             var boss = _activeBosses[bossId];
+            var bossLock = GetLock(bossId);
 
-            if (DateTime.UtcNow >= boss.ExpireAt)
-                return (0, 0, 0, "This boss has already expired.");
+            await bossLock.WaitAsync();
 
-            int roll = _rand.Next(-10, 11);
-
-            int baseDamage = Math.Max(1, playerAttack - boss.Definition.Defense);
-            int finalDamage = baseDamage;
-
-            int selfDamage = 0;
-            string result;
-
-            if (roll == -10)
+            try
             {
-                selfDamage = (int)(playerMaxHp * 0.75);
-                result = $"💀 Critical Fail! You took {selfDamage} damage!";
-                return (0, selfDamage, roll, result);
-            }
+                if (boss.CurrentHealth <= 0)
+                    return (0, 0, "Boss already defeated.");
 
-            if (roll < 0)
+                var player = await _playerRepository.GetByDiscordIdAsync(userId);
+
+                if (player == null)
+                    return (0, 0, "You need to start your adventure first.");
+
+                // 🔥 CENTRALIZED STATS
+                var stats = _statService.CalculateStats(player);
+                int playerAttack = stats.attack;
+                int playerMaxHp = stats.health;
+
+                int roll = _rand.Next(-10, 11);
+
+                int baseDamage = Math.Max(1, playerAttack - boss.Definition.Defense);
+                int finalDamage = baseDamage;
+
+                int selfDamage = 0;
+                string result;
+
+                if (roll == -10)
+                {
+                    selfDamage = (int)(playerMaxHp * 0.75);
+                    player.Health = Math.Max(0, player.Health - selfDamage);
+                    await _playerRepository.UpdatePlayerAsync(player);
+
+                    _attackCooldowns[userId] = DateTime.UtcNow;
+
+                    return (0, selfDamage, $"💀 Critical Fail! You took {selfDamage} damage!");
+                }
+
+                if (roll < 0)
+                {
+                    double percent = Math.Abs(roll) * 0.05;
+                    selfDamage = (int)(playerMaxHp * percent);
+
+                    player.Health = Math.Max(0, player.Health - selfDamage);
+                    await _playerRepository.UpdatePlayerAsync(player);
+
+                    _attackCooldowns[userId] = DateTime.UtcNow;
+
+                    return (0, selfDamage, $"⚠️ You hurt yourself for {selfDamage}!");
+                }
+
+                if (roll == 10)
+                {
+                    finalDamage *= 2;
+                    result = $"✨ Critical Hit! {finalDamage} dmg!";
+                }
+                else if (roll > 0)
+                {
+                    finalDamage = (int)(finalDamage * (1 + roll * 0.05));
+                    result = $"🎯 {finalDamage} damage!";
+                }
+                else
+                {
+                    result = $"➖ {finalDamage} damage";
+                }
+
+                boss.CurrentHealth = Math.Max(0, boss.CurrentHealth - finalDamage);
+
+                if (!boss.DamageDealt.ContainsKey(userId))
+                    boss.DamageDealt[userId] = 0;
+
+                boss.DamageDealt[userId] += finalDamage;
+
+                _attackCooldowns[userId] = DateTime.UtcNow;
+
+                return (finalDamage, 0, result);
+            }
+            finally
             {
-                double percent = Math.Abs(roll) * 0.05;
-                selfDamage = (int)(playerMaxHp * percent);
-
-                result = $"⚠️ Roll {roll}: You hurt yourself for {selfDamage} damage!";
-                return (0, selfDamage, roll, result);
+                bossLock.Release();
             }
-
-            if (roll == 10)
-            {
-                finalDamage *= 2;
-                result = $"✨ Critical Hit! You dealt {finalDamage} damage!";
-            }
-            else if (roll > 0)
-            {
-                double multiplier = 1 + (roll * 0.05);
-                finalDamage = (int)(finalDamage * multiplier);
-                result = $"🎯 Roll {roll}: You dealt {finalDamage} damage!";
-            }
-            else
-            {
-                result = $"➖ Neutral hit: {finalDamage} damage";
-            }
-
-            boss.CurrentHealth -= finalDamage;
-            if (boss.CurrentHealth < 0)
-                boss.CurrentHealth = 0;
-
-            if (!boss.DamageDealt.ContainsKey(userId))
-                boss.DamageDealt[userId] = 0;
-
-            boss.DamageDealt[userId] += finalDamage;
-
-            return (finalDamage, 0, roll, result);
         }
 
         // =========================
-        // REWARD HANDLING
+        // DEATH
         // =========================
 
         public async Task<string> HandleBossDeathAsync(ActiveBoss boss)
@@ -243,59 +320,62 @@ namespace Hogs.RPG.Services.Game
             return sb.ToString();
         }
 
-        public async Task<string> HandleBossEscapeAsync(ActiveBoss boss)
+        // =========================
+        // UI
+        // =========================
+
+        public async Task TryUpdateBossMessageAsync(ActiveBoss boss, DiscordSocketClient client)
         {
-            var damageData = boss.DamageDealt;
+            if ((DateTime.UtcNow - boss.LastUiUpdate).TotalSeconds < 2)
+                return;
 
-            if (damageData.Count == 0)
-                return $"⏰ {boss.Definition.Name} escaped... no one dealt damage.";
+            boss.LastUiUpdate = DateTime.UtcNow;
 
-            int maxHealth = boss.Definition.MaxHealth;
-            int rewardPool = (int)(boss.Definition.RewardGold * 0.5);
+            var channel = client.GetChannel(boss.ChannelId) as IMessageChannel;
+            if (channel == null) return;
 
-            var sb = new StringBuilder();
+            var message = await channel.GetMessageAsync(boss.MessageId);
 
-            sb.AppendLine($"🏃 **{boss.Definition.Name} has escaped!**\n");
-            sb.AppendLine("💰 Reduced Rewards (50%):");
-
-            foreach (var entry in damageData)
+            if (message is IUserMessage msg)
             {
-                var userId = entry.Key;
-                var damage = entry.Value;
-
-                double contribution = (double)damage / maxHealth;
-                int gold = (int)(rewardPool * contribution);
-
-                var player = await _playerService.GetOrCreatePlayerAsync(userId, "Unknown");
-                player.Gold += gold;
-
-                await _playerRepository.UpdatePlayerAsync(player);
-
-                sb.AppendLine($"<@{userId}> +{gold} gold");
+                await msg.ModifyAsync(m =>
+                {
+                    m.Embed = BuildBossEmbed(boss);
+                });
             }
-
-            return sb.ToString();
         }
 
-        // =========================
-        // CLEANUP
-        // =========================
-
-        public List<ActiveBoss> GetExpiredBosses()
+        public Embed BuildBossEmbed(ActiveBoss boss)
         {
-            return _activeBosses.Values
-                .Where(b => DateTime.UtcNow >= b.ExpireAt)
-                .ToList();
+            var def = boss.Definition;
+
+            return new EmbedBuilder()
+                .WithTitle($"🔥 {def.Name}")
+                .WithDescription(def.Description)
+
+                .AddField("❤️ Health",
+                    $"{GetHealthBar(boss.CurrentHealth, def.MaxHealth)}\n{boss.CurrentHealth}/{def.MaxHealth}")
+
+                .AddField("🏆 Top Damage",
+                    boss.DamageDealt.Count == 0
+                        ? "No attacks yet..."
+                        : string.Join("\n",
+                            boss.DamageDealt
+                                .OrderByDescending(x => x.Value)
+                                .Take(5)
+                                .Select((x, i) => $"{i + 1}. <@{x.Key}> — {x.Value}")
+                        ))
+
+                .WithImageUrl(def.ImageUrl)
+                .WithColor(Color.DarkRed)
+                .Build();
         }
 
-        public void RemoveBoss(string bossId)
+        private string GetHealthBar(int current, int max)
         {
-            _activeBosses.Remove(bossId);
-        }
-
-        public void ClearAllBosses()
-        {
-            _activeBosses.Clear();
+            int bars = 10;
+            int filled = (int)((double)current / max * bars);
+            return new string('█', filled) + new string('░', bars - filled);
         }
     }
 }

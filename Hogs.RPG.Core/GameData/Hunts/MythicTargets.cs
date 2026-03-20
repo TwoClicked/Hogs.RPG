@@ -1,6 +1,7 @@
 ﻿namespace Hogs.RPG.GameData.Hunts;
 
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Enums;
 
 public static class MythicTargets
 {
@@ -16,7 +17,8 @@ public static class MythicTargets
         MaxGold = 55,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 20
+        RequiredLevel = 20,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget SkyTyrant = new()
@@ -31,7 +33,8 @@ public static class MythicTargets
         MaxGold = 50,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 20
+        RequiredLevel = 20,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget AbyssStalker = new()
@@ -46,7 +49,8 @@ public static class MythicTargets
         MaxGold = 55,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 20
+        RequiredLevel = 20,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget ColossusElk = new()
@@ -61,7 +65,8 @@ public static class MythicTargets
         MaxGold = 52,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 20
+        RequiredLevel = 20,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget DeathRaven = new()
@@ -76,6 +81,7 @@ public static class MythicTargets
         MaxGold = 50,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 20
+        RequiredLevel = 20,
+        Category = HuntCategory.Normal
     };
 }

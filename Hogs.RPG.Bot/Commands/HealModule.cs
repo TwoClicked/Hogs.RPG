@@ -5,59 +5,28 @@ using System.Threading.Tasks;
 
 public class HealModule : InteractionModuleBase<SocketInteractionContext>
 {
-    private readonly InventoryService _inventoryService;
-    private readonly PlayerRepository _playerRepository;
+    private readonly HealService _healService;
 
-    public HealModule(
-        InventoryService inventoryService,
-        PlayerRepository playerRepository)
+    public HealModule(HealService healService)
     {
-        _inventoryService = inventoryService;
-        _playerRepository = playerRepository;
+        _healService = healService;
     }
 
     [SlashCommand("heal", "Use a health potion to fully heal")]
     public async Task Heal()
     {
-
         await DeferAsync();
-        var userId = Context.User.Id;
 
-        var player = await _playerRepository.GetByDiscordIdAsync(userId);
+        var result = await _healService.HealAsync(Context.User.Id);
 
-        if (player == null)
+        if (!result.IsSuccess)
         {
-            await FollowupAsync("You need to start your adventure first.");
+            await FollowupAsync(result.Message);
             return;
         }
 
-        // Already full HP
-        if (player.Health >= player.MaxHealth)
-        {
-            await FollowupAsync("❤️ You're already at full health.");
-            return;
-        }
-
-        var inventory = await _inventoryService.GetInventoryAsync(userId);
-        var potion = inventory.FirstOrDefault(i => i.ItemId == "health_potion");
-
-        if (potion == null || potion.Quantity <= 0)
-        {
-            await FollowupAsync("❌ You don't have any health potions.");
-            return;
-        }
-
-        // Apply heal
-        player.Health = player.MaxHealth;
-
-        // Remove potion
-        await _inventoryService.TakeItemAsync(userId, "health_potion", 1);
-
-        // Save player
-        await _playerRepository.UpdatePlayerAsync(player);
-
-        var remaining = potion.Quantity - 1;
-
-        await FollowupAsync($"❤️ You healed to full! ({remaining} potions left.)");
+        await FollowupAsync(
+            $"❤️ You healed to full! ({result.RemainingPotions} potions left.)"
+        );
     }
 }

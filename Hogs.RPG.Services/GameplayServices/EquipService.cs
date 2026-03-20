@@ -38,76 +38,87 @@ namespace Hogs.RPG.Services.GameplayServices
             if (ownedItem == null || ownedItem.Quantity <= 0)
                 return "You do not have that item.";
 
-            string previousItem = "";
+            // =========================
+            // GET CURRENT ITEM IN SLOT
+            // =========================
+            string currentItemId = item.Slot switch
+            {
+                EquipmentSlot.MainHand => player.MainHand,
+                EquipmentSlot.OffHand => player.OffHand,
+                EquipmentSlot.Helmet => player.Helmet,
+                EquipmentSlot.Body => player.Body,
+                EquipmentSlot.Legs => player.Legs,
+                EquipmentSlot.Gloves => player.Gloves,
+                EquipmentSlot.Boots => player.Boots,
+                EquipmentSlot.Ring => player.Ring,
+                EquipmentSlot.Amulet => player.Amulet,
+                _ => ""
+            };
+
+            var currentItem = string.IsNullOrEmpty(currentItemId)
+                ? null
+                : _equipmentService.GetEquipment(currentItemId);
+
+            // =========================
+            // CALCULATE DIFFERENCE
+            // =========================
+            int atkDiff = item.Attack - (currentItem?.Attack ?? 0);
+            int defDiff = item.Defense - (currentItem?.Defense ?? 0);
+            int hpDiff = item.Health - (currentItem?.Health ?? 0);
+
+            string FormatDiff(int value, string label)
+            {
+                if (value == 0) return null;
+                return value > 0
+                    ? $"⬆ +{value} {label}"
+                    : $"⬇ {value} {label}";
+            }
+
+            var diffLines = new List<string>();
+
+            var atk = FormatDiff(atkDiff, "ATK");
+            var def = FormatDiff(defDiff, "DEF");
+            var hp = FormatDiff(hpDiff, "HP");
+
+            if (atk != null) diffLines.Add(atk);
+            if (def != null) diffLines.Add(def);
+            if (hp != null) diffLines.Add(hp);
+
+            var diffText = diffLines.Count > 0
+                ? string.Join("\n", diffLines)
+                : "No stat change";
+
+            // =========================
+            // APPLY EQUIP
+            // =========================
+            string previousItem = currentItemId;
 
             switch (item.Slot)
             {
-                case EquipmentSlot.MainHand:
-                    previousItem = player.MainHand;
-                    player.MainHand = itemId;
-                    break;
-
-                case EquipmentSlot.OffHand:
-                    previousItem = player.OffHand;
-                    player.OffHand = itemId;
-                    break;
-
-                case EquipmentSlot.Helmet:
-                    previousItem = player.Helmet;
-                    player.Helmet = itemId;
-                    break;
-
-                case EquipmentSlot.Body:
-                    previousItem = player.Body;
-                    player.Body = itemId;
-                    break;
-
-                case EquipmentSlot.Legs:
-                    previousItem = player.Legs;
-                    player.Legs = itemId;
-                    break;
-
-                case EquipmentSlot.Gloves:
-                    previousItem = player.Gloves;
-                    player.Gloves = itemId;
-                    break;
-
-                case EquipmentSlot.Boots:
-                    previousItem = player.Boots;
-                    player.Boots = itemId;
-                    break;
-
-                case EquipmentSlot.Ring:
-                    previousItem = player.Ring;
-                    player.Ring = itemId;
-                    break;
-
-                case EquipmentSlot.Amulet:
-                    previousItem = player.Amulet;
-                    player.Amulet = itemId;
-                    break;
+                case EquipmentSlot.MainHand: player.MainHand = itemId; break;
+                case EquipmentSlot.OffHand: player.OffHand = itemId; break;
+                case EquipmentSlot.Helmet: player.Helmet = itemId; break;
+                case EquipmentSlot.Body: player.Body = itemId; break;
+                case EquipmentSlot.Legs: player.Legs = itemId; break;
+                case EquipmentSlot.Gloves: player.Gloves = itemId; break;
+                case EquipmentSlot.Boots: player.Boots = itemId; break;
+                case EquipmentSlot.Ring: player.Ring = itemId; break;
+                case EquipmentSlot.Amulet: player.Amulet = itemId; break;
             }
 
-            // Remove new item from inventory
             await _inventoryService.TakeItemAsync(userId, itemId, 1);
 
-            // If there was old gear → remove stats and return to inventory
             if (!string.IsNullOrEmpty(previousItem))
-            {
-                var oldItem = _equipmentService.GetEquipment(previousItem);
-
-                if (oldItem != null)
-                {
-                    player.Attack -= oldItem.Attack;
-                    player.Defense -= oldItem.Defense;
-                    player.Health -= oldItem.Health;
-                }
-
                 await _inventoryService.GiveItemAsync(userId, previousItem, 1);
-            }
+
             await _playerRepository.UpdatePlayerAsync(player);
 
-            return $"⚔ You equipped **{item.Name}**.";
+            // =========================
+            // RESULT MESSAGE
+            // =========================
+            return
+                $"⚔ Equipped **{item.Name}**\n\n" +
+                $"📊 **Stat Changes**\n{diffText}";
         }
 
         public async Task<string> UnequipAsync(ulong userId, string slot)
@@ -175,11 +186,85 @@ namespace Hogs.RPG.Services.GameplayServices
 
             var item = _equipmentService.GetEquipment(itemId);
 
+            // Return item to inventory
             await _inventoryService.GiveItemAsync(userId, itemId, 1);
 
             await _playerRepository.UpdatePlayerAsync(player);
 
             return $"You unequipped **{item.Name}**.";
+        }
+
+        public async Task<(string previewText, string itemId)> GetEquipPreviewAsync(ulong userId, string itemId)
+        {
+            var player = await _playerRepository.GetByDiscordIdAsync(userId);
+
+            if (player == null)
+                return ("You need to start your adventure first.", null);
+
+            var item = _equipmentService.GetEquipment(itemId);
+
+            if (item == null)
+                return ("That item cannot be equipped.", null);
+
+            var inventory = await _inventoryService.GetInventoryAsync(userId);
+            var ownedItem = inventory.Find(i => i.ItemId == itemId);
+
+            if (ownedItem == null || ownedItem.Quantity <= 0)
+                return ("You do not have that item.", null);
+
+            // =========================
+            // CURRENT ITEM
+            // =========================
+            string currentItemId = item.Slot switch
+            {
+                EquipmentSlot.MainHand => player.MainHand,
+                EquipmentSlot.OffHand => player.OffHand,
+                EquipmentSlot.Helmet => player.Helmet,
+                EquipmentSlot.Body => player.Body,
+                EquipmentSlot.Legs => player.Legs,
+                EquipmentSlot.Gloves => player.Gloves,
+                EquipmentSlot.Boots => player.Boots,
+                EquipmentSlot.Ring => player.Ring,
+                EquipmentSlot.Amulet => player.Amulet,
+                _ => ""
+            };
+
+            var currentItem = string.IsNullOrEmpty(currentItemId)
+                ? null
+                : _equipmentService.GetEquipment(currentItemId);
+
+            // =========================
+            // DIFF
+            // =========================
+            int atkDiff = item.Attack - (currentItem?.Attack ?? 0);
+            int defDiff = item.Defense - (currentItem?.Defense ?? 0);
+            int hpDiff = item.Health - (currentItem?.Health ?? 0);
+
+            string FormatDiff(int value, string label)
+            {
+                if (value == 0) return null;
+                return value > 0
+                    ? $"⬆ +{value} {label}"
+                    : $"⬇ {value} {label}";
+            }
+
+            var diffs = new List<string>();
+
+            if (FormatDiff(atkDiff, "ATK") != null) diffs.Add(FormatDiff(atkDiff, "ATK"));
+            if (FormatDiff(defDiff, "DEF") != null) diffs.Add(FormatDiff(defDiff, "DEF"));
+            if (FormatDiff(hpDiff, "HP") != null) diffs.Add(FormatDiff(hpDiff, "HP"));
+
+            var diffText = diffs.Count > 0 ? string.Join("\n", diffs) : "No stat change";
+
+            var currentName = currentItem?.Name ?? "None";
+
+            var preview =
+                $"⚔ Equip **{item.Name}**?\n\n" +
+                $"Current: **{currentName}**\n" +
+                $"New: **{item.Name}**\n\n" +
+                $"📊 **Result**\n{diffText}";
+
+            return (preview, itemId);
         }
     }
 }

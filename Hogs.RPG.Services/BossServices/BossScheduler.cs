@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
-using Hogs.RPG.Services.Game;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Linq;
@@ -33,173 +32,80 @@ namespace Hogs.RPG.Services.Game
 
                 await HandleWeeklyBoss(now);
                 await HandleDailyBosses(now);
-                await CleanupExpiredBosses(); // 🔥 NEW
+                await CleanupExpiredBosses();
 
                 await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
             }
         }
-
-        // =========================
-        // WEEKLY BOSS
-        // =========================
 
         private async Task HandleWeeklyBoss(DateTime now)
         {
             if (now.DayOfWeek != DayOfWeek.Sunday || now.Hour < 16)
                 return;
 
-            var weeklyActive = _bossService
+            var active = _bossService
                 .GetAllActiveBosses()
                 .Any(b => b.Definition.Type == BossType.Weekly);
 
-            if (weeklyActive)
-                return;
+            if (active) return;
 
             var boss = await _bossService.SpawnWeeklyBoss();
-
             if (boss != null)
-            {
-                await AnnounceBoss(boss, "🔥 A Weekly Boss has spawned!");
-            }
+                await AnnounceBoss(boss, "🔥 Weekly Boss spawned!");
         }
-
-        // =========================
-        // DAILY BOSSES
-        // =========================
 
         private async Task HandleDailyBosses(DateTime now)
         {
-            await TrySpawnDaily("gravelmaw", now, 12);
-            await TrySpawnDaily("primordial_serpent", now, 18);
-            await TrySpawnDaily("xerathul", now, 22);
+            await TrySpawn("gravelmaw", now, 12);
+            await TrySpawn("primordial_serpent", now, 18);
+            await TrySpawn("xerathul", now, 22);
         }
 
-        private async Task TrySpawnDaily(string bossId, DateTime now, int hour)
+        private async Task TrySpawn(string id, DateTime now, int hour)
         {
-            if (now.Hour < hour)
-                return;
+            if (now.Hour < hour) return;
+            if (_bossService.IsBossActive(id)) return;
 
-            if (_bossService.IsBossActive(bossId))
-                return;
-
-            var boss = await _bossService.SpawnBoss(bossId);
-
+            var boss = await _bossService.SpawnBoss(id);
             if (boss != null)
-            {
-                await AnnounceBoss(boss, "⚔ A Daily Boss has appeared!");
-            }
+                await AnnounceBoss(boss, "⚔ Daily Boss appeared!");
         }
-
-        // =========================
-        // CLEANUP SYSTEM 🔥
-        // =========================
 
         private async Task CleanupExpiredBosses()
         {
-            var expiredBosses = _bossService.GetExpiredBosses();
+            var expired = _bossService.GetExpiredBosses();
 
-            foreach (var boss in expiredBosses)
+            foreach (var boss in expired)
             {
-                await HandleBossEscape(boss);
+                var channel = _client.GetChannel(_channelId) as IMessageChannel;
+
+                if (channel != null)
+                    await channel.SendMessageAsync($"⏰ {boss.Definition.Name} escaped!");
+
                 _bossService.RemoveBoss(boss.Definition.Id);
             }
         }
 
-        private async Task HandleBossEscape(ActiveBoss boss)
+        private async Task AnnounceBoss(ActiveBoss boss, string text)
         {
             var channel = _client.GetChannel(_channelId) as IMessageChannel;
+            if (channel == null) return;
 
-            if (channel == null)
-                return;
+            var embed = _bossService.BuildBossEmbed(boss);
 
-            var damageData = boss.DamageDealt;
-
-            if (damageData.Count == 0)
-            {
-                await channel.SendMessageAsync($"⏰ **{boss.Definition.Name} escaped...** No one dealt damage.");
-                return;
-            }
-
-            int maxHealth = boss.Definition.MaxHealth;
-            int rewardPool = (int)(boss.Definition.RewardGold * 0.5);
-
-            var message = new StringBuilder();
-
-            message.AppendLine($"🏃 **{boss.Definition.Name} has escaped!**\n");
-            message.AppendLine("💰 **Reduced Rewards (50%)**:");
-
-            foreach (var entry in damageData)
-            {
-                var userId = entry.Key;
-                var damage = entry.Value;
-
-                double contribution = (double)damage / maxHealth;
-                int goldReward = (int)(rewardPool * contribution);
-
-                message.AppendLine($"<@{userId}> earned {goldReward} gold");
-            }
-
-            await channel.SendMessageAsync(message.ToString());
-        }
-
-        // =========================
-        // ANNOUNCEMENT
-        // =========================
-
-        private async Task AnnounceBoss(ActiveBoss boss, string message)
-        {
-            var channel = _client.GetChannel(_channelId) as IMessageChannel;
-
-            if (channel == null)
-                return;
-
-            var embed = BuildBossEmbed(boss);
-
-            await channel.SendMessageAsync(
-                $"@BossRaid {message}",
-                false,
-                embed
-            );
-        }
-
-        // =========================
-        // EMBED
-        // =========================
-
-        private Embed BuildBossEmbed(ActiveBoss boss)
-        {
-            var def = boss.Definition;
-
-            return new EmbedBuilder()
-                .WithTitle($"🔥 {def.Name} has appeared!")
-                .WithDescription(def.Description ?? "A powerful boss challenges all adventurers!")
-
-                .AddField("❤️ Health",
-                    $"{GetHealthBar(boss.CurrentHealth, def.MaxHealth)}\n{boss.CurrentHealth}/{def.MaxHealth}",
-                    true)
-
-                .AddField("🛡 Defense", def.Defense, true)
-                .AddField("💰 Reward", $"{def.RewardGold} Gold", true)
-
-                .AddField("⚔ Abilities",
-                    string.IsNullOrWhiteSpace(def.AbilitiesText)
-                        ? "Unknown..."
-                        : def.AbilitiesText)
-
-                .WithImageUrl(def.ImageUrl)
-                .WithColor(Color.DarkRed)
-                .WithFooter("⏳ Defeat the boss before it escapes!")
-                .WithCurrentTimestamp()
+            var components = new ComponentBuilder()
+                .WithButton("⚔ Attack", $"boss_attack:{boss.Definition.Id}", ButtonStyle.Danger)
+                .WithButton("🧪 Heal", $"boss_heal:{boss.Definition.Id}", ButtonStyle.Success)
                 .Build();
-        }
 
-        private string GetHealthBar(int current, int max)
-        {
-            int bars = 10;
-            double percent = (double)current / max;
-            int filled = (int)(percent * bars);
+            var msg = await channel.SendMessageAsync(
+                $"@BossRaid {text}",
+                embed: embed,
+                components: components
+            );
 
-            return new string('█', filled) + new string('░', bars - filled);
+            boss.ChannelId = channel.Id;
+            boss.MessageId = msg.Id;
         }
     }
 }

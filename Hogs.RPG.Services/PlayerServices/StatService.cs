@@ -1,53 +1,46 @@
 ﻿using Hogs.RPG.Core.Entities;
-using Hogs.RPG.Data.Repositories;
-using System.Threading.Tasks;
+using Hogs.RPG.Services.GameplayServices;
 
-namespace Hogs.RPG.Services.GameplayServices
+public class StatService
 {
-    public class StatService
+    private readonly EquipmentService _equipmentService;
+
+    public StatService(EquipmentService equipmentService)
     {
-        private readonly EquipmentService _equipmentService;
+        _equipmentService = equipmentService;
+    }
 
-        public StatService(EquipmentService equipmentService)
+    public (int attack, int defense, int health) CalculateStats(Player player)
+    {
+        int attack = player.Attack;
+        int defense = player.Defense;
+        int health = player.MaxHealth;
+
+        var equippedItems = new[]
         {
-            _equipmentService = equipmentService;
-        }
+            player.MainHand,
+            player.OffHand,
+            player.Helmet,
+            player.Body,
+            player.Legs,
+            player.Gloves,
+            player.Boots,
+            player.Ring,
+            player.Amulet
+        };
 
-        public CombatStats Calculate(Player player)
+        foreach (var itemId in equippedItems)
         {
-            var stats = new CombatStats
-            {
-                Attack = player.Attack,
-                Defense = player.Defense,
-                Health = player.Health
-            };
-
-            AddItem(stats, player.MainHand);
-            AddItem(stats, player.OffHand);
-            AddItem(stats, player.Helmet);
-            AddItem(stats, player.Body);
-            AddItem(stats, player.Legs);
-            AddItem(stats, player.Gloves);
-            AddItem(stats, player.Boots);
-            AddItem(stats, player.Ring);
-            AddItem(stats, player.Amulet);
-
-            return stats;
-        }
-
-        private void AddItem(CombatStats stats, string itemId)
-        {
-            if (string.IsNullOrEmpty(itemId))
-                return;
+            if (string.IsNullOrEmpty(itemId)) continue;
 
             var item = _equipmentService.GetEquipment(itemId);
+            if (item == null) continue;
 
-            if (item == null)
-                return;
-
-            stats.Attack += item.Attack;
-            stats.Defense += item.Defense;
-            stats.Health += item.Health;
+            attack += item.Attack;
+            defense += item.Defense;
+            health += item.Health;
         }
+
+        return (attack, defense, health);
     }
 }

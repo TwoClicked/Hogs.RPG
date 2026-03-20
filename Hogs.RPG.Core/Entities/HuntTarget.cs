@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hogs.RPG.Core.Enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,5 +29,9 @@ namespace Hogs.RPG.Core.Entities
         public int MaxDrop { get; set; }
 
         public int RequiredLevel { get; set; }
+
+
+        // Seperating the material gathering for Alchemy and Gear, Discord limits the autocomp at 25
+        public HuntCategory Category { get; set; } = HuntCategory.Normal; 
     }
 }

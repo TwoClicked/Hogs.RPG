@@ -18,7 +18,7 @@ namespace Hogs.RPG.Services.GameplayServices
                 // Stat rewards
                 player.Attack += 5;
                 player.Defense += 5;
-                player.Health += 10;
+                player.MaxHealth += 10;
 
                 levelUpMessage += $"\n🔥 LEVEL UP!\nYou reached Level {player.Level}!\nAttack +5\nDefense +5\nHealth +10\n";
             }

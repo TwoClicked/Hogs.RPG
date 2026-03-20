@@ -1,7 +1,8 @@
-﻿using Hogs.RPG.Data.Repositories;
+﻿using Hogs.RPG.Core.GameData.InventoryItems;
+using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.GameData.Gathering;
-using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.GameplayServices;
+using Hogs.RPG.Services.InventoryServices;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -39,14 +40,25 @@ namespace Hogs.RPG.Services.GatheringServices
             if (!GatherAreaRegistry.All.TryGetValue(areaId.ToLower(), out var area))
                 return "Unknown gathering area.";
 
+            if (energy == -1)
+            {
+                energy = player.Energy;
+            }
+
+            // =========================
+            // VALIDATION
+            // =========================
             if (energy <= 0)
-                return "Energy must be greater than 0.";
+                return "⚡ You have no energy left.";
 
             if (player.Energy < energy)
                 return $"⚡ You only have {player.Energy} energy.";
 
             var gathered = new Dictionary<string, int>();
 
+            // =========================
+            // GATHER LOOP
+            // =========================
             for (int i = 0; i < energy; i++)
             {
                 double roll = _random.NextDouble();
@@ -67,20 +79,33 @@ namespace Hogs.RPG.Services.GatheringServices
                 }
             }
 
+            // =========================
+            // GIVE ITEMS
+            // =========================
             foreach (var item in gathered)
             {
-                await _inventoryService.GiveItemAsync(userId, item.Key, item.Value); // Will use defer before gather is called, (Response time up to 15Minutes) 
+                await _inventoryService.GiveItemAsync(userId, item.Key, item.Value);
             }
 
+            // =========================
+            // SPEND ENERGY
+            // =========================
             await _energyService.SpendEnergy(player, energy);
 
+            // =========================
+            // BUILD RESULT
+            // =========================
             var result = new StringBuilder();
 
             result.AppendLine($"🌿 You gather in the {area.Name}...\n");
 
             foreach (var item in gathered)
             {
-                result.AppendLine($"+{item.Value} {item.Key}");
+                var itemName = InventoryItemDefinitions.All.TryGetValue(item.Key, out var def)
+                    ? def.Name
+                    : item.Key;
+
+                result.AppendLine($"+{item.Value} {itemName}");
             }
 
             result.AppendLine($"\n⚡ Energy: {player.Energy}/100");

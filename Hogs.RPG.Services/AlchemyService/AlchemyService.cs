@@ -18,6 +18,38 @@ namespace Hogs.RPG.Services.AlchemyServices
             if (!RecipeRegistry.All.TryGetValue(recipeId, out var recipe))
                 return "Unknown recipe.";
 
+            // =========================
+            // CALCULATE MAX IF NEEDED
+            // =========================
+            if (amount == -1)
+            {
+                int maxCraftable = int.MaxValue;
+
+                foreach (var material in recipe.Materials)
+                {
+                    var playerAmount = await _inventoryService.GetItemAmountAsync(userId, material.Key);
+
+                    if (playerAmount == 0)
+                    {
+                        maxCraftable = 0;
+                        break;
+                    }
+
+                    int possible = playerAmount / material.Value;
+
+                    if (possible < maxCraftable)
+                        maxCraftable = possible;
+                }
+
+                amount = maxCraftable;
+            }
+
+            // =========================
+            // VALIDATION
+            // =========================
+            if (amount <= 0)
+                return "You don't have enough materials to craft this.";
+
             foreach (var material in recipe.Materials)
             {
                 var playerAmount = await _inventoryService.GetItemAmountAsync(userId, material.Key);
@@ -26,6 +58,9 @@ namespace Hogs.RPG.Services.AlchemyServices
                     return $"You need {material.Value * amount}x {material.Key}.";
             }
 
+            // =========================
+            // REMOVE MATERIALS
+            // =========================
             foreach (var material in recipe.Materials)
             {
                 await _inventoryService.TakeItemAsync(
@@ -35,6 +70,9 @@ namespace Hogs.RPG.Services.AlchemyServices
                 );
             }
 
+            // =========================
+            // GIVE RESULT
+            // =========================
             await _inventoryService.GiveItemAsync(
                 userId,
                 recipe.ResultItem,

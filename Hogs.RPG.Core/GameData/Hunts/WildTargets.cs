@@ -1,6 +1,7 @@
 ﻿namespace Hogs.RPG.GameData.Hunts;
 
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Enums;
 
 public static class WildTargets
 {
@@ -16,7 +17,8 @@ public static class WildTargets
         MaxGold = 20,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 5
+        RequiredLevel = 5,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget Shark = new()
@@ -31,7 +33,8 @@ public static class WildTargets
         MaxGold = 22,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 5
+        RequiredLevel = 5,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget Eagle = new()
@@ -46,7 +49,8 @@ public static class WildTargets
         MaxGold = 20,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 5
+        RequiredLevel = 5,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget Bull = new()
@@ -61,7 +65,8 @@ public static class WildTargets
         MaxGold = 24,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 5
+        RequiredLevel = 5,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget Lynx = new()
@@ -76,6 +81,7 @@ public static class WildTargets
         MaxGold = 20,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 5
+        RequiredLevel = 5,
+        Category = HuntCategory.Normal
     };
 }

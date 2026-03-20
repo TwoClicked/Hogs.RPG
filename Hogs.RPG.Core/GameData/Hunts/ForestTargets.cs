@@ -1,6 +1,7 @@
 ﻿namespace Hogs.RPG.GameData.Hunts;
 
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Enums;
 
 public static class ForestTargets
 {
@@ -16,7 +17,8 @@ public static class ForestTargets
         MaxGold = 12,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 1
+        RequiredLevel = 1,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget Pig = new()
@@ -31,7 +33,8 @@ public static class ForestTargets
         MaxGold = 14,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 1
+        RequiredLevel = 1,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget Raccoon = new()
@@ -46,7 +49,8 @@ public static class ForestTargets
         MaxGold = 13,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 1
+        RequiredLevel = 1,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget Turkey = new()
@@ -61,7 +65,8 @@ public static class ForestTargets
         MaxGold = 10,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 1
+        RequiredLevel = 1,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget Fox = new()
@@ -76,7 +81,8 @@ public static class ForestTargets
         MaxGold = 9,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 1
+        RequiredLevel = 1,
+        Category = HuntCategory.Normal
     };
 
     // Sub item for Health Potions (Lowest level
@@ -92,6 +98,7 @@ public static class ForestTargets
         DropItem = "monster_blood",
         MinDrop = 1,
         MaxDrop = 5,
-        RequiredLevel = 1
+        RequiredLevel = 1,
+        Category = HuntCategory.Alchemy
     };
 }

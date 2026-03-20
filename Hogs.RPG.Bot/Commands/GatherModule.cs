@@ -1,6 +1,5 @@
 ﻿using Discord.Interactions;
 using Hogs.RPG.Services.GatheringServices;
-using Microsoft.VisualBasic;
 using System.Threading.Tasks;
 
 public class GatherModule : InteractionModuleBase<SocketInteractionContext>
@@ -14,16 +13,25 @@ public class GatherModule : InteractionModuleBase<SocketInteractionContext>
 
     [SlashCommand("gather", "Gather materials from an area")]
     public async Task Gather(
-        [Autocomplete(typeof(GatherAreaAutocompleteHandler))]
-        string area,
-        int energy)
+        [Autocomplete(typeof(GatherAreaAutocompleteHandler))] string area,
+        [Autocomplete(typeof(GatherEnergyAutocompleteHandler))] string energy = "1")
     {
+        await DeferAsync();
 
-        await DeferAsync(); // part of interactionmodulebase... (Due to the gahter call for loops it can take longer then 3s, Defer (15Min open call) (CHECK LATER: DOES DEFER KEEP THE LINE OPEN FOR 15 MINUTES????)
+        int energyAmount;
 
-        var result = await _gatherService.GatherAsync(Context.User.Id, area, energy);
+        if (energy.ToLower() == "max")
+        {
+            energyAmount = -1;
+        }
+        else if (!int.TryParse(energy, out energyAmount))
+        {
+            await FollowupAsync("Invalid energy amount. Use a number or 'max'.");
+            return;
+        }
+
+        var result = await _gatherService.GatherAsync(Context.User.Id, area, energyAmount);
 
         await FollowupAsync(result);
-
     }
 }

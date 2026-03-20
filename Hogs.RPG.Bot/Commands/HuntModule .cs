@@ -1,4 +1,6 @@
 ﻿using Discord.Interactions;
+using Hogs.RPG.Bot.Autocomplete;
+using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Services.HuntServices;
 using System.Threading.Tasks;
 
@@ -15,6 +17,7 @@ namespace Hogs.RPG.Bot.Commands
 
         [SlashCommand("hunt", "Hunt animals for resources")]
         public async Task Hunt(
+         [Autocomplete(typeof(HuntCategoryAutocompleteHandler))]string category,
          [Autocomplete(typeof(HuntAutocompleteHandler))] string target = null,
          [Autocomplete(typeof(HuntAmountAutocompleteHandler))] string amount = "10")
         {

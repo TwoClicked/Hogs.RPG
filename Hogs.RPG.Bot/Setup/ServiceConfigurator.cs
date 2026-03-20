@@ -26,6 +26,8 @@ namespace Hogs.RPG.Bot.Setup
             // registering Services
             services.AddSingleton<PlayerRepository>();
             services.AddSingleton<PlayerService>();
+            services.AddSingleton<HealService>();
+            services.AddSingleton<StatService>();
 
             services.AddSingleton<InventoryRepository>();
             services.AddSingleton<InventoryService>();

@@ -1,6 +1,7 @@
 ﻿namespace Hogs.RPG.GameData.Hunts;
 
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Enums;
 
 public static class StormTargets
 {
@@ -16,7 +17,8 @@ public static class StormTargets
         MaxGold = 40,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 15
+        RequiredLevel = 15,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget AncientBear = new()
@@ -31,7 +33,8 @@ public static class StormTargets
         MaxGold = 42,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 15
+        RequiredLevel = 15,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget NightStalker = new()
@@ -46,7 +49,8 @@ public static class StormTargets
         MaxGold = 38,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 15
+        RequiredLevel = 15,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget TitanElk = new()
@@ -61,7 +65,8 @@ public static class StormTargets
         MaxGold = 40,
         MinDrop = 1,
         MaxDrop = 3,
-        RequiredLevel = 15
+        RequiredLevel = 15,
+        Category = HuntCategory.Normal
     };
 
     public static readonly HuntTarget VoidRaven = new()
@@ -76,6 +81,7 @@ public static class StormTargets
         MaxGold = 38,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 15
+        RequiredLevel = 15,
+        Category = HuntCategory.Normal
     };
 }

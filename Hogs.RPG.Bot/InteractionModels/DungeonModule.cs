@@ -4,7 +4,7 @@ using Discord.WebSocket;
 using Hogs.RPG.Services.Game;
 using System.Threading.Tasks;
 
-namespace Hogs.RPG.Bot.Commands
+namespace Hogs.RPG.Bot.InteractionModels
 {
     public class DungeonModule : InteractionModuleBase<SocketInteractionContext>
     {

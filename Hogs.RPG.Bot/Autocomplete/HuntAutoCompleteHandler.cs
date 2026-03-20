@@ -1,7 +1,9 @@
 ﻿using Discord;
 using Discord.Interactions;
-using Hogs.RPG.GameData.Hunts;
+using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.GameData.Hunts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,25 +29,106 @@ public class HuntAutocompleteHandler : AutocompleteHandler
 
         var input = autocompleteInteraction.Data.Current.Value?.ToString()?.ToLower() ?? "";
 
+        // =========================
+        // READ SELECTED TIER
+        // =========================
+        var tierValue = autocompleteInteraction.Data.Options
+            .FirstOrDefault(o => o.Name == "tier")?.Value?.ToString();
+
+        int.TryParse(tierValue, out int tierStart);
+
+        // =========================
+        // READ CATEGORY (NEW)
+        // =========================
+        var categoryValue = autocompleteInteraction.Data.Options
+            .FirstOrDefault(o => o.Name == "category")?.Value?.ToString();
+
+        HuntCategory selectedCategory = HuntCategory.Normal;
+
+        if (!string.IsNullOrEmpty(categoryValue) &&
+            Enum.TryParse<HuntCategory>(categoryValue, true, out var parsed))
+        {
+            selectedCategory = parsed;
+        }
+
+        // =========================
+        // TIER HELPER
+        // =========================
+        string GetTierLabel(int requiredLevel)
+        {
+            int start = (requiredLevel / 5) * 5;
+
+            if (start == 0)
+                start = 1;
+
+            int end = start + 4;
+
+            return $"[Lv {start}-{end}]";
+        }
+
+        // =========================
+        // FILTER HUNTS
+        // =========================
         var hunts = HuntTargetRegistry.All.Values
             .Where(h => player.Level >= h.RequiredLevel)
+
+            // ✅ CATEGORY FILTER
+            .Where(h => h.Category == selectedCategory)
+
+            // ✅ TIER FILTER
+            .Where(h =>
+                tierStart == 0 ||
+                (h.RequiredLevel >= tierStart && h.RequiredLevel < tierStart + 5))
+
+            // ✅ SEARCH FILTER
             .Where(h =>
                 string.IsNullOrEmpty(input) ||
                 h.Name.ToLower().Contains(input) ||
                 h.Id.ToLower().Contains(input))
+
             .OrderBy(h => h.RequiredLevel)
+            .ThenBy(h => h.Name)
+
             .Take(25)
-            .Select(h => new AutocompleteResult($"{h.Icon} {h.Name}", h.Id))
+
+            .Select(h =>
+            {
+                var materialName = InventoryItemDefinitions.All.TryGetValue(h.DropItem, out var item)
+                    ? item.Name
+                    : h.DropItem;
+
+                // 🧪 Highlight alchemy
+                var prefix = h.Category == HuntCategory.Alchemy ? "🧪 " : "";
+
+                return new AutocompleteResult(
+                    $"{GetTierLabel(h.RequiredLevel)} {prefix}{h.Icon} {h.Name} → ✦ {materialName}",
+                    h.Id);
+            })
             .ToList();
 
-        // Fallback (if nothing matched)
+        // =========================
+        // FALLBACK
+        // =========================
         if (hunts.Count == 0)
         {
             hunts = HuntTargetRegistry.All.Values
                 .Where(h => player.Level >= h.RequiredLevel)
+                .Where(h => h.Category == selectedCategory)
                 .OrderBy(h => h.RequiredLevel)
+                .ThenBy(h => h.Name)
                 .Take(5)
-                .Select(h => new AutocompleteResult($"{h.Icon} {h.Name}", h.Id))
+                .Select(h =>
+                {
+                    var materialName = InventoryItemDefinitions.All.TryGetValue(h.DropItem, out var item)
+                        ? item.Name
+                        : h.DropItem;
+
+                    var prefix = h.Category == HuntCategory.Alchemy ? "🧪 " : "";
+
+                    return new AutocompleteResult(
+                        $"{GetTierLabel(h.RequiredLevel)} {prefix}{h.Icon} {h.Name} → ✦ {materialName}",
+                        h.Id);
+                })
                 .ToList();
         }
 

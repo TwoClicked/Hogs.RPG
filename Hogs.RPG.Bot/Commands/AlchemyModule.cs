@@ -26,17 +26,27 @@ public class AlchemyModule : InteractionModuleBase<SocketInteractionContext>
     // =========================
     [SlashCommand("craft", "Craft potions")]
     public async Task CraftPotion(
-        [Autocomplete(typeof(PotionAutocompleteHandler))]
-        string potion,
-        int amount = 1)
+        [Autocomplete(typeof(PotionAutocompleteHandler))] string potion,
+        [Autocomplete(typeof(CraftAmountAutocompleteHandler))] string amount = "1")
     {
-
         await DeferAsync();
+
+        int craftAmount;
+
+        if (amount.ToLower() == "max")
+        {
+            craftAmount = -1; // handled in service
+        }
+        else if (!int.TryParse(amount, out craftAmount))
+        {
+            await FollowupAsync("Invalid amount.");
+            return;
+        }
 
         var result = await _alchemyService.CraftPotionAsync(
             Context.User.Id,
             potion,
-            amount
+            craftAmount
         );
 
         await FollowupAsync(result);
@@ -52,7 +62,6 @@ public class AlchemyModule : InteractionModuleBase<SocketInteractionContext>
 
         var recipes = RecipeRegistry.All.Values;
 
-        // Only non-equipment = potions/alchemy
         var potionRecipes = recipes
             .Where(r => !EquipmentRegistry.All.ContainsKey(r.ResultItem))
             .ToList();
@@ -69,32 +78,40 @@ public class AlchemyModule : InteractionModuleBase<SocketInteractionContext>
 
         foreach (var recipe in potionRecipes)
         {
-            // Get result item safely
             if (!InventoryItemDefinitions.All.TryGetValue(recipe.ResultItem, out var item))
                 continue;
 
-            bool canCraft = true;
+            int maxCraftable = int.MaxValue;
 
             foreach (var mat in recipe.Materials)
             {
                 var invItem = inventory.Find(i => i.ItemId == mat.Key);
 
-                if (invItem == null || invItem.Quantity < mat.Value)
+                if (invItem == null || invItem.Quantity == 0)
                 {
-                    canCraft = false;
+                    maxCraftable = 0;
                     break;
                 }
+
+                int possible = invItem.Quantity / mat.Value;
+
+                if (possible < maxCraftable)
+                    maxCraftable = possible;
             }
 
+            bool canCraft = maxCraftable > 0;
             var icon = canCraft ? "🧪✅" : "🧪❌";
 
-            builder.AppendLine($"{icon} **{item.Name}**");
+            builder.AppendLine($"{icon} **{item.Name}** (Max: {maxCraftable})");
 
             foreach (var mat in recipe.Materials)
             {
+                var invItem = inventory.Find(i => i.ItemId == mat.Key);
+
                 if (InventoryItemDefinitions.All.TryGetValue(mat.Key, out var matItem))
                 {
-                    builder.AppendLine($"  {matItem.Name} x{mat.Value}");
+                    int owned = invItem?.Quantity ?? 0;
+                    builder.AppendLine($"  {matItem.Name} {owned}/{mat.Value}");
                 }
                 else
                 {

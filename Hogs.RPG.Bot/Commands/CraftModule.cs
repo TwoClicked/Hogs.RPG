@@ -6,6 +6,8 @@ using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Equipment;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Hogs.RPG.Bot.Commands
 {
@@ -33,15 +35,24 @@ namespace Hogs.RPG.Bot.Commands
             _inventoryService = inventoryService;
         }
 
+        // =========================
+        // CRAFT
+        // =========================
         [SlashCommand("craft", "Craft an item")]
         public async Task Craft(
             [Autocomplete(typeof(CraftAutocompleteHandler))]
             string recipe)
         {
+            await DeferAsync(ephemeral: true);
+
             var result = await _craftingService.CraftAsync(Context.User.Id, recipe);
-            await RespondAsync(result);
+
+            await FollowupAsync(result, ephemeral: true);
         }
 
+        // =========================
+        // RECIPES
+        // =========================
         [SlashCommand("recipes", "View crafting recipes")]
         public async Task Recipes(string slot = null)
         {
@@ -49,6 +60,9 @@ namespace Hogs.RPG.Bot.Commands
 
             var recipes = _craftingService.GetAllRecipes();
             var inventory = await _inventoryService.GetInventoryAsync(Context.User.Id);
+
+            // Fast lookup
+            var invLookup = inventory.ToDictionary(i => i.ItemId, i => i.Quantity);
 
             // =========================
             // CATEGORY VIEW
@@ -104,9 +118,7 @@ namespace Hogs.RPG.Bot.Commands
 
                 foreach (var mat in recipe.Materials)
                 {
-                    var invItem = inventory.Find(i => i.ItemId == mat.Key);
-
-                    if (invItem == null || invItem.Quantity < mat.Value)
+                    if (!invLookup.TryGetValue(mat.Key, out var qty) || qty < mat.Value)
                     {
                         canCraft = false;
                         break;
@@ -115,11 +127,31 @@ namespace Hogs.RPG.Bot.Commands
 
                 var icon = canCraft ? "✅" : "❌";
 
+                var item = EquipmentRegistry.All[recipe.ResultItem];
+
                 builder.AppendLine($"{icon} **{recipe.Name}**");
 
+                // =========================
+                // STATS
+                // =========================
+                if (item.Attack > 0)
+                    builder.AppendLine($"  ⚔ Attack +{item.Attack}");
+
+                if (item.Defense > 0)
+                    builder.AppendLine($"  🛡 Defense +{item.Defense}");
+
+                if (item.Health > 0)
+                    builder.AppendLine($"  ❤️ Health +{item.Health}");
+
+                // =========================
+                // MATERIALS (WITH NAMES)
+                // =========================
                 foreach (var mat in recipe.Materials)
                 {
-                    builder.AppendLine($"  {mat.Key} x{mat.Value}");
+                    if (InventoryItemDefinitions.All.TryGetValue(mat.Key, out var matDef))
+                        builder.AppendLine($"  {matDef.Name} x{mat.Value}");
+                    else
+                        builder.AppendLine($"  {mat.Key} x{mat.Value}"); // fallback
                 }
 
                 builder.AppendLine();

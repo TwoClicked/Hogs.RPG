@@ -19,15 +19,7 @@ namespace Hogs.RPG.Bot.Commands
             _itemService = itemservice;
         }
 
-        [SlashCommand("giveitem", "Give yourself an item (testing)")]
-        public async Task GiveItem(string itemId, int amount)
-        {
-            var userId = Context.User.Id;
 
-            await _inventoryService.GiveItemAsync(userId, itemId, amount);
-
-            await RespondAsync($"You received {amount}x {itemId}");
-        }
 
         [SlashCommand("inventory", "View your inventory")]
         public async Task Inventory()
