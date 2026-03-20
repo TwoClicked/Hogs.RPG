@@ -104,7 +104,7 @@ namespace Hogs.RPG.Bot.Commands
                     if (timeSince.TotalSeconds < ATTACK_COOLDOWN_SECONDS)
                     {
                         int remaining = (int)(ATTACK_COOLDOWN_SECONDS - timeSince.TotalSeconds);
-                        await FollowupAsync($"⏳ Wait {remaining}s before attacking again.");
+                        await FollowupAsync($"⏳ Wait {remaining}s before attacking again."); 
                         return;
                     }
                 }
