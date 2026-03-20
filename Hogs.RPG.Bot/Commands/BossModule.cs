@@ -75,11 +75,13 @@ namespace Hogs.RPG.Bot.Commands
         [SlashCommand("attackboss", "Attack the active boss")]
         public async Task AttackBoss()
         {
+
+            await DeferAsync();
             var bosses = _bossService.GetAllActiveBosses();
 
             if (bosses.Count == 0)
             {
-                await RespondAsync("❌ There are no active bosses.");
+                await FollowupAsync("❌ There are no active bosses.");
                 return;
             }
 
@@ -102,7 +104,7 @@ namespace Hogs.RPG.Bot.Commands
                     if (timeSince.TotalSeconds < ATTACK_COOLDOWN_SECONDS)
                     {
                         int remaining = (int)(ATTACK_COOLDOWN_SECONDS - timeSince.TotalSeconds);
-                        await RespondAsync($"⏳ Wait {remaining}s before attacking again.");
+                        await FollowupAsync($"⏳ Wait {remaining}s before attacking again.");
                         return;
                     }
                 }
@@ -133,7 +135,7 @@ namespace Hogs.RPG.Bot.Commands
 
                     await _playerRepository.UpdatePlayerAsync(player);
 
-                    await RespondAsync($"""
+                    await FollowupAsync($"""
 💀 You were defeated!
 
 -250 Gold
@@ -154,13 +156,13 @@ XP reset
                 var message = await _bossService.HandleBossDeathAsync(boss);
                 _bossService.RemoveBoss(boss.Definition.Id);
 
-                await RespondAsync(message);
+                await FollowupAsync(message);
                 return;
             }
 
             string hpBar = GetHealthBar(boss.CurrentHealth, boss.Definition.MaxHealth);
 
-            await RespondAsync($"""
+            await FollowupAsync($"""
 🎯 Attacking **{boss.Definition.Name}** ({boss.Definition.Type})
 
 {result.resultText}

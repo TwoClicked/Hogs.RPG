@@ -13,7 +13,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "claw_dagger",
             Name = "Claw Dagger",
-            Icon = "🗡",
+            Icon = "<:Suscat:1383488809982754918>",
             Type = "Equipment",
             Description = "A crude dagger made from sharpened claws."
         };

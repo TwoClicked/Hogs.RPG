@@ -19,20 +19,22 @@ public class HealModule : InteractionModuleBase<SocketInteractionContext>
     [SlashCommand("heal", "Use a health potion to fully heal")]
     public async Task Heal()
     {
+
+        await DeferAsync();
         var userId = Context.User.Id;
 
         var player = await _playerRepository.GetByDiscordIdAsync(userId);
 
         if (player == null)
         {
-            await RespondAsync("You need to start your adventure first.");
+            await FollowupAsync("You need to start your adventure first.");
             return;
         }
 
         // Already full HP
         if (player.Health >= player.MaxHealth)
         {
-            await RespondAsync("❤️ You're already at full health.");
+            await FollowupAsync("❤️ You're already at full health.");
             return;
         }
 
@@ -41,7 +43,7 @@ public class HealModule : InteractionModuleBase<SocketInteractionContext>
 
         if (potion == null || potion.Quantity <= 0)
         {
-            await RespondAsync("❌ You don't have any health potions.");
+            await FollowupAsync("❌ You don't have any health potions.");
             return;
         }
 
@@ -56,6 +58,6 @@ public class HealModule : InteractionModuleBase<SocketInteractionContext>
 
         var remaining = potion.Quantity - 1;
 
-        await RespondAsync($"❤️ You healed to full! ({remaining} potions left.)");
+        await FollowupAsync($"❤️ You healed to full! ({remaining} potions left.)");
     }
 }
