@@ -2,8 +2,10 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.GameplayServices;
+using Hogs.RPG.Services.GatheringServices;
 using Hogs.RPG.Services.PlayerServices;
 using System;
 using System.Collections.Generic;
@@ -18,19 +20,25 @@ namespace Hogs.RPG.Bot.Commands
         private readonly EquipService _equipService;
         private readonly StatService _statService;
         private readonly EquipmentService _equipmentService;
+        private readonly EnergyService _energyService; 
+        private readonly HunterStaminaService _hunterStaminaService;
 
         public PlayerCommands(
             PlayerService playerService,
             PlayerRepository playerRepository,
             EquipService equipService,
             StatService statService,
-            EquipmentService equipmentService)
+            EquipmentService equipmentService,
+            EnergyService energyService,
+            HunterStaminaService hungerStaminaService)
         {
             _playerService = playerService;
             _playerRepository = playerRepository;
             _equipService = equipService;
             _statService = statService;
             _equipmentService = equipmentService;
+            _energyService = energyService;
+            _hunterStaminaService = hungerStaminaService;
         }
 
         [SlashCommand("startadventure", "Begin your adventure")]
@@ -39,6 +47,8 @@ namespace Hogs.RPG.Bot.Commands
             await DeferAsync(ephemeral: true);
 
             var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
+            _energyService.RegenerateEnergy(player);
+            _hunterStaminaService.Regenerate(player);
 
             if (player != null)
             {
@@ -83,19 +93,20 @@ namespace Hogs.RPG.Bot.Commands
 
             var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
 
+            _energyService.RegenerateEnergy(player);
+            _hunterStaminaService.Regenerate(player);
+
             if (player == null)
             {
                 await FollowupAsync("You haven't started your adventure yet. Use `/startadventure`.");
                 return;
             }
 
-            // XP
             int xpRequired = player.Level * player.Level * 100;
             double progress = (double)player.XP / xpRequired;
             int filledBars = (int)(progress * 10);
             string xpBar = new string('█', filledBars) + new string('░', 10 - filledBars);
 
-            // 🔥 Final stats (base + gear)
             var stats = _statService.CalculateStats(player);
 
             int bonusAttack = stats.attack - player.Attack;
@@ -121,15 +132,15 @@ namespace Hogs.RPG.Bot.Commands
 
                 .AddField(
                     "⚒ Equipment",
-                    $"🗡 Main Hand: {FormatItem(player.MainHand)}\n" +
-                    $"🏹 Off Hand: {FormatItem(player.OffHand)}\n" +
-                    $"🪖 Helmet: {FormatItem(player.Helmet)}\n" +
-                    $"🛡 Body: {FormatItem(player.Body)}\n" +
-                    $"👖 Legs: {FormatItem(player.Legs)}\n" +
-                    $"🧤 Gloves: {FormatItem(player.Gloves)}\n" +
-                    $"🥾 Boots: {FormatItem(player.Boots)}\n" +
-                    $"💍 Ring: {FormatItem(player.Ring)}\n" +
-                    $"📿 Amulet: {FormatItem(player.Amulet)}",
+                    $"Main Hand:{FormatItem(player.MainHand)}\n" +
+                    $"Off Hand: {FormatItem(player.OffHand)}\n" +
+                    $"Helmet:   {FormatItem(player.Helmet)}\n" +
+                    $"Body:     {FormatItem(player.Body)}\n" +
+                    $"Legs:     {FormatItem(player.Legs)}\n" +
+                    $"Gloves:   {FormatItem(player.Gloves)}\n" +
+                    $"Boots:    {FormatItem(player.Boots)}\n" +
+                    $"Ring:     {FormatItem(player.Ring)}\n" +
+                    $"Amulet:   {FormatItem(player.Amulet)}",
                     false)
 
                 .WithFooter("HOGS RPG")
@@ -142,28 +153,37 @@ namespace Hogs.RPG.Bot.Commands
         private string FormatItem(string id)
         {
             if (string.IsNullOrEmpty(id))
-                return "None";
+                return "*None*";
 
-            var item = _equipmentService.GetEquipment(id);
-            if (item == null)
+            var equip = _equipmentService.GetEquipment(id);
+            if (equip == null)
                 return id;
+
+            // 🔥 Get ItemDefinition (for icon + name)
+            InventoryItemDefinitions.All.TryGetValue(id, out var itemDef);
 
             var stats = new List<string>();
 
-            if (item.Attack > 0)
-                stats.Add($"+{item.Attack} ATK");
+            if (equip.Attack > 0)
+                stats.Add($"+{equip.Attack} ATK");
 
-            if (item.Defense > 0)
-                stats.Add($"+{item.Defense} DEF");
+            if (equip.Defense > 0)
+                stats.Add($"+{equip.Defense} DEF");
 
-            if (item.Health > 0)
-                stats.Add($"+{item.Health} HP");
+            if (equip.Health > 0)
+                stats.Add($"+{equip.Health} HP");
 
             var statText = stats.Count > 0
                 ? $" ({string.Join(", ", stats)})"
                 : "";
 
-            return $"{item.Name}{statText}";
+            var icon = itemDef != null && !string.IsNullOrWhiteSpace(itemDef.Icon)
+                ? $"{itemDef.Icon} "
+                : "";
+
+            var name = itemDef?.Name ?? equip.Name;
+
+            return $"{icon}{name}{statText}";
         }
 
         [SlashCommand("equip", "Equip an item")]
@@ -200,14 +220,22 @@ namespace Hogs.RPG.Bot.Commands
         [ComponentInteraction("equip_confirm:*")]
         public async Task ConfirmEquip(string itemId)
         {
-            var result = await _equipService.EquipAsync(Context.User.Id, itemId);
-
             if (Context.Interaction is SocketMessageComponent component)
             {
+                // 🔥 Immediately ACK + remove buttons
                 await component.UpdateAsync(msg =>
                 {
+                    msg.Content = "⏳ Equipping item...";
+                    msg.Components = new ComponentBuilder().Build(); // removes buttons
+                });
+
+                // Now do the actual work
+                var result = await _equipService.EquipAsync(Context.User.Id, itemId);
+
+                // Update message again
+                await component.ModifyOriginalResponseAsync(msg =>
+                {
                     msg.Content = result;
-                    msg.Components = new ComponentBuilder().Build();
                 });
             }
         }

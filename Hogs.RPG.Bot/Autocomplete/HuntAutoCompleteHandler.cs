@@ -4,6 +4,8 @@ using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.GameData.Hunts;
+using Hogs.RPG.Services.GameplayServices;
+using Hogs.RPG.Services.GatheringServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,6 +25,11 @@ public class HuntAutocompleteHandler : AutocompleteHandler
             return AutocompletionResult.FromSuccess();
 
         var player = await playerRepo.GetByDiscordIdAsync(context.User.Id);
+
+        var staminaService = services.GetService(typeof(HunterStaminaService)) as HunterStaminaService;
+
+        staminaService?.Regenerate(player);
+
 
         if (player == null)
             return AutocompletionResult.FromSuccess();
@@ -72,15 +79,12 @@ public class HuntAutocompleteHandler : AutocompleteHandler
         var hunts = HuntTargetRegistry.All.Values
             .Where(h => player.Level >= h.RequiredLevel)
 
-            // ✅ CATEGORY FILTER
             .Where(h => h.Category == selectedCategory)
 
-            // ✅ TIER FILTER
             .Where(h =>
                 tierStart == 0 ||
                 (h.RequiredLevel >= tierStart && h.RequiredLevel < tierStart + 5))
 
-            // ✅ SEARCH FILTER
             .Where(h =>
                 string.IsNullOrEmpty(input) ||
                 h.Name.ToLower().Contains(input) ||

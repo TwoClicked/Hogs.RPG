@@ -25,7 +25,11 @@ namespace Hogs.RPG.Services.GameplayServices
                 return;
 
             player.HunterStamina = Math.Min(MaxStamina, player.HunterStamina + minutesPassed);
-            player.LastHunterStaminaUpdate = now.ToString("o");
+
+
+            player.LastHunterStaminaUpdate = last
+                .AddMinutes(minutesPassed)
+                .ToString("o");
         }
 
         public void Spend(Player player, int amount)

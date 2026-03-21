@@ -24,6 +24,9 @@ namespace Hogs.RPG.Bot.Commands
         [SlashCommand("inventory", "View your inventory")]
         public async Task Inventory()
         {
+
+            await DeferAsync();
+
             var inventory = await _inventoryService.GetInventoryAsync(Context.User.Id);
 
             if (inventory.Count == 0)
@@ -64,7 +67,7 @@ namespace Hogs.RPG.Bot.Commands
                 builder.AppendLine(); // space between categories
             }
 
-            await RespondAsync(builder.ToString());
+            await FollowupAsync(builder.ToString());
         }
 
     }

@@ -8,7 +8,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "wolf_trophy",
             Name = "Wolf Trophy",
-            Icon = "🏆",
+            Icon = "<:wolf_trophy:1484991561665347763>",
             Type = "Material",
             Description = "A trophy taken from a hunted wolf."
         };
@@ -17,7 +17,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "boar_tusk",
             Name = "Boar Tusk",
-            Icon = "🦷",
+            Icon = "<:boar_tusk:1484992085072543754>",
             Type = "Material",
             Description = "A sharp tusk from a wild boar."
         };
@@ -26,7 +26,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "stag_antler",
             Name = "Stag Antler",
-            Icon = "🦌",
+            Icon = "<:stag_antler:1484992623797080094>",
             Type = "Material",
             Description = "An elegant antler from a stag."
         };
@@ -35,7 +35,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "ancient_feather",
             Name = "Ancient Feather",
-            Icon = "🪶",
+            Icon = "<:ancient_feather:1484993910466940939>",
             Type = "Material",
             Description = "A feather infused with ancient power."
         };
@@ -44,7 +44,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "bear_heart",
             Name = "Bear Heart",
-            Icon = "❤️",
+            Icon = "<:bear_heart:1484994339749757043>",
             Type = "Material",
             Description = "The powerful heart of a bear."
         };
@@ -53,7 +53,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "alpha_fang",
             Name = "Alpha Fang",
-            Icon = "🦷",
+            Icon = "<:alpha_fang:1484994754537328690>",
             Type = "Material",
             Description = "A fang from an alpha predator."
         };
@@ -62,7 +62,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "storm_talon",
             Name = "Storm Talon",
-            Icon = "⚡",
+            Icon = "<:storm_talon:1484995437479067811>",
             Type = "Material",
             Description = "A talon charged with storm energy."
         };
@@ -71,7 +71,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "saber_relic",
             Name = "Saber Relic",
-            Icon = "🗿",
+            Icon = "<:saber_relic:1484997677426151696>",
             Type = "Material",
             Description = "A relic from an ancient sabertooth."
         };
@@ -80,7 +80,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "griffin_core",
             Name = "Griffin Core",
-            Icon = "🦅",
+            Icon = "<:griffin_core:1484998403069968425>",
             Type = "Material",
             Description = "The core essence of a griffin."
         };
@@ -89,7 +89,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "storm_relic",
             Name = "Storm Relic",
-            Icon = "🌩️",
+            Icon = "<:storm_relic:1484998990377521284>",
             Type = "Material",
             Description = "A relic infused with storm power."
         };
@@ -98,7 +98,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "ancient_core",
             Name = "Ancient Core",
-            Icon = "🔮",
+            Icon = "<:ancient_core:1485000004744646786>",
             Type = "Material",
             Description = "A core from an ancient beast."
         };
@@ -107,7 +107,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "mythic_heart",
             Name = "Mythic Heart",
-            Icon = "💜",
+            Icon = "<:mythic_heart:1485029281586352339>",
             Type = "Material",
             Description = "A heart from a mythic creature."
         };
@@ -116,7 +116,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "sky_relic",
             Name = "Sky Relic",
-            Icon = "☁️",
+            Icon = "<:sky_relic:1485029934060798033>",
             Type = "Material",
             Description = "A relic from the sky tyrant."
         };

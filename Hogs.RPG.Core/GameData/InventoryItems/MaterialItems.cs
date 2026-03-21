@@ -8,7 +8,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "herb",
             Name = "Herb",
-            Icon = "🌿",
+            Icon = "<:herbs:1485050887008288888>",
             Type = "Material",
             Description = "A common herb used in alchemy."
         };
@@ -17,7 +17,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "red_mushroom",
             Name = "Red Mushroom",
-            Icon = "🍄",
+            Icon = "<:red_mushroom:1484989913739825173>",
             Type = "Material",
             Description = "A strange mushroom used in potion brewing."
         };
@@ -26,7 +26,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "crystal_leaf",
             Name = "Crystal Leaf",
-            Icon = "🍃",
+            Icon = "<:crystal_leaf:1484990368427540561>",
             Type = "Material",
             Description = "A magical glowing leaf."
         };

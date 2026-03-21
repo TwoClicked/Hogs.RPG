@@ -13,7 +13,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "claw_dagger",
             Name = "Claw Dagger",
-            Icon = "<:Suscat:1383488809982754918>",
+            Icon = "<:claw_dagger:1484928258805076019>",
             Type = "Equipment",
             Description = "A crude dagger made from sharpened claws."
         };
@@ -22,7 +22,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "bone_buckler",
             Name = "Bone Buckler",
-            Icon = "🛡",
+            Icon = "<:bone_buckler:1484920792125935647>",
             Type = "Equipment",
             Description = "A small shield crafted from reinforced bone."
         };
@@ -31,7 +31,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "leather_vest",
             Name = "Leather Vest",
-            Icon = "🦺",
+            Icon = "<:leather_vest:1484922630359355442>",
             Type = "Equipment",
             Description = "Basic leather armor for hunters."
         };
@@ -40,7 +40,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "bone_helm",
             Name = "Bone Helm",
-            Icon = "🪖",
+            Icon = "<:bone_helm:1484923093796524123>",
             Type = "Equipment",
             Description = "A helmet formed from hardened bone."
         };
@@ -49,7 +49,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "hunter_leggings",
             Name = "Hunter Leggings",
-            Icon = "🥾",
+            Icon = "<:hunter_leggings:1484923823022411906>",
             Type = "Equipment",
             Description = "Flexible leggings favored by hunters."
         };
@@ -58,7 +58,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "hide_boots",
             Name = "Hide Boots",
-            Icon = "🥾",
+            Icon = "<:hide_boots:1484924359012257893>",
             Type = "Equipment",
             Description = "Boots made from animal hide."
         };
@@ -67,7 +67,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "fur_gloves",
             Name = "Fur Gloves",
-            Icon = "🧤",
+            Icon = "<:fur_gloves:1484924776442237079>",
             Type = "Equipment",
             Description = "Warm gloves lined with fur."
         };
@@ -76,7 +76,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "feather_band",
             Name = "Feather Band",
-            Icon = "💍",
+            Icon = "<:feather_band:1484925991540494588>",
             Type = "Equipment",
             Description = "A ring decorated with feathers."
         };
@@ -85,7 +85,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "raven_charm",
             Name = "Raven Charm",
-            Icon = "📿",
+            Icon = "<:raven_charm:1484926593569914981>",
             Type = "Equipment",
             Description = "A mystical charm blessed by ravens."
         };
@@ -99,7 +99,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "fang_blade",
             Name = "Fang Blade",
-            Icon = "⚔",
+            Icon = "<:fang_blade:1484929833619296306>",
             Type = "Equipment",
             Description = "A blade forged with beast fangs."
         };
@@ -108,7 +108,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "horn_shield",
             Name = "Horn Shield",
-            Icon = "🛡",
+            Icon = "<:horn_shield:1484930369609535558>",
             Type = "Equipment",
             Description = "A durable shield reinforced with horns."
         };
@@ -117,7 +117,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "hide_warcoat",
             Name = "Hide Warcoat",
-            Icon = "🦺",
+            Icon = "<:hide_warcoat:1484930813802840276>",
             Type = "Equipment",
             Description = "A heavy coat made from thick hides."
         };
@@ -126,7 +126,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "raider_helm",
             Name = "Raider Helm",
-            Icon = "🪖",
+            Icon = "<:raider_helm:1484931625753116763>",
             Type = "Equipment",
             Description = "Helmet worn by hardened raiders."
         };
@@ -135,7 +135,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "raider_legguards",
             Name = "Raider Legguards",
-            Icon = "🥾",
+            Icon = "<:raider_legguards:1484932074367357018>",
             Type = "Equipment",
             Description = "Leg armor reinforced with hide."
         };
@@ -144,7 +144,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "raider_boots",
             Name = "Raider Boots",
-            Icon = "🥾",
+            Icon = "<:raider_boots:1484932927107366962>",
             Type = "Equipment",
             Description = "Boots worn by raiders."
         };
@@ -153,7 +153,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "tracker_gloves",
             Name = "Tracker Gloves",
-            Icon = "🧤",
+            Icon = "<:tracker_gloves:1484933377034289344>",
             Type = "Equipment",
             Description = "Gloves designed for hunters and trackers."
         };
@@ -162,7 +162,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "raider_band",
             Name = "Raider Band",
-            Icon = "💍",
+            Icon = "<:raider_band:1484934211960832070>",
             Type = "Equipment",
             Description = "A ring worn by raider captains."
         };
@@ -171,7 +171,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "talon_charm",
             Name = "Talon Charm",
-            Icon = "📿",
+            Icon = "<:talon_charm:1484934913764626613>",
             Type = "Equipment",
             Description = "A charm made from razor talons."
         };
@@ -194,7 +194,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "antler_shield",
             Name = "Antler Shield",
-            Icon = "🛡",
+            Icon = "<:saber_fang_blade:1484936509193716007>",
             Type = "Equipment",
             Description = "A shield reinforced with giant antlers."
         };
@@ -203,7 +203,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "warlord_armor",
             Name = "Warlord Armor",
-            Icon = "🦺",
+            Icon = "<:warlord_armor:1484939356698312794>",
             Type = "Equipment",
             Description = "Armor worn by powerful warlords."
         };
@@ -212,7 +212,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "warlord_helm",
             Name = "Warlord Helm",
-            Icon = "🪖",
+            Icon = "<:warlord_helm:1484940410328449194>",
             Type = "Equipment",
             Description = "Helm worn by a warlord."
         };
@@ -221,7 +221,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "warlord_greaves",
             Name = "Warlord Greaves",
-            Icon = "🥾",
+            Icon = "<:warlord_greaves:1484941023863111852>",
             Type = "Equipment",
             Description = "Greaves crafted for battle."
         };
@@ -230,7 +230,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "sabertooth_boots",
             Name = "Sabertooth Boots",
-            Icon = "🥾",
+            Icon = "<:sabertooth_boots:1484942228601438369>",
             Type = "Equipment",
             Description = "Boots made from sabertooth materials."
         };
@@ -239,7 +239,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "claw_gauntlets",
             Name = "Claw Gauntlets",
-            Icon = "🧤",
+            Icon = "<:claw_gauntlets:1484945068430459020>",
             Type = "Equipment",
             Description = "Gauntlets lined with razor claws."
         };
@@ -248,7 +248,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "griffin_band",
             Name = "Griffin Band",
-            Icon = "💍",
+            Icon = "<:griffin_band:1484945586888376340>",
             Type = "Equipment",
             Description = "A ring blessed by griffins."
         };
@@ -257,7 +257,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "raven_eye_pendant",
             Name = "Raven Eye Pendant",
-            Icon = "📿",
+            Icon = "<:raven_eye_pendant:1484947421833203775>",
             Type = "Equipment",
             Description = "A pendant containing the eye of a raven spirit."
         };
@@ -271,7 +271,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "titan_blade",
             Name = "Titan Blade",
-            Icon = "⚔",
+            Icon = "<:titan_blade:1484949683351847095>",
             Type = "Equipment",
             Description = "A blade wielded by champions."
         };
@@ -280,7 +280,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "titan_shield",
             Name = "Titan Shield",
-            Icon = "🛡",
+            Icon = "<:titan_shield:1484951494032756906>",
             Type = "Equipment",
             Description = "A shield forged from titan remains."
         };
@@ -289,7 +289,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "champion_plate",
             Name = "Champion Plate",
-            Icon = "🦺",
+            Icon = "<:champion_plate:1484952447989321890>",
             Type = "Equipment",
             Description = "Plate armor worn by champions."
         };
@@ -298,7 +298,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "champion_helm",
             Name = "Champion Helm",
-            Icon = "🪖",
+            Icon = "<:champion_helm:1484954270116876359>",
             Type = "Equipment",
             Description = "Helmet of the champion."
         };
@@ -307,7 +307,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "champion_greaves",
             Name = "Champion Greaves",
-            Icon = "🥾",
+            Icon = "<:champion_greaves:1484955194352734331>",
             Type = "Equipment",
             Description = "Greaves used by elite warriors."
         };
@@ -316,7 +316,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "shadowstep_boots",
             Name = "Shadowstep Boots",
-            Icon = "🥾",
+            Icon = "<:shadowstep_boots:1484956266173432049>",
             Type = "Equipment",
             Description = "Boots that allow silent movement."
         };
@@ -325,7 +325,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "storm_gauntlets",
             Name = "Storm Gauntlets",
-            Icon = "🧤",
+            Icon = "<:storm_gauntlets:1484957090371076176>",
             Type = "Equipment",
             Description = "Gauntlets crackling with storm energy."
         };
@@ -334,7 +334,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "storm_ring",
             Name = "Storm Ring",
-            Icon = "💍",
+            Icon = "<:storm_ring:1484957528633905152>",
             Type = "Equipment",
             Description = "A ring infused with storm power."
         };
@@ -343,7 +343,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "void_pendant",
             Name = "Void Pendant",
-            Icon = "📿",
+            Icon = "<:void_pendant:1484958340651159702>",
             Type = "Equipment",
             Description = "A pendant touched by the void."
         };
@@ -357,7 +357,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "worldbreaker_blade",
             Name = "Worldbreaker Blade",
-            Icon = "⚔",
+            Icon = "<:worldbreaker_blade:1484959617116274788>",
             Type = "Equipment",
             Description = "A blade capable of shattering worlds."
         };
@@ -366,7 +366,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "colossus_shield",
             Name = "Colossus Shield",
-            Icon = "🛡",
+            Icon = "<:colossus_shield:1484959987427049756>",
             Type = "Equipment",
             Description = "A shield forged from colossus remains."
         };
@@ -375,7 +375,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "beastslayer_plate",
             Name = "Beastslayer Plate",
-            Icon = "🦺",
+            Icon = "<:beastslayer_plate:1484960404512833557>",
             Type = "Equipment",
             Description = "Armor made to slay the greatest beasts."
         };
@@ -384,7 +384,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "mythic_crown",
             Name = "Mythic Crown",
-            Icon = "👑",
+            Icon = "<:mythic_crown:1484961627005648958>",
             Type = "Equipment",
             Description = "A crown worn by mythic kings."
         };
@@ -393,7 +393,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "colossus_legguards",
             Name = "Colossus Legguards",
-            Icon = "🥾",
+            Icon = "<:colossus_legguards:1484962794016210984>",
             Type = "Equipment",
             Description = "Heavy leg armor forged from colossus hides."
         };
@@ -402,7 +402,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "skystrider_boots",
             Name = "Skystrider Boots",
-            Icon = "🥾",
+            Icon = "<:skystrider_boots:1484963673595449614>",
             Type = "Equipment",
             Description = "Boots that allow the wearer to stride the skies."
         };
@@ -411,7 +411,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "abyss_gauntlets",
             Name = "Abyss Gauntlets",
-            Icon = "🧤",
+            Icon = "<:abyss_gauntlets:1484964392301887650>",
             Type = "Equipment",
             Description = "Gauntlets forged from abyssal claws."
         };
@@ -420,7 +420,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "raven_king_band",
             Name = "Raven King Band",
-            Icon = "💍",
+            Icon = "<:raven_king_band:1484965033740861552>",
             Type = "Equipment",
             Description = "Ring of the legendary Raven King."
         };
@@ -429,7 +429,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "pendant_of_the_wild",
             Name = "Pendant of the Wild",
-            Icon = "📿",
+            Icon = "<:pendant_of_the_wild:1484965682360877116>",
             Type = "Equipment",
             Description = "A pendant symbolizing mastery of the wild."
         };

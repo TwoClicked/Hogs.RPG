@@ -8,7 +8,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "xp_potion",
             Name = "XP Potion",
-            Icon = "🧪",
+            Icon = "<:xp_potion:1484990673164832768>",
             Type = "Potion",
             Description = "Grants double experience on the next hunt."
         };
@@ -17,7 +17,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "health_potion",
             Name = "Health Potion",
-            Icon = "❤️",
+            Icon = "<:health_potion:1484990983845183702>",
             Type = "Potion",
             Description = "Fully restores your health during encounters."
         };
