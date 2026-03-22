@@ -60,5 +60,8 @@ public static class EquipmentRegistry
         { Tier5Mythic.ColossusLegguards.Id, Tier5Mythic.ColossusLegguards },
         { Tier5Mythic.PendantOfTheWild.Id, Tier5Mythic.PendantOfTheWild },
         { Tier5Mythic.AbyssGauntlets.Id, Tier5Mythic.AbyssGauntlets },
+
+        //FANCULO GEAR
+        {FanculoGear.FanculoHelm.Id, FanculoGear.FanculoHelm }
     };
 }

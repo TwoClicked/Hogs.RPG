@@ -16,5 +16,8 @@
 
         // Drop system
         public List<BossLoot> LootTable { get; set; } = new();
+
+        //Abilities
+        public string BehaviorId { get; set; }
     }
 }

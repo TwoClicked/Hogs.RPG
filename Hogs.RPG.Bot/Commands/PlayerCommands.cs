@@ -93,14 +93,16 @@ namespace Hogs.RPG.Bot.Commands
 
             var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
 
-            _energyService.RegenerateEnergy(player);
-            _hunterStaminaService.Regenerate(player);
+
 
             if (player == null)
             {
                 await FollowupAsync("You haven't started your adventure yet. Use `/startadventure`.");
                 return;
             }
+
+            _energyService.RegenerateEnergy(player);
+            _hunterStaminaService.Regenerate(player);
 
             int xpRequired = player.Level * player.Level * 100;
             double progress = (double)player.XP / xpRequired;

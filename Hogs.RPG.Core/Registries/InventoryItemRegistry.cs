@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.GameData.Equipment;
 using System.Collections.Generic;
 
 namespace Hogs.RPG.Core.GameData.InventoryItems
@@ -126,6 +127,9 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             { HuntRareDrops.AncientCore.Id, HuntRareDrops.AncientCore },
             { HuntRareDrops.MythicHeart.Id, HuntRareDrops.MythicHeart },
             { HuntRareDrops.SkyRelic.Id, HuntRareDrops.SkyRelic },
+
+            //Fanculo dungeon drops
+            {DungeonBossDrops.FanculoHelmItem.Id, DungeonBossDrops.FanculoHelmItem }
         };
     }
 }

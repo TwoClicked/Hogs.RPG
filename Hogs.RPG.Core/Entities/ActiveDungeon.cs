@@ -19,5 +19,10 @@
         public bool IsBoss { get; set; }
 
         public bool IsActive { get; set; } = true;
+
+        public bool RageTriggered { get; set; }
+
+        public ulong MessageId { get; set; }
+        public ulong ChannelId { get; set; }
     }
 }

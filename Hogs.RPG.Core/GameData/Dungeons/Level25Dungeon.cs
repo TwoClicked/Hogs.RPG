@@ -19,24 +19,17 @@ namespace Hogs.RPG.Core.GameData.Dungeons
             BaseEnemyAttack = 25,
             EnemyAttackScaling = 5,
 
-            Boss = FanculoBoss.Fanculo
+            Boss = FanculoBoss.Fanculo,
+
+            Drops = new List<DungeonDrop>
+{
+            new DungeonDrop
+            {
+                ItemId = "fanculo_helm",
+                ChancePercent = 1
+            }
+        }
         };
 
-        //public static readonly DungeonDefinition TyrDungeon = new()
-        //{
-        //    Id = "tyr_fallen_asgard",
-        //    Name = "Fallen Asgard",
-
-        //    RequiredLevel = 35,
-        //    Floors = 6,
-
-        //    BaseEnemyHealth = 160,
-        //    EnemyHealthScaling = 35,
-
-        //    BaseEnemyAttack = 40,
-        //    EnemyAttackScaling = 8,
-
-        //    Boss = TyrBoss.Tyr
-        //};
     }
 }

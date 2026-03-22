@@ -19,5 +19,6 @@
         public int BaseEnemyAttack { get; set; }
 
         public int EnemyAttackScaling { get; set; }
+        public List<DungeonDrop> Drops { get; set; } = new();
     }
 }
