@@ -17,6 +17,7 @@ namespace Hogs.RPG.Services.Game
         private readonly InventoryService _inventoryService;
         private readonly IMessageChannel _announcementChannel;
         private readonly DiscordSocketClient _client;
+        private readonly StatService _statService;
 
         private readonly Dictionary<ulong, (ulong messageId, ulong channelId)> _lastMessages = new();
         private readonly Dictionary<ulong, DateTime> _lastAction = new();
@@ -28,12 +29,14 @@ namespace Hogs.RPG.Services.Game
         public DungeonService(
             PlayerRepository playerRepository,
             InventoryService inventoryService,
-            DiscordSocketClient client)
+            DiscordSocketClient client,
+            StatService statService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
 
-            _client = client; 
+            _client = client;
+            _statService = statService;
 
             _announcementChannel = client.GetChannel(1485357755433750549) as IMessageChannel;
         }
@@ -48,7 +51,7 @@ namespace Hogs.RPG.Services.Game
                 return Simple("You are already in a dungeon.");
 
             // 🔥 Dungeon cooldown check
-            const int COOLDOWN_HOURS = 2; // change to 6 if desired
+            const int COOLDOWN_HOURS = 2;
 
             if (_lastDungeonRun.TryGetValue(userId, out var lastRun))
             {
@@ -79,20 +82,33 @@ namespace Hogs.RPG.Services.Game
             if (player.Level < dungeon.RequiredLevel)
                 return Simple($"You must be level {dungeon.RequiredLevel}.");
 
+            // 🔥 USE YOUR EXISTING STAT SERVICE
+            var (attack, defense, health) = _statService.CalculateStats(player);
+
             var session = new ActiveDungeon
             {
                 PlayerId = userId,
                 DungeonId = dungeonId,
                 Floor = 1,
-                MaxHealth = player.MaxHealth,
-                PlayerHealth = player.MaxHealth,
+
+                // ✅ SNAPSHOT STATS (critical fix)
+                Attack = attack,
+                Defense = defense,
+
+                MaxHealth = health,
+                PlayerHealth = health,
+
                 EnemyMaxHealth = dungeon.BaseEnemyHealth,
                 EnemyHealth = dungeon.BaseEnemyHealth,
+
                 IsBoss = false,
                 CurrentImageUrl = null
             };
 
             _active[userId] = session;
+
+            // 🔥 IMPORTANT: actually start cooldown
+            _lastDungeonRun[userId] = DateTime.UtcNow;
 
             // 🔥 Announcement (safe)
             if (_announcementChannel != null)
@@ -105,15 +121,11 @@ namespace Hogs.RPG.Services.Game
             return Wrap(BuildEmbed(session, "🏰 You enter the dungeon..."));
         }
 
-        // =========================
-        // ATTACK
-        // =========================
         public async Task<DungeonResult> AttackAsync(ulong userId)
         {
             if (!_active.TryGetValue(userId, out var session))
                 return Simple("You are not in a dungeon.");
 
-            // 🔥 COOLDOWN CHECK
             if (IsOnCooldown(userId, 1, out int remaining))
             {
                 return Wrap(BuildEmbed(session,
@@ -121,13 +133,13 @@ namespace Hogs.RPG.Services.Game
                     session.CurrentImageUrl));
             }
 
-            var player = await _playerRepository.GetByDiscordIdAsync(userId);
             var dungeon = DungeonRegistry.All[session.DungeonId];
 
-            int playerDamage = (int)(player.Attack * (100.0 / (100 + GetEnemyDefense(session))));
+            // ✅ USE SESSION STATS
+            int playerDamage = (int)(session.Attack * (100.0 / (100 + GetEnemyDefense(session))));
             playerDamage = Math.Max(1, playerDamage);
 
-            session.EnemyHealth -= playerDamage;
+            session.EnemyHealth = Math.Max(0, session.EnemyHealth - playerDamage);
 
             var text = $"⚔ You deal {playerDamage} damage!\n";
 
@@ -139,12 +151,18 @@ namespace Hogs.RPG.Services.Game
 
             int enemyAttack = GetEnemyAttack(session, dungeon);
 
-            int enemyDamage = (int)(enemyAttack * (100.0 / (100 + player.Defense)));
+            // ✅ USE SESSION DEFENSE
+            int enemyDamage = (int)(enemyAttack * (100.0 / (100 + session.Defense)));
             enemyDamage = Math.Max(1, enemyDamage);
 
-            var behaviorText = HandleBossBehavior(session, dungeon.Boss, ref enemyDamage);
+            string behaviorText = null;
 
-            session.PlayerHealth -= enemyDamage;
+            if (session.IsBoss)
+            {
+                behaviorText = HandleBossBehavior(session, dungeon.Boss, ref enemyDamage);
+            }
+
+            session.PlayerHealth = Math.Max(0, session.PlayerHealth - enemyDamage);
 
             text += $"👹 Enemy hits you for {enemyDamage}!";
 
@@ -157,7 +175,6 @@ namespace Hogs.RPG.Services.Game
                 return await HandleDeath(userId);
             }
 
-            // 🔥 APPLY COOLDOWN
             _lastAction[userId] = DateTime.UtcNow;
 
             return Wrap(BuildEmbed(session, text, session.CurrentImageUrl));
@@ -280,8 +297,13 @@ namespace Hogs.RPG.Services.Game
             var player = await _playerRepository.GetByDiscordIdAsync(userId);
             var dungeon = DungeonRegistry.All[session.DungeonId];
 
+            // 🔥 Apply penalties
             player.Gold = Math.Max(0, player.Gold - 250);
             player.XP = 0;
+
+            // 🔥 CRITICAL FIX: restore HP INCLUDING gear
+            var (attack, defense, maxHealth) = _statService.CalculateStats(player);
+            player.Health = maxHealth;
 
             await _playerRepository.UpdatePlayerAsync(player);
 
@@ -292,12 +314,14 @@ namespace Hogs.RPG.Services.Game
                     $"💀 <@{userId}> died in **{dungeon.Name}**"
                 );
             }
+
             _lastDungeonRun[userId] = DateTime.UtcNow;
+
             return new DungeonResult
             {
                 Embed = new EmbedBuilder()
                     .WithTitle("💀 You Died")
-                    .WithDescription("Lost 250 gold and all XP.")
+                    .WithDescription("Lost 250 gold and all XP.\n❤️ You were restored to full health.")
                     .WithColor(Color.DarkRed)
                     .Build(),
                 IsFinished = true
@@ -365,6 +389,9 @@ namespace Hogs.RPG.Services.Game
             return result;
         }
 
+        // =========================
+        // UPDATE MESSAGE (FIXED)
+        // =========================
         public async Task UpdateDungeonMessageAsync(ulong userId, DungeonResult result)
         {
             ulong messageId;
@@ -382,22 +409,36 @@ namespace Hogs.RPG.Services.Game
             }
             else
             {
+                Console.WriteLine("❌ No message tracking found");
                 return;
             }
 
+            // 🔥 FIXED: Proper channel resolution
             var channel = _client.GetChannel(channelId) as IMessageChannel;
 
             if (channel == null)
             {
-                channel = await _client.GetDMChannelAsync(channelId);
+                var user = _client.GetUser(userId);
+
+                if (user != null)
+                {
+                    channel = await user.CreateDMChannelAsync();
+                }
             }
 
             if (channel == null)
+            {
+                Console.WriteLine("❌ Channel not found");
                 return;
+            }
 
             var msg = await channel.GetMessageAsync(messageId) as IUserMessage;
+
             if (msg == null)
+            {
+                Console.WriteLine("❌ Dungeon message not found");
                 return;
+            }
 
             await msg.ModifyAsync(m =>
             {
@@ -416,26 +457,28 @@ namespace Hogs.RPG.Services.Game
                         .Build();
                 }
             });
+
+            Console.WriteLine($"✅ Dungeon message updated for {userId}");
         }
 
         //Boss ability section
         private string HandleRage(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
         {
-            // Trigger rage at 30% HP
+            // Trigger rage at 50% HP
             if (!session.RageTriggered && session.EnemyHealth <= boss.MaxHealth * 0.3)
             {
                 session.RageTriggered = true;
 
-                int heal = (int)(boss.MaxHealth * 0.15);
+                int heal = (int)(boss.MaxHealth * 0.50);
                 session.EnemyHealth += heal;
 
                 return $"🔥 **{boss.Name} enters SCOOTER ROAD RAGE! (+{heal} HP)**";
             }
 
-            // Apply double damage if enraged
+            // Apply triple damage if enraged
             if (session.RageTriggered)
             {
-                enemyDamage *= 2;
+                enemyDamage *= 3;
             }
 
             return null;
@@ -500,7 +543,17 @@ namespace Hogs.RPG.Services.Game
         private string Bar(int current, int max)
         {
             int total = 10;
-            int filled = (int)((double)current / max * total);
+
+            // 🔥 HARD CLAMP
+            if (max <= 0) max = 1;
+
+            current = Math.Max(0, Math.Min(current, max));
+
+            double percent = (double)current / max;
+            int filled = (int)(percent * total);
+
+            filled = Math.Max(0, Math.Min(filled, total));
+
             return new string('█', filled) + new string('░', total - filled);
         }
 

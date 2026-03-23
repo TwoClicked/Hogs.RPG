@@ -19,5 +19,7 @@ namespace Hogs.RPG.Core.Entities
 
         // 👇 REQUIRED for rate-limit safe updates
         public DateTime LastUiUpdate { get; set; } = DateTime.MinValue;
+
+        public Queue<string> RecentHits { get; set; } = new();
     }
 }

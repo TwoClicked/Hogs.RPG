@@ -8,13 +8,17 @@
 
         public int Floor { get; set; }
 
-        public int PlayerHealth { get; set; }
-        public string CurrentImageUrl { get; set; }
+        // 🔥 ADD THESE (critical)
+        public int Attack { get; set; }
+        public int Defense { get; set; }
 
+        public int PlayerHealth { get; set; }
         public int MaxHealth { get; set; }
 
         public int EnemyHealth { get; set; }
         public int EnemyMaxHealth { get; set; }
+
+        public string CurrentImageUrl { get; set; }
 
         public bool IsBoss { get; set; }
 

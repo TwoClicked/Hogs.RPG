@@ -26,6 +26,11 @@ public class HuntAutocompleteHandler : AutocompleteHandler
 
         var player = await playerRepo.GetByDiscordIdAsync(context.User.Id);
 
+        if (player == null)
+        {
+            new AutocompleteResult("❌ Create a profile first with /startadventure", "no_profile");
+        }
+
         var staminaService = services.GetService(typeof(HunterStaminaService)) as HunterStaminaService;
 
         staminaService?.Regenerate(player);

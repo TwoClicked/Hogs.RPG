@@ -16,7 +16,7 @@ public class GatherModule : InteractionModuleBase<SocketInteractionContext>
         [Autocomplete(typeof(GatherAreaAutocompleteHandler))] string area,
         [Autocomplete(typeof(GatherEnergyAutocompleteHandler))] string energy = "1")
     {
-        await DeferAsync();
+        await DeferAsync(ephemeral: true);
 
         int energyAmount;
 
@@ -26,12 +26,12 @@ public class GatherModule : InteractionModuleBase<SocketInteractionContext>
         }
         else if (!int.TryParse(energy, out energyAmount))
         {
-            await FollowupAsync("Invalid energy amount. Use a number or 'max'.");
+            await FollowupAsync("Invalid energy amount. Use a number or 'max'.", ephemeral: true);
             return;
         }
 
         var result = await _gatherService.GatherAsync(Context.User.Id, area, energyAmount);
 
-        await FollowupAsync(result);
+        await FollowupAsync(result, ephemeral: true);
     }
 }

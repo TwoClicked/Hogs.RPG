@@ -10,14 +10,14 @@ namespace Hogs.RPG.Core.GameData.Dungeons
             Id = "crypt_fanculo",
             Name = "Crypt of the Wandering Viking",
 
-            RequiredLevel = 25,
+            RequiredLevel = 10,
             Floors = 5,
 
             BaseEnemyHealth = 100,
-            EnemyHealthScaling = 25,
+            EnemyHealthScaling = 40,
 
-            BaseEnemyAttack = 25,
-            EnemyAttackScaling = 5,
+            BaseEnemyAttack = 45,
+            EnemyAttackScaling = 15,
 
             Boss = FanculoBoss.Fanculo,
 

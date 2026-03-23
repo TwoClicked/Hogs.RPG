@@ -185,7 +185,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "saber_fang_blade",
             Name = "Saber Fang Blade",
-            Icon = "⚔",
+            Icon = "<:saber_fang:1484972884173656114>",
             Type = "Equipment",
             Description = "A weapon forged from sabertooth fangs."
         };

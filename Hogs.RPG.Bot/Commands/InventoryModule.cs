@@ -24,14 +24,13 @@ namespace Hogs.RPG.Bot.Commands
         [SlashCommand("inventory", "View your inventory")]
         public async Task Inventory()
         {
-
-            await DeferAsync();
+            await DeferAsync(ephemeral: true);
 
             var inventory = await _inventoryService.GetInventoryAsync(Context.User.Id);
 
             if (inventory.Count == 0)
             {
-                await RespondAsync("Your inventory is empty.");
+                await FollowupAsync("Your inventory is empty.", ephemeral: true);
                 return;
             }
 
@@ -57,17 +56,17 @@ namespace Hogs.RPG.Bot.Commands
                 };
 
                 builder.AppendLine(header);
-                builder.AppendLine(); // ONE empty line after header
+                builder.AppendLine();
 
                 foreach (var entry in group.OrderBy(i => i.Item.Name))
                 {
                     builder.AppendLine($"{entry.Item.Icon} {entry.Item.Name} x{entry.Amount}");
                 }
 
-                builder.AppendLine(); // space between categories
+                builder.AppendLine();
             }
 
-            await FollowupAsync(builder.ToString());
+            await FollowupAsync(builder.ToString(), ephemeral: true);
         }
 
     }

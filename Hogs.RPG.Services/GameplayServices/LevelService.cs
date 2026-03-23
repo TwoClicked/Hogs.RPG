@@ -6,24 +6,44 @@ namespace Hogs.RPG.Services.GameplayServices
     {
         private const int MaxLevel = 50;
 
-        public string CheckLevelUp(Player player)
+        private readonly StatService _statService;
+
+        public LevelService(StatService statService)
+        {
+            _statService = statService;
+        }
+
+        public (string message, int levelsGained) CheckLevelUp(Player player)
         {
             string levelUpMessage = "";
+            int levels = 0;
 
             while (player.Level < MaxLevel && player.XP >= GetRequiredXP(player.Level))
             {
                 player.XP -= GetRequiredXP(player.Level);
                 player.Level++;
+                levels++;
 
-                // Stat rewards
+                // Base stat rewards
                 player.Attack += 5;
                 player.Defense += 5;
                 player.MaxHealth += 10;
 
-                levelUpMessage += $"\n🔥 LEVEL UP!\nYou reached Level {player.Level}!\nAttack +5\nDefense +5\nHealth +10\n";
+                // Recalculate FINAL max health (includes gear)
+                var (_, _, maxHealth) = _statService.CalculateStats(player);
+
+                // Fully heal to new max
+                player.Health = maxHealth;
+
+                levelUpMessage +=
+                    $"\n🔥 LEVEL UP!\n" +
+                    $"You reached Level {player.Level}!\n" +
+                    $"Attack +5\n" +
+                    $"Defense +5\n" +
+                    $"Health +10\n";
             }
 
-            return levelUpMessage;
+            return (levelUpMessage, levels);
         }
 
         public int GetRequiredXP(int level)

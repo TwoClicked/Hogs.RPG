@@ -14,7 +14,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "fanculo_helm",
             Name = "Fanculo Horned Helm",
-            Icon = "🪖",
+            Icon = "<:fanculo_helm:1485380941416497294>",
             Type = "Equipment",
             Description = "A battle-worn helm infused with chaotic Viking energy."
         };

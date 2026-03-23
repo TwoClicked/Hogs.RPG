@@ -47,8 +47,6 @@ namespace Hogs.RPG.Bot.Commands
             await DeferAsync(ephemeral: true);
 
             var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
-            _energyService.RegenerateEnergy(player);
-            _hunterStaminaService.Regenerate(player);
 
             if (player != null)
             {
@@ -193,6 +191,15 @@ namespace Hogs.RPG.Bot.Commands
             [Autocomplete(typeof(EquipSlotAutocompleteHandler))] string slot,
             [Autocomplete(typeof(EquipBySlotAutocompleteHandler))] string itemId)
         {
+
+            var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
+
+            if (player == null)
+            {
+                await RespondAsync("⚠️ You need to start your adventure first with `/startadventure`.", ephemeral: true);
+                return;
+            }
+
             var (preview, validItemId) = await _equipService.GetEquipPreviewAsync(Context.User.Id, itemId);
 
             if (validItemId == null)
@@ -213,6 +220,14 @@ namespace Hogs.RPG.Bot.Commands
             [Autocomplete(typeof(UnequipAutocompleteHandler))] string slot)
         {
             await DeferAsync(ephemeral: true);
+
+            var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
+
+            if (player == null)
+            {
+                await RespondAsync("⚠️ You need to start your adventure first with `/startadventure`.", ephemeral: true);
+                return;
+            }
 
             var result = await _equipService.UnequipAsync(Context.User.Id, slot);
 

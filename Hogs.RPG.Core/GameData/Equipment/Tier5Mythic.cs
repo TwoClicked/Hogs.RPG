@@ -10,7 +10,8 @@ public static class Tier5Mythic
         Id = "mythic_crown",
         Name = "Mythic Crown",
         Slot = EquipmentSlot.Helmet,
-        Defense = 18
+        Defense = 18,
+        Attack = 15
     };
 
     public static readonly EquipmentDefinition BeastslayerPlate = new()

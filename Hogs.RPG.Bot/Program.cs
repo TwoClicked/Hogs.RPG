@@ -2,8 +2,10 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Bot.Setup;
+using Hogs.RPG.Services.Game; // 🔥 IMPORTANT (for BossScheduler)
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hogs.RPG.Bot
@@ -13,6 +15,9 @@ namespace Hogs.RPG.Bot
         private DiscordSocketClient _client;
         private IServiceProvider _services;
         private InteractionService _interactionService;
+
+        // 🔥 Keep reference so it doesn't start twice
+        private bool _schedulerStarted = false;
 
         public static void Main(string[] args)
             => new Program().MainAsync().GetAwaiter().GetResult();
@@ -28,10 +33,11 @@ namespace Hogs.RPG.Bot
 
             var services = new ServiceCollection();
 
-            // register bot instance
+            // ✅ Register Discord client properly
             services.AddSingleton(_client);
+            services.AddSingleton<DiscordSocketClient>(_client);
 
-            // register InteractionService
+            // ✅ InteractionService
             services.AddSingleton<InteractionService>(provider =>
                 new InteractionService(
                     provider.GetRequiredService<DiscordSocketClient>(),
@@ -41,8 +47,7 @@ namespace Hogs.RPG.Bot
                         DefaultRunMode = RunMode.Async
                     }));
 
-
-            // register project services (GoogleSheetsService etc.)
+            // ✅ Your services (includes BossScheduler registration)
             ServiceConfigurator.Configure(services);
 
             _services = services.BuildServiceProvider();
@@ -69,30 +74,55 @@ namespace Hogs.RPG.Bot
 
         private async Task ReadyAsync()
         {
-            _interactionService = _services.GetRequiredService<InteractionService>();
+            Console.WriteLine("🔥 Discord client READY");
 
+            _interactionService = _services.GetRequiredService<InteractionService>();
             _interactionService.Log += LogAsync;
 
             Console.WriteLine("[Init] Loading interaction modules...");
             await _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
 
-            //Console.WriteLine("[Init] Registering slash commands globally...");
-            //await _interactionService.RegisterCommandsGloballyAsync();
             Console.WriteLine("[Init] Registering HogsServer commands Locally...");
             await _interactionService.RegisterCommandsToGuildAsync(
-                guildId: 1109193500664287336, // HOGS SERVER DISCORD ID
-                deleteMissing: true); 
+                guildId: 1109193500664287336,
+                deleteMissing: true);
 
             Console.WriteLine("[Init] Slash commands registered.");
+
+            // =========================
+            // 🔥 START SCHEDULER HERE
+            // =========================
+            if (!_schedulerStarted)
+            {
+                Console.WriteLine("🚀 Starting BossScheduler...");
+
+                var scheduler = _services.GetRequiredService<BossScheduler>();
+
+                _ = scheduler.StartAsync(CancellationToken.None);
+
+                _schedulerStarted = true;
+            }
         }
 
         private async Task HandleInteractionAsync(SocketInteraction arg)
         {
-            Console.WriteLine("🔥 Interaction received"); // DEBUG
+            Console.WriteLine("🔥 Interaction received");
+
+            if (arg == null)
+            {
+                Console.WriteLine("❌ Interaction was null");
+                return;
+            }
 
             try
             {
                 var ctx = new SocketInteractionContext(_client, arg);
+
+                if (_interactionService == null)
+                {
+                    Console.WriteLine("❌ InteractionService not initialized yet");
+                    return;
+                }
 
                 var result = await _interactionService.ExecuteCommandAsync(ctx, _services);
 

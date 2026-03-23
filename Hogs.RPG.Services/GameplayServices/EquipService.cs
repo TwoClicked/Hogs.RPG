@@ -1,4 +1,5 @@
-﻿using Hogs.RPG.Core.Enums;
+﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.InventoryServices;
 using System.Threading.Tasks;
@@ -10,16 +11,23 @@ namespace Hogs.RPG.Services.GameplayServices
         private readonly PlayerRepository _playerRepository;
         private readonly InventoryService _inventoryService;
         private readonly EquipmentService _equipmentService;
+        private readonly StatService _statService;
 
-        public EquipService(PlayerRepository playerRepository,
-                            InventoryService inventoryService,
-                            EquipmentService equipmentService)
+        public EquipService(
+            PlayerRepository playerRepository,
+            InventoryService inventoryService,
+            EquipmentService equipmentService,
+            StatService statService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
             _equipmentService = equipmentService;
+            _statService = statService;
         }
 
+        // =========================
+        // EQUIP
+        // =========================
         public async Task<string> EquipAsync(ulong userId, string itemId)
         {
             var player = await _playerRepository.GetByDiscordIdAsync(userId);
@@ -39,7 +47,7 @@ namespace Hogs.RPG.Services.GameplayServices
                 return "You do not have that item.";
 
             // =========================
-            // GET CURRENT ITEM IN SLOT
+            // CURRENT ITEM
             // =========================
             string currentItemId = item.Slot switch
             {
@@ -60,7 +68,7 @@ namespace Hogs.RPG.Services.GameplayServices
                 : _equipmentService.GetEquipment(currentItemId);
 
             // =========================
-            // CALCULATE DIFFERENCE
+            // DIFF
             // =========================
             int atkDiff = item.Attack - (currentItem?.Attack ?? 0);
             int defDiff = item.Defense - (currentItem?.Defense ?? 0);
@@ -111,16 +119,21 @@ namespace Hogs.RPG.Services.GameplayServices
             if (!string.IsNullOrEmpty(previousItem))
                 await _inventoryService.GiveItemAsync(userId, previousItem, 1);
 
+            // =========================
+            // CLAMP HEALTH
+            // =========================
+            ClampHealth(player);
+
             await _playerRepository.UpdatePlayerAsync(player);
 
-            // =========================
-            // RESULT MESSAGE
-            // =========================
             return
                 $"⚔ Equipped **{item.Name}**\n\n" +
                 $"📊 **Stat Changes**\n{diffText}";
         }
 
+        // =========================
+        // UNEQUIP
+        // =========================
         public async Task<string> UnequipAsync(ulong userId, string slot)
         {
             var player = await _playerRepository.GetByDiscordIdAsync(userId);
@@ -186,14 +199,21 @@ namespace Hogs.RPG.Services.GameplayServices
 
             var item = _equipmentService.GetEquipment(itemId);
 
-            // Return item to inventory
             await _inventoryService.GiveItemAsync(userId, itemId, 1);
+
+            // =========================
+            // CLAMP HEALTH
+            // =========================
+            ClampHealth(player);
 
             await _playerRepository.UpdatePlayerAsync(player);
 
             return $"You unequipped **{item.Name}**.";
         }
 
+        // =========================
+        // PREVIEW
+        // =========================
         public async Task<(string previewText, string itemId)> GetEquipPreviewAsync(ulong userId, string itemId)
         {
             var player = await _playerRepository.GetByDiscordIdAsync(userId);
@@ -212,9 +232,6 @@ namespace Hogs.RPG.Services.GameplayServices
             if (ownedItem == null || ownedItem.Quantity <= 0)
                 return ("You do not have that item.", null);
 
-            // =========================
-            // CURRENT ITEM
-            // =========================
             string currentItemId = item.Slot switch
             {
                 EquipmentSlot.MainHand => player.MainHand,
@@ -233,9 +250,6 @@ namespace Hogs.RPG.Services.GameplayServices
                 ? null
                 : _equipmentService.GetEquipment(currentItemId);
 
-            // =========================
-            // DIFF
-            // =========================
             int atkDiff = item.Attack - (currentItem?.Attack ?? 0);
             int defDiff = item.Defense - (currentItem?.Defense ?? 0);
             int hpDiff = item.Health - (currentItem?.Health ?? 0);
@@ -265,6 +279,17 @@ namespace Hogs.RPG.Services.GameplayServices
                 $"📊 **Result**\n{diffText}";
 
             return (preview, itemId);
+        }
+
+        // =========================
+        // HELPER
+        // =========================
+        private void ClampHealth(Player player)
+        {
+            var (_, _, maxHealth) = _statService.CalculateStats(player);
+
+            if (player.Health > maxHealth)
+                player.Health = maxHealth;
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Discord;
+using Discord.WebSocket;
+using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.GameData.Hunts;
@@ -19,6 +21,9 @@ namespace Hogs.RPG.Services.HuntServices
         private readonly LevelService _levelService;
         private readonly BuffService _buffService;
         private readonly HunterStaminaService _staminaService;
+        private readonly DiscordSocketClient _client;
+
+        private readonly ulong _feedChannelId = 1485357755433750549;
 
         private readonly Random _random = new();
 
@@ -49,13 +54,15 @@ namespace Hogs.RPG.Services.HuntServices
             InventoryService inventoryService,
             LevelService levelService,
             BuffService buffService,
-            HunterStaminaService staminaService)
+            HunterStaminaService staminaService,
+            DiscordSocketClient client)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
             _levelService = levelService;
             _buffService = buffService;
             _staminaService = staminaService;
+            _client = client;
         }
 
         public async Task<string> HuntAsync(ulong userId, string targetId = null, int stamina = 10)
@@ -65,12 +72,10 @@ namespace Hogs.RPG.Services.HuntServices
             if (player == null)
                 return "You need to use /startadventure first.";
 
-            // 🔄 Regenerate stamina
             _staminaService.Regenerate(player);
 
             bool usedMax = false;
 
-            // ✅ Handle /hunt max
             if (stamina == -1)
             {
                 stamina = player.HunterStamina;
@@ -111,10 +116,8 @@ namespace Hogs.RPG.Services.HuntServices
                 target = availableTargets[_random.Next(availableTargets.Count)];
             }
 
-            // 🔋 Spend stamina (after validation)
             _staminaService.Spend(player, stamina);
 
-            // 🔁 Aggregation
             int totalXp = 0;
             int totalGold = 0;
             int totalDrops = 0;
@@ -124,7 +127,6 @@ namespace Hogs.RPG.Services.HuntServices
             int rareCount = 0;
             int treasureCount = 0;
 
-            // Auto XP Potion (once per hunt)
             if (player.AutoUseXpPotions)
             {
                 var inventory = await _inventoryService.GetInventoryAsync(userId);
@@ -204,7 +206,6 @@ namespace Hogs.RPG.Services.HuntServices
                 }
             }
 
-            // Apply buffs ONCE
             double xpMultiplier = _buffService.ApplyXpBuff(player);
             double goldMultiplier = _buffService.ApplyGoldBuff(player);
 
@@ -214,13 +215,25 @@ namespace Hogs.RPG.Services.HuntServices
             player.XP += totalXp;
             player.Gold += totalGold;
 
-            var levelMessage = _levelService.CheckLevelUp(player);
+            var (levelMessage, levelsGained) = _levelService.CheckLevelUp(player);
 
             await _inventoryService.GiveItemAsync(userId, target.DropItem, totalDrops);
 
             await _playerRepository.UpdatePlayerAsync(player);
 
-            // 🧾 Build result
+            // ✅ LEVEL ANNOUNCEMENT
+            if (levelsGained > 0)
+            {
+                var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
+
+                if (channel != null)
+                {
+                    await channel.SendMessageAsync(
+                        $"🎉 <@{player.DiscordId}> reached **Level {player.Level}**!"
+                    );
+                }
+            }
+
             var sb = new StringBuilder();
 
             var label = usedMax ? "ALL stamina" : $"{stamina} stamina";

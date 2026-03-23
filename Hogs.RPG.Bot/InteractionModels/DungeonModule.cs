@@ -25,9 +25,19 @@ namespace Hogs.RPG.Bot.InteractionModels
 
             var result = await _dungeonService.StartDungeonAsync(Context.User.Id, dungeonId);
 
-            // Handle errors
-            if (result.Embed.Description.Contains("already") ||
-                result.Embed.Description.Contains("must"))
+            // ✅ SAFER ERROR HANDLING
+            if (result == null || result.Embed == null)
+            {
+                await FollowupAsync("❌ Something went wrong.", ephemeral: true);
+                return;
+            }
+
+            var desc = result.Embed.Description ?? "";
+
+            if (desc.Contains("already") ||
+                desc.Contains("must") ||
+                desc.Contains("wait") ||
+                desc.Contains("Use /startadventure"))
             {
                 await FollowupAsync(embed: result.Embed, ephemeral: true);
                 return;
@@ -48,7 +58,7 @@ namespace Hogs.RPG.Bot.InteractionModels
                     components: components
                 );
 
-                // 🔥 Store DM message reference
+                // ✅ Store reference for updates
                 _dungeonService.SetDungeonMessage(Context.User.Id, message.Id, dm.Id);
 
                 await FollowupAsync("📬 Check your DMs to continue the dungeon.", ephemeral: true);
@@ -65,9 +75,17 @@ namespace Hogs.RPG.Bot.InteractionModels
         [ComponentInteraction("dungeon_attack")]
         public async Task Attack()
         {
-            var component = (SocketMessageComponent)Context.Interaction;
+            if (Context.Interaction is not SocketMessageComponent component)
+                return;
 
-            await component.DeferAsync();
+            try
+            {
+                await component.DeferAsync();
+            }
+            catch
+            {
+                return;
+            }
 
             var result = await _dungeonService.AttackAsync(Context.User.Id);
 

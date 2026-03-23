@@ -16,7 +16,9 @@ namespace Hogs.RPG.Core.GameData.Equipment
             Id = "fanculo_helm",
             Name = "Fanculo Horned Helm",
             Slot = EquipmentSlot.Helmet,
-            Defense = 20
+            Defense = 20,
+            Attack = 20,
+            Health = 150
         };
 
     }

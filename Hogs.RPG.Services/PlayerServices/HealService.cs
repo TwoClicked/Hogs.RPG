@@ -5,13 +5,16 @@ public class HealService
 {
     private readonly InventoryService _inventoryService;
     private readonly PlayerRepository _playerRepository;
+    private readonly StatService _statService;
 
     public HealService(
         InventoryService inventoryService,
-        PlayerRepository playerRepository)
+        PlayerRepository playerRepository,
+        StatService statService)
     {
         _inventoryService = inventoryService;
         _playerRepository = playerRepository;
+        _statService = statService;
     }
 
     public async Task<HealResult> HealAsync(ulong userId)
@@ -21,7 +24,9 @@ public class HealService
         if (player == null)
             return HealResult.Fail("You need to start your adventure first.");
 
-        if (player.Health >= player.MaxHealth)
+        var (attack, defense, maxHealth) = _statService.CalculateStats(player);
+
+        if (player.Health >= maxHealth)
             return HealResult.Fail("❤️ You're already at full health.");
 
         var inventory = await _inventoryService.GetInventoryAsync(userId);
@@ -30,11 +35,11 @@ public class HealService
         if (potion == null || potion.Quantity <= 0)
             return HealResult.Fail("❌ You don't have any health potions.");
 
-        player.Health = player.MaxHealth;
+        player.Health = maxHealth; 
 
         await _inventoryService.TakeItemAsync(userId, "health_potion", 1);
         await _playerRepository.UpdatePlayerAsync(player);
 
-        return HealResult.Success(player.Health, player.MaxHealth, potion.Quantity - 1);
+        return HealResult.Success(player.Health, maxHealth, potion.Quantity - 1); 
     }
 }

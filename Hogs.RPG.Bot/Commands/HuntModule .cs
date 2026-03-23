@@ -17,27 +17,27 @@ namespace Hogs.RPG.Bot.Commands
 
         [SlashCommand("hunt", "Hunt animals for resources")]
         public async Task Hunt(
-         [Autocomplete(typeof(HuntCategoryAutocompleteHandler))]string category,
-         [Autocomplete(typeof(HuntAutocompleteHandler))] string target = null,
-         [Autocomplete(typeof(HuntAmountAutocompleteHandler))] string amount = "10")
+            [Autocomplete(typeof(HuntCategoryAutocompleteHandler))] string category,
+            [Autocomplete(typeof(HuntAutocompleteHandler))] string target = null,
+            [Autocomplete(typeof(HuntAmountAutocompleteHandler))] string amount = "10")
         {
-            await DeferAsync();
+            await DeferAsync(ephemeral: true);
 
             int stamina;
 
             if (amount.ToLower() == "max")
             {
-                stamina = -1; // special flag handled in service
+                stamina = -1;
             }
             else if (!int.TryParse(amount, out stamina))
             {
-                await FollowupAsync("Invalid amount. Use a number or 'max'.");
+                await FollowupAsync("Invalid amount. Use a number or 'max'.", ephemeral: true);
                 return;
             }
 
             var result = await _huntService.HuntAsync(Context.User.Id, target, stamina);
 
-            await FollowupAsync(result);
+            await FollowupAsync(result, ephemeral: true);
         }
     }
 }

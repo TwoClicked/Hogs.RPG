@@ -54,6 +54,9 @@ namespace Hogs.RPG.Bot.Setup
             services.AddSingleton<BossRepository>();
             services.AddSingleton<BossService>();
 
+            services.AddSingleton<BossScheduler>();
+            services.AddHostedService<BossScheduler>();
+
             services.AddSingleton<DungeonService>();
         }
     }
