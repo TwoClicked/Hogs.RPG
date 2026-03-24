@@ -129,7 +129,17 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             { HuntRareDrops.SkyRelic.Id, HuntRareDrops.SkyRelic },
 
             //Fanculo dungeon drops
-            {DungeonBossDrops.FanculoHelmItem.Id, DungeonBossDrops.FanculoHelmItem }
+            {DungeonBossDrops.FanculoHelmItem.Id, DungeonBossDrops.FanculoHelmItem },
+
+            // ===== Boss Equipment Drops =====
+            
+            { DailyWeeklyBossDrops.AureliusSwordItem.Id, DailyWeeklyBossDrops.AureliusSwordItem },
+
+
+
+            { DailyWeeklyBossDrops.XerathulArmorItem.Id, DailyWeeklyBossDrops.XerathulArmorItem },
+            { DailyWeeklyBossDrops.GravelmawShieldItem.Id, DailyWeeklyBossDrops.GravelmawShieldItem },
+            { DailyWeeklyBossDrops.SerpentAmuletItem.Id, DailyWeeklyBossDrops.SerpentAmuletItem },
         };
     }
 }

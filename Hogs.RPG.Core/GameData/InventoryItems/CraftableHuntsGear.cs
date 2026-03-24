@@ -185,7 +185,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "saber_fang_blade",
             Name = "Saber Fang Blade",
-            Icon = "<:saber_fang:1484972884173656114>",
+            Icon = "<:saber_fang_blade:1484936509193716007>",
             Type = "Equipment",
             Description = "A weapon forged from sabertooth fangs."
         };
@@ -194,7 +194,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "antler_shield",
             Name = "Antler Shield",
-            Icon = "<:saber_fang_blade:1484936509193716007>",
+            Icon = "<:antler_shield:1484937172141478060>",
             Type = "Equipment",
             Description = "A shield reinforced with giant antlers."
         };

@@ -162,19 +162,6 @@ namespace Hogs.RPG.Bot.Commands
                 await FollowupAsync("💥 Something went wrong spawning the boss.", ephemeral: true);
             }
         }
-        // =========================
-        // CLEAR BOSSES
-        // =========================
-
-        [SlashCommand("clearbosses", "Remove all active bosses (Admin Only)")]
-        public async Task ClearBosses()
-        {
-            if (!await EnsureAdminAsync()) return;
-
-            _bossService.ClearAllBosses();
-
-            await RespondAsync("🧹 All active bosses have been cleared.", ephemeral: true);
-        }
 
 
         // =========================

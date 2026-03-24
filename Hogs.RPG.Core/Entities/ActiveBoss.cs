@@ -1,25 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Hogs.RPG.Core.Entities;
 
-namespace Hogs.RPG.Core.Entities
+public class ActiveBoss
 {
-    public class ActiveBoss
-    {
-        public BossDefinition Definition { get; set; }
+    public BossDefinition Definition { get; set; }
 
-        public int CurrentHealth { get; set; }
+    public int CurrentHealth { get; set; }
 
-        public DateTime ExpireAt { get; set; }
+    public DateTime ExpireAt { get; set; }
+    public DateTime SpawnedAt { get; set; } = DateTime.UtcNow;
 
-        public Dictionary<ulong, int> DamageDealt { get; set; } = new();
+    public Dictionary<ulong, int> DamageDealt { get; set; } = new();
+    public HashSet<ulong> Participants { get; set; } = new();
 
-        // 👇 REQUIRED for raid UI system
-        public ulong ChannelId { get; set; }
-        public ulong MessageId { get; set; }
+    public bool IsDead { get; set; } = false;
 
-        // 👇 REQUIRED for rate-limit safe updates
-        public DateTime LastUiUpdate { get; set; } = DateTime.MinValue;
+    // UI tracking
+    public ulong ChannelId { get; set; }
+    public ulong MessageId { get; set; }
 
-        public Queue<string> RecentHits { get; set; } = new();
-    }
+    public DateTime LastUiUpdate { get; set; } = DateTime.MinValue;
 }

@@ -544,14 +544,17 @@ namespace Hogs.RPG.Services.Game
         {
             int total = 10;
 
-            // 🔥 HARD CLAMP
-            if (max <= 0) max = 1;
+            // ✅ HARD SAFETY
+            if (max <= 0)
+                max = 1;
 
+            // clamp current
             current = Math.Max(0, Math.Min(current, max));
 
             double percent = (double)current / max;
             int filled = (int)(percent * total);
 
+            // ✅ HARD CLAMP AGAIN
             filled = Math.Max(0, Math.Min(filled, total));
 
             return new string('█', filled) + new string('░', total - filled);

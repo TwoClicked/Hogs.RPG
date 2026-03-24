@@ -24,7 +24,7 @@ namespace Hogs.RPG.Services.Game
         private readonly ulong _bossChannelId = 1485386835180916969;
         private readonly ulong _bossRoleId = 1485387222822948934;
 
-        // ✅ NEW: prevent multiple spawns per day
+        // Prevent multiple spawns per day
         private readonly HashSet<string> _spawnedToday = new();
 
         public BossScheduler(
@@ -51,7 +51,7 @@ namespace Hogs.RPG.Services.Game
 
                 try
                 {
-                    // ✅ Reset daily spawns at midnight
+                    // Reset daily spawn tracker at midnight
                     if (now.Hour == 0 && now.Minute < 1)
                     {
                         Console.WriteLine("🔄 Resetting daily spawn tracker");
@@ -71,6 +71,9 @@ namespace Hogs.RPG.Services.Game
             }
         }
 
+        // =========================
+        // WEEKLY
+        // =========================
         private async Task HandleWeeklyBoss(DateTime now)
         {
             Console.WriteLine("➡ Checking weekly boss spawn...");
@@ -85,9 +88,11 @@ namespace Hogs.RPG.Services.Game
                 .GetAllActiveBosses()
                 .Any(b => b.Definition.Type == BossType.Weekly);
 
-            Console.WriteLine($"Weekly boss active: {active}");
-
-            if (active) return;
+            if (active)
+            {
+                Console.WriteLine("❌ Weekly boss already active.");
+                return;
+            }
 
             var boss = await _bossService.SpawnWeeklyBoss();
 
@@ -102,11 +107,14 @@ namespace Hogs.RPG.Services.Game
             }
         }
 
+        // =========================
+        // DAILY
+        // =========================
         private async Task HandleDailyBosses(DateTime now)
         {
             Console.WriteLine("➡ Checking daily bosses...");
 
-            // ✅ FIXED IDS
+            // Add/remove bosses here
             //await TrySpawn("gravelmaw_02", now, 12);
             await TrySpawn("primordial_serpent_03", now, 18);
             await TrySpawn("xerathul_04", now, 22);
@@ -122,7 +130,6 @@ namespace Hogs.RPG.Services.Game
                 return;
             }
 
-            // ✅ prevent respawn spam
             if (_spawnedToday.Contains(id))
             {
                 Console.WriteLine($"   ❌ {id} already spawned today");
@@ -151,30 +158,15 @@ namespace Hogs.RPG.Services.Game
             }
         }
 
+        // =========================
+        // EXPIRY CLEANUP
+        // =========================
         private async Task CleanupExpiredBosses()
         {
             Console.WriteLine("➡ Checking expired bosses...");
 
-            var activeBosses = _bossService.GetAllActiveBosses();
-            var expired = _bossService.GetExpiredBosses();
-
-            Console.WriteLine($"Active bosses: {activeBosses.Count}");
-            Console.WriteLine($"Expired bosses: {expired.Count}");
-
-            foreach (var b in activeBosses)
-            {
-                Console.WriteLine($"{b.Definition.Name} expires at {b.ExpireAt:HH:mm:ss} | now {DateTime.UtcNow:HH:mm:ss}");
-            }
-
-            // =========================
-            // EXPIRED BOSSES HANDLING
-            // =========================
-            Console.WriteLine("? Checking expired bosses...");
-
-            // 🔥 Snapshot list to avoid race issues
             var expiredBosses = _bossService.GetExpiredBosses().ToList();
 
-            Console.WriteLine($"Active bosses: {_bossService.GetAllActiveBosses().Count}");
             Console.WriteLine($"Expired bosses: {expiredBosses.Count}");
 
             foreach (var boss in expiredBosses)
@@ -183,7 +175,6 @@ namespace Hogs.RPG.Services.Game
 
                 try
                 {
-                    // 🔥 Handle rewards (50% split)
                     var message = await _bossService.HandleBossExpiryAsync(boss);
 
                     var channel = _client.GetChannel(boss.ChannelId) as IMessageChannel;
@@ -197,7 +188,6 @@ namespace Hogs.RPG.Services.Game
                         Console.WriteLine($"⚠️ Missing channel for boss {boss.Definition.Name}");
                     }
 
-                    // 🔥 Remove AFTER rewards + message
                     _bossService.RemoveBoss(boss.Definition.Id);
                 }
                 catch (Exception ex)
@@ -207,6 +197,9 @@ namespace Hogs.RPG.Services.Game
             }
         }
 
+        // =========================
+        // ANNOUNCE
+        // =========================
         private async Task AnnounceBoss(ActiveBoss boss, string text)
         {
             Console.WriteLine($"📢 Announcing boss: {boss.Definition.Name}");
@@ -223,11 +216,10 @@ namespace Hogs.RPG.Services.Game
 
             var components = new ComponentBuilder()
                 .WithButton("⚔ Attack", $"boss_attack:{boss.Definition.Id}", ButtonStyle.Danger)
-                .WithButton("🧪 Heal", $"boss_heal:{boss.Definition.Id}", ButtonStyle.Success)
                 .Build();
 
             var msg = await channel.SendMessageAsync(
-                $"<@&{_bossRoleId}> {text}",
+                $"<@&{_bossRoleId}> **{boss.Definition.Name}** has appeared!\n{text}",
                 embed: embed,
                 components: components
             );

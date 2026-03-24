@@ -3,7 +3,7 @@ using Hogs.RPG.Core.GameData.DungeonBosses;
 
 namespace Hogs.RPG.Core.GameData.Dungeons
 {
-    public static class Level25Dungeon
+    public static class Level25Dungeon // Rename when restarting, Will remain level 10
     {
         public static readonly DungeonDefinition CryptOfFanculo = new()
         {

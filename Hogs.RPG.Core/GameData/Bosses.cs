@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hogs.RPG.Core.GameData.InventoryItems
+namespace Hogs.RPG.Core.GameData
 {
-    internal class WeeklyBossDrops
+    internal class Bosses
     {
     }
 }
