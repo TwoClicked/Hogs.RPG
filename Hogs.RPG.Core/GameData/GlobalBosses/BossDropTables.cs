@@ -20,7 +20,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             new BossLoot
             {
-                ItemId = "serpent_amulet",
+                ItemId = "serpent_gloves",
                 DropChance = 5,
                 MinAmount = 1,
                 MaxAmount = 1

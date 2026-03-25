@@ -115,7 +115,7 @@ namespace Hogs.RPG.Services.Game
             Console.WriteLine("➡ Checking daily bosses...");
 
             // Add/remove bosses here
-            //await TrySpawn("gravelmaw_02", now, 12);
+            await TrySpawn("gravelmaw_02", now, 12);
             await TrySpawn("primordial_serpent_03", now, 18);
             await TrySpawn("xerathul_04", now, 22);
         }

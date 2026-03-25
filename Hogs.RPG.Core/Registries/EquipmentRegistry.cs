@@ -62,13 +62,13 @@ public static class EquipmentRegistry
         { Tier5Mythic.AbyssGauntlets.Id, Tier5Mythic.AbyssGauntlets },
 
         //FANCULO GEAR
-        {FanculoGear.FanculoHelm.Id, FanculoGear.FanculoHelm },
+        {DungeonBossGear.FanculoHelm.Id, DungeonBossGear.FanculoHelm },
         
         // ===== Boss Equipment Drops =====
 
         { GlobalBossGear.AureliusSword.Id, GlobalBossGear.AureliusSword },
         { GlobalBossGear.XerathulArmor.Id, GlobalBossGear.XerathulArmor },
         { GlobalBossGear.GravelmawShield.Id, GlobalBossGear.GravelmawShield },
-        { GlobalBossGear.SerpentAmulet.Id, GlobalBossGear.SerpentAmulet },
+        { GlobalBossGear.SerpentGloves.Id, GlobalBossGear.SerpentGloves },
     };
 }

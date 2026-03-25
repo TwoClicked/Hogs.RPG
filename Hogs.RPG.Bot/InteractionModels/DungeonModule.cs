@@ -19,7 +19,8 @@ namespace Hogs.RPG.Bot.InteractionModels
         // ENTER DUNGEON
         // =========================
         [SlashCommand("dungeon", "Enter a dungeon")]
-        public async Task EnterDungeon(string dungeonId = "crypt_fanculo")
+        public async Task EnterDungeon(
+            [Autocomplete(typeof(DungeonAutocompleteHandler))] string dungeonId)
         {
             await DeferAsync(ephemeral: true);
 

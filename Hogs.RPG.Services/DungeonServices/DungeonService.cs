@@ -51,7 +51,7 @@ namespace Hogs.RPG.Services.Game
                 return Simple("You are already in a dungeon.");
 
             // 🔥 Dungeon cooldown check
-            const int COOLDOWN_HOURS = 2;
+            const int COOLDOWN_HOURS = 1;
 
             if (_lastDungeonRun.TryGetValue(userId, out var lastRun))
             {
@@ -135,8 +135,19 @@ namespace Hogs.RPG.Services.Game
 
             var dungeon = DungeonRegistry.All[session.DungeonId];
 
-            // ✅ USE SESSION STATS
-            int playerDamage = (int)(session.Attack * (100.0 / (100 + GetEnemyDefense(session))));
+            // =========================
+            // PLAYER ATTACK
+            // =========================
+            int enemyDefense = GetEnemyDefense(session);
+
+            // 🌫️ Luminara cloud effect
+            if (session.CloudActive)
+            {
+                enemyDefense *= 2;
+                session.CloudActive = false; // one-turn effect
+            }
+
+            int playerDamage = (int)(session.Attack * (100.0 / (100 + enemyDefense)));
             playerDamage = Math.Max(1, playerDamage);
 
             session.EnemyHealth = Math.Max(0, session.EnemyHealth - playerDamage);
@@ -149,17 +160,32 @@ namespace Hogs.RPG.Services.Game
                 return await NextFloor(userId, session, text);
             }
 
+            // =========================
+            // ENEMY ATTACK
+            // =========================
             int enemyAttack = GetEnemyAttack(session, dungeon);
 
-            // ✅ USE SESSION DEFENSE
             int enemyDamage = (int)(enemyAttack * (100.0 / (100 + session.Defense)));
-            enemyDamage = Math.Max(1, enemyDamage);
+
+            // 🔥 Minimum damage safeguard
+            enemyDamage = Math.Max(5, enemyDamage);
 
             string behaviorText = null;
 
             if (session.IsBoss)
             {
                 behaviorText = HandleBossBehavior(session, dungeon.Boss, ref enemyDamage);
+            }
+
+            // 💢 CRIT CHANCE (after behavior modifies damage)
+            if (_random.Next(0, 100) < 10)
+            {
+                enemyDamage = (int)(enemyDamage * 2.5);
+
+                if (string.IsNullOrEmpty(behaviorText))
+                    behaviorText = "💢 Critical hit!";
+                else
+                    behaviorText += "\n💢 Critical hit!";
             }
 
             session.PlayerHealth = Math.Max(0, session.PlayerHealth - enemyDamage);
@@ -462,6 +488,8 @@ namespace Hogs.RPG.Services.Game
         }
 
         //Boss ability section
+
+        // Fanculo
         private string HandleRage(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
         {
             // Trigger rage at 50% HP
@@ -479,6 +507,52 @@ namespace Hogs.RPG.Services.Game
             if (session.RageTriggered)
             {
                 enemyDamage *= 3;
+            }
+
+            return null;
+        }
+        // Hrothgar
+        private string HandleLifestealSmash(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            // 25% chance
+            if (_random.Next(0, 100) < 25)
+            {
+                enemyDamage = (int)(enemyDamage * 1.8);
+
+                int heal = enemyDamage;
+                session.EnemyHealth = Math.Min(session.EnemyMaxHealth, session.EnemyHealth + heal);
+
+                return $"🩸 **{boss.Name} crushes you and absorbs {heal} HP!**";
+            }
+
+            return null;
+        }
+
+        private string HandleDefensiveCloud(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            // 30% chance to reduce incoming player damage next turn
+            if (_random.Next(0, 100) < 30)
+            {
+                session.CloudActive = true;
+                return $"🌫️ **{boss.Name} vanishes into a toxic mist! Incoming damage reduced!**";
+            }
+
+            return null;
+        }
+
+        // Thorkell
+        private string HandleCrushingBlow(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            // 20% chance
+            if (_random.Next(0, 100) < 20)
+            {
+                // Ignore 50% defense
+                int reducedDefense = session.Defense / 2;
+
+                enemyDamage = (int)(boss.Attack * (100.0 / (100 + reducedDefense)));
+                enemyDamage = (int)(enemyDamage * 1.5);
+
+                return $"💥 **{boss.Name} shatters your defenses with a crushing blow!**";
             }
 
             return null;
@@ -513,6 +587,15 @@ namespace Hogs.RPG.Services.Game
             {
                 case "rage":
                     return HandleRage(session, boss, ref enemyDamage);
+
+                case "lifesteal_smash":
+                    return HandleLifestealSmash(session, boss, ref enemyDamage);
+
+                case "defensive_cloud":
+                    return HandleDefensiveCloud(session, boss, ref enemyDamage);
+
+                case "crushing_blow":
+                    return HandleCrushingBlow(session, boss, ref enemyDamage);
 
                 default:
                     return null;
@@ -572,7 +655,7 @@ namespace Hogs.RPG.Services.Game
         private int GetEnemyDefense(ActiveDungeon session)
         {
             if (session.IsBoss)
-                return 20; // boss defense
+                return DungeonRegistry.All[session.DungeonId].Boss.Defense;
 
             return 10 + (session.Floor * 2);
         }

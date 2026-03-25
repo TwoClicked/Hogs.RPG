@@ -33,12 +33,12 @@ public static class GlobalBossGear
         Health = 50
     };
 
-    public static readonly EquipmentDefinition SerpentAmulet = new()
+    public static readonly EquipmentDefinition SerpentGloves = new()
     {
-        Id = "serpent_amulet",
-        Name = "Serpent Fang Amulet",
-        Slot = EquipmentSlot.Amulet,
-        Attack = 25,
+        Id = "serpent_gloves",
+        Name = "Serpent Fang Gloves",
+        Slot = EquipmentSlot.Gloves,
+        Attack = 10,
         Defense = 10,
         Health = 150
     };

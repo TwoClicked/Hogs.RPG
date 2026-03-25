@@ -24,9 +24,16 @@
 
         public bool IsActive { get; set; } = true;
 
-        public bool RageTriggered { get; set; }
+        
 
         public ulong MessageId { get; set; }
         public ulong ChannelId { get; set; }
+
+
+
+        //Dungeon boss abilities
+
+        public bool RageTriggered { get; set; }
+        public bool CloudActive { get; set; }
     }
 }

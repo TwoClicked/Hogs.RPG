@@ -128,8 +128,11 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             { HuntRareDrops.MythicHeart.Id, HuntRareDrops.MythicHeart },
             { HuntRareDrops.SkyRelic.Id, HuntRareDrops.SkyRelic },
 
-            //Fanculo dungeon drops
-            {DungeonBossDrops.FanculoHelmItem.Id, DungeonBossDrops.FanculoHelmItem },
+            // dungeon drops
+            { DungeonBossDrops.FanculoHelmItem.Id, DungeonBossDrops.FanculoHelmItem },
+            { DungeonBossDrops.HrothgarRingItem.Id, DungeonBossDrops.HrothgarRingItem },
+            { DungeonBossDrops.LuminaraAmuletItem.Id, DungeonBossDrops.LuminaraAmuletItem },
+            { DungeonBossDrops.ThorkellBootsItem.Id, DungeonBossDrops.ThorkellBootsItem },
 
             // ===== Boss Equipment Drops =====
             
@@ -139,7 +142,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
 
             { DailyWeeklyBossDrops.XerathulArmorItem.Id, DailyWeeklyBossDrops.XerathulArmorItem },
             { DailyWeeklyBossDrops.GravelmawShieldItem.Id, DailyWeeklyBossDrops.GravelmawShieldItem },
-            { DailyWeeklyBossDrops.SerpentAmuletItem.Id, DailyWeeklyBossDrops.SerpentAmuletItem },
+            { DailyWeeklyBossDrops.SerpentGlovesItem.Id, DailyWeeklyBossDrops.SerpentGlovesItem },
         };
     }
 }

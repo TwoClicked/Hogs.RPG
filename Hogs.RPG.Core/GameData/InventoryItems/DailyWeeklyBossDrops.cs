@@ -17,11 +17,11 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Description = "A massive shield carved from the petrified hide of Gravelmaw."
         };
 
-        public static readonly ItemDefinition SerpentAmuletItem = new()
+        public static readonly ItemDefinition SerpentGlovesItem = new()
         {
-            Id = "serpent_amulet",
-            Name = "Serpent Fang Amulet",
-            Icon = "🐍",
+            Id = "serpent_gloves",
+            Name = "Serpent Fang Gloves",
+            Icon = "<:primordial_serpent_gloves:1485351574493728828>",
             Type = "Equipment",
             Description = "An ancient amulet radiating venomous energy."
         };
