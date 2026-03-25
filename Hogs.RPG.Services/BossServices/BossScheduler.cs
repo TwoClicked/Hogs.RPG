@@ -20,23 +20,31 @@ namespace Hogs.RPG.Services.Game
         private readonly DiscordSocketClient _client;
         private readonly PlayerService _playerService;
         private readonly PlayerRepository _playerRepository;
+        private readonly BossRepository _bossRepository;
+
+        private readonly Random _random = new();
+        private static readonly HashSet<int> SpawnHours = new() { 0, 3, 6, 9, 12, 15, 18, 21 };
 
         private readonly ulong _bossChannelId = 1485386835180916969;
         private readonly ulong _bossRoleId = 1485387222822948934;
 
         // Prevent multiple spawns per day
-        private readonly HashSet<string> _spawnedToday = new();
+        private HashSet<string> _spawnedToday = new();
+
+        private DateTime _lastReset = DateTime.MinValue;
 
         public BossScheduler(
             BossService bossService,
             DiscordSocketClient client,
             PlayerService playerService,
-            PlayerRepository playerRepository)
+            PlayerRepository playerRepository,
+            BossRepository bossRepository)
         {
             _bossService = bossService;
             _client = client;
             _playerService = playerService;
             _playerRepository = playerRepository;
+            _bossRepository = bossRepository;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -51,14 +59,17 @@ namespace Hogs.RPG.Services.Game
 
                 try
                 {
-                    // Reset daily spawn tracker at midnight
-                    if (now.Hour == 0 && now.Minute < 1)
+                    // 🔥 Sync state from Google Sheets once per day (or first run)
+                    if (_lastReset.Date != now.Date)
                     {
-                        Console.WriteLine("🔄 Resetting daily spawn tracker");
-                        _spawnedToday.Clear();
+                        Console.WriteLine("🔄 Syncing boss state from Google Sheets");
+
+                        await _bossRepository.ClearOldStateAsync(now);
+                        _spawnedToday = await _bossRepository.LoadSpawnStateAsync(now);
+
+                        _lastReset = now.Date;
                     }
 
-                    await HandleWeeklyBoss(now);
                     await HandleDailyBosses(now);
                     await CleanupExpiredBosses();
                 }
@@ -72,89 +83,78 @@ namespace Hogs.RPG.Services.Game
         }
 
         // =========================
-        // WEEKLY
-        // =========================
-        private async Task HandleWeeklyBoss(DateTime now)
-        {
-            Console.WriteLine("➡ Checking weekly boss spawn...");
-
-            if (now.DayOfWeek != DayOfWeek.Sunday || now.Hour < 16)
-            {
-                Console.WriteLine("❌ Not time for weekly boss.");
-                return;
-            }
-
-            var active = _bossService
-                .GetAllActiveBosses()
-                .Any(b => b.Definition.Type == BossType.Weekly);
-
-            if (active)
-            {
-                Console.WriteLine("❌ Weekly boss already active.");
-                return;
-            }
-
-            var boss = await _bossService.SpawnWeeklyBoss();
-
-            if (boss != null)
-            {
-                Console.WriteLine($"✅ Weekly boss spawned: {boss.Definition.Name}");
-                await AnnounceBoss(boss, "🔥 Weekly Boss spawned!");
-            }
-            else
-            {
-                Console.WriteLine("❌ No weekly boss available.");
-            }
-        }
-
-        // =========================
         // DAILY
         // =========================
         private async Task HandleDailyBosses(DateTime now)
         {
-            Console.WriteLine("➡ Checking daily bosses...");
+            Console.WriteLine("➡ Checking scheduled bosses...");
 
-            // Add/remove bosses here
-            await TrySpawn("gravelmaw_02", now, 12);
-            await TrySpawn("primordial_serpent_03", now, 18);
-            await TrySpawn("xerathul_04", now, 22);
-        }
 
-        private async Task TrySpawn(string id, DateTime now, int hour)
-        {
-            Console.WriteLine($"   → Checking spawn for {id} at hour {hour}");
 
-            if (now.Hour < hour)
+            // ✅ Only allow spawn in first 2 minutes of valid hours
+            if (!SpawnHours.Contains(now.Hour) || now.Minute >= 3)
             {
-                Console.WriteLine($"   ❌ Too early for {id}");
+                Console.WriteLine($"   ❌ Outside spawn window ({now:HH:mm})");
                 return;
             }
 
-            if (_spawnedToday.Contains(id))
+            // ✅ Prevent multiple spawns in same timeslot
+            var timeslotKey = $"timeslot_{now.Date:yyyyMMdd}_{now.Hour}";
+
+            if (_spawnedToday.Contains(timeslotKey))
             {
-                Console.WriteLine($"   ❌ {id} already spawned today");
+                Console.WriteLine("   ❌ Already spawned this timeslot");
                 return;
             }
 
-            if (_bossService.IsBossActive(id))
+            // ✅ Get all DAILY bosses from repository
+            var allDailyBosses = await _bossRepository.GetByTypeAsync(BossType.Daily);
+
+            if (!allDailyBosses.Any())
             {
-                Console.WriteLine($"   ❌ {id} already active");
+                Console.WriteLine("⚠️ No daily bosses found in repository");
                 return;
             }
 
-            var boss = await _bossService.SpawnBoss(id);
+            // ✅ Filter out bosses already spawned today
+            var availableBosses = allDailyBosses
+                .Where(b => !_spawnedToday.Contains(b.Id))
+                .ToList();
+
+            if (!availableBosses.Any())
+            {
+                Console.WriteLine("⚠️ All daily bosses already spawned today.");
+                return;
+            }
+
+            // 🎲 Random selection
+            var selected = availableBosses[_random.Next(availableBosses.Count)];
+
+            // ✅ Safety check (should rarely happen but good practice)
+            if (_bossService.IsBossActive(selected.Id))
+            {
+                Console.WriteLine($"   ❌ Boss already active: {selected.Id}");
+                return;
+            }
+
+            // ✅ Spawn boss
+            var boss = await _bossService.SpawnBoss(selected.Id);
 
             if (boss != null)
             {
-                Console.WriteLine($"   ✅ Spawned {id}");
+                Console.WriteLine($"   ✅ Spawned RANDOM boss: {selected.Name}");
 
-                _spawnedToday.Add(id);
+                _spawnedToday.Add(selected.Id);
+                _spawnedToday.Add(timeslotKey);
 
-                await AnnounceBoss(boss, "⚔ Daily Boss appeared!");
+                await _bossRepository.SaveSpawnEntryAsync(now, selected.Id);
+                await _bossRepository.SaveSpawnEntryAsync(now, timeslotKey);
+
+                await AnnounceBoss(boss, "⚔ A mysterious boss has appeared!");
             }
             else
             {
-                Console.WriteLine($"   ❌ Boss {id} not found in repo");
+                Console.WriteLine($"   ❌ Failed to spawn boss {selected.Id}");
             }
         }
 

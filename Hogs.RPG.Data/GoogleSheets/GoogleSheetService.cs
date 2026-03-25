@@ -85,5 +85,35 @@ namespace Hogs.RPG.Data.GoogleSheets
 
             await updateRequest.ExecuteAsync();
         }
+
+        public async Task WriteRangeAsync(string sheetName, string startCell, IList<IList<object>> data)
+        {
+            var valueRange = new Google.Apis.Sheets.v4.Data.ValueRange
+            {
+                Values = data
+            };
+
+            var updateRequest = _sheetsService.Spreadsheets.Values.Update(
+                valueRange,
+                _spreadsheetId,
+                $"{sheetName}!{startCell}"
+            );
+
+            updateRequest.ValueInputOption =
+                Google.Apis.Sheets.v4.SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.RAW;
+
+            await updateRequest.ExecuteAsync();
+        }
+
+        public async Task ClearRangeAsync(string sheetName, string range)
+        {
+            var clearRequest = new Google.Apis.Sheets.v4.Data.ClearValuesRequest();
+
+            await _sheetsService.Spreadsheets.Values.Clear(
+                clearRequest,
+                _spreadsheetId,
+                $"{sheetName}!{range}"
+            ).ExecuteAsync();
+        }
     }
 }

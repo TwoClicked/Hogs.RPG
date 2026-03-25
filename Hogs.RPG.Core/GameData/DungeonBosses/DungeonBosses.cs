@@ -20,7 +20,16 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
             ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1482049411365470400/B2BA700C-F9CE-4B4B-8847-44D4EE18825C.png?ex=69bd7292&is=69bc2112&hm=d461b2ff15efb092afd84048e83339051c4b96b2ca5c1ee0138cbdca3932401c",
 
             BehaviorId = "rage",
-            AbilitiesText = "Enters rage at low HP, doubling damage temporarily."
+            AbilitiesText = "Enters rage at low HP, doubling damage temporarily.",
+
+            Drops = new List<DungeonDrop>
+            {
+                new DungeonDrop
+                {
+                    ItemId = "fanculo_helm",
+                    ChancePercent = 5
+                }
+            }
         };
 
         // =========================
@@ -39,7 +48,16 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
             ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1482039038960468029/image0.jpg?ex=69c4a929&is=69c357a9&hm=da453d03b2b992740ca594ab6a22c24a9f11bcfbfd6da396666fc5fa01af4b47",
 
             BehaviorId = "lifesteal_smash",
-            AbilitiesText = "Unleashes a heavy blow, restoring health equal to damage dealt."
+            AbilitiesText = "Unleashes a heavy blow, restoring health equal to damage dealt.",
+
+            Drops = new List<DungeonDrop>
+            {
+                new DungeonDrop
+                {
+                    ItemId = "hrothgar_ring",
+                    ChancePercent = 5
+                }
+            }
         };
 
         // =========================
@@ -55,10 +73,19 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
             Attack = 85,
             Defense = 40,
 
-            ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1486259283753701426/Boss.JPG?ex=69c4da52&is=69c388d2&hm=95b7737c96729bec3481238d7b7545422c0a731dc835432f8ab06d51bb55a0ea", 
+            ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1486259283753701426/Boss.JPG?ex=69c4da52&is=69c388d2&hm=95b7737c96729bec3481238d7b7545422c0a731dc835432f8ab06d51bb55a0ea",
 
             BehaviorId = "defensive_cloud",
-            AbilitiesText = "Surrounds herself with a toxic mist, reducing incoming damage."
+            AbilitiesText = "Surrounds herself with a toxic mist, reducing incoming damage.",
+
+            Drops = new List<DungeonDrop>
+            {
+                new DungeonDrop
+                {
+                    ItemId = "luminara_amulet",
+                    ChancePercent = 5
+                }
+            }
         };
 
         // =========================
@@ -77,7 +104,16 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
             ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1486083730123526285/image.png?ex=69c436d3&is=69c2e553&hm=7671b9af89c6a275aa2fb1b90df80281ceb75a5e50e157d777200ada94a88c08",
 
             BehaviorId = "crushing_blow",
-            AbilitiesText = "Occasionally unleashes a devastating blow ignoring part of the player's defense."
+            AbilitiesText = "Occasionally unleashes a devastating blow ignoring part of the player's defense.",
+
+            Drops = new List<DungeonDrop>
+            {
+                new DungeonDrop
+                {
+                    ItemId = "thorkell_boots",
+                    ChancePercent = 5
+                }
+            }
         };
     }
 }

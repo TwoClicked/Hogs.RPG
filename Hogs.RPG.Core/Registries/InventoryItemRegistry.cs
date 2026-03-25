@@ -137,12 +137,13 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             // ===== Boss Equipment Drops =====
             
             { DailyWeeklyBossDrops.AureliusSwordItem.Id, DailyWeeklyBossDrops.AureliusSwordItem },
-
-
-
             { DailyWeeklyBossDrops.XerathulArmorItem.Id, DailyWeeklyBossDrops.XerathulArmorItem },
             { DailyWeeklyBossDrops.GravelmawShieldItem.Id, DailyWeeklyBossDrops.GravelmawShieldItem },
             { DailyWeeklyBossDrops.SerpentGlovesItem.Id, DailyWeeklyBossDrops.SerpentGlovesItem },
+            { DailyWeeklyBossDrops.PunisherRingItem.Id, DailyWeeklyBossDrops.PunisherRingItem },
+            { DailyWeeklyBossDrops.TyrHelmItem.Id, DailyWeeklyBossDrops.TyrHelmItem },
+            { DailyWeeklyBossDrops.ThrolakLeggingsItem.Id, DailyWeeklyBossDrops.ThrolakLeggingsItem },
+            { DailyWeeklyBossDrops.GullveigAmuletItem.Id, DailyWeeklyBossDrops.GullveigAmuletItem },
         };
     }
 }

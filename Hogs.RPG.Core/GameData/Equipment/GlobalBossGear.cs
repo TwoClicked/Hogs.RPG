@@ -40,6 +40,45 @@ public static class GlobalBossGear
         Slot = EquipmentSlot.Gloves,
         Attack = 10,
         Defense = 10,
-        Health = 150
+        Health = 70
+    };
+    public static readonly EquipmentDefinition TyrHelm = new()
+    {
+        Id = "tyr_helm",
+        Name = "Helm of the High Overseer",
+        Slot = EquipmentSlot.Helmet,
+        Attack = 25,
+        Defense = 35,
+        Health = 100
+    };
+
+    public static readonly EquipmentDefinition ThrolakLeggings = new()
+    {
+        Id = "thorlak_leggings",
+        Name = "Bloodbreaker WarLeggings",
+        Slot = EquipmentSlot.Legs,
+        Attack = 15,
+        Defense = 20,
+        Health = 80
+    };
+
+    public static readonly EquipmentDefinition PunisherRing = new()
+    {
+        Id = "punisher_ring",
+        Name = "Seal of Collection",
+        Slot = EquipmentSlot.Ring,
+        Attack = 12,
+        Defense = 8,
+        Health = 120
+    };
+
+    public static readonly EquipmentDefinition GullveigAmulet = new()
+    {
+        Id = "gullveig_amulet",
+        Name = "Seiðr-Touched Amulet",
+        Slot = EquipmentSlot.Amulet,
+        Attack = 20,
+        Defense = 10,
+        Health = 60
     };
 }

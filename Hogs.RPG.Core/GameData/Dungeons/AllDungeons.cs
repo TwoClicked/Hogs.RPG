@@ -19,16 +19,7 @@ namespace Hogs.RPG.Core.GameData.Dungeons
             BaseEnemyAttack = 45,
             EnemyAttackScaling = 15,
 
-            Boss = DungeonBosses.DungeonBosses.Fanculo,
-
-            Drops = new List<DungeonDrop>
-            {
-                new DungeonDrop
-                {
-                    ItemId = "fanculo_helm",
-                    ChancePercent = 5
-                }
-            }
+            Boss = DungeonBosses.DungeonBosses.Fanculo
         };
 
         // =========================
@@ -48,16 +39,7 @@ namespace Hogs.RPG.Core.GameData.Dungeons
             BaseEnemyAttack = 65,
             EnemyAttackScaling = 20,
 
-            Boss = DungeonBosses.DungeonBosses.Hrothgar,
-
-            Drops = new List<DungeonDrop>
-            {
-                new DungeonDrop
-                {
-                    ItemId = "hrothgar_ring",
-                    ChancePercent = 5
-                }
-            }
+            Boss = DungeonBosses.DungeonBosses.Hrothgar
         };
 
         // =========================
@@ -69,24 +51,15 @@ namespace Hogs.RPG.Core.GameData.Dungeons
             Name = "Spirit Forest",
 
             RequiredLevel = 20,
-            Floors = 12,
+            Floors = 10,
 
             BaseEnemyHealth = 240,
             EnemyHealthScaling = 70,
 
-            BaseEnemyAttack = 85,
+            BaseEnemyAttack = 150,
             EnemyAttackScaling = 25,
 
-            Boss = DungeonBosses.DungeonBosses.Luminara,
-
-            Drops = new List<DungeonDrop>
-            {
-                new DungeonDrop
-                {
-                    ItemId = "luminara_amulet",
-                    ChancePercent = 5
-                }
-            }
+            Boss = DungeonBosses.DungeonBosses.Luminara
         };
 
         // =========================
@@ -98,24 +71,15 @@ namespace Hogs.RPG.Core.GameData.Dungeons
             Name = "Temple of Ruin",
 
             RequiredLevel = 25,
-            Floors = 15,
+            Floors = 12,
 
             BaseEnemyHealth = 350,
             EnemyHealthScaling = 90,
 
-            BaseEnemyAttack = 110,
+            BaseEnemyAttack = 200,
             EnemyAttackScaling = 30,
 
-            Boss = DungeonBosses.DungeonBosses.ThorkellSonOfTyr,
-
-            Drops = new List<DungeonDrop>
-            {
-                new DungeonDrop
-                {
-                    ItemId = "thorkell_boots",
-                    ChancePercent = 5
-                }
-            }
+            Boss = DungeonBosses.DungeonBosses.ThorkellSonOfTyr
         };
     }
 }

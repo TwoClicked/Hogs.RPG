@@ -10,7 +10,7 @@ namespace Hogs.RPG.Services.GatheringServices
         private readonly PlayerRepository _playerRepository;
 
         private const int MaxEnergy = 100;
-        private const int RegenMinutes = 5;
+        private const int RegenMinutes = 1;
 
         public EnergyService(PlayerRepository playerRepository)
         {

@@ -61,8 +61,11 @@ public static class EquipmentRegistry
         { Tier5Mythic.PendantOfTheWild.Id, Tier5Mythic.PendantOfTheWild },
         { Tier5Mythic.AbyssGauntlets.Id, Tier5Mythic.AbyssGauntlets },
 
-        //FANCULO GEAR
-        {DungeonBossGear.FanculoHelm.Id, DungeonBossGear.FanculoHelm },
+        // Dungeon GEAR
+        { DungeonBossGear.FanculoHelm.Id, DungeonBossGear.FanculoHelm },
+        { DungeonBossGear.HrothgarRing.Id, DungeonBossGear.HrothgarRing },
+        { DungeonBossGear.LuminaraAmulet.Id, DungeonBossGear.LuminaraAmulet },
+        { DungeonBossGear.ThorkellBoots.Id, DungeonBossGear.ThorkellBoots },
         
         // ===== Boss Equipment Drops =====
 
@@ -70,5 +73,9 @@ public static class EquipmentRegistry
         { GlobalBossGear.XerathulArmor.Id, GlobalBossGear.XerathulArmor },
         { GlobalBossGear.GravelmawShield.Id, GlobalBossGear.GravelmawShield },
         { GlobalBossGear.SerpentGloves.Id, GlobalBossGear.SerpentGloves },
+        { GlobalBossGear.TyrHelm.Id, GlobalBossGear.TyrHelm },
+        { GlobalBossGear.ThrolakLeggings.Id, GlobalBossGear.ThrolakLeggings },
+        { GlobalBossGear.PunisherRing.Id, GlobalBossGear.PunisherRing },
+        { GlobalBossGear.GullveigAmulet.Id, GlobalBossGear.GullveigAmulet },
     };
 }

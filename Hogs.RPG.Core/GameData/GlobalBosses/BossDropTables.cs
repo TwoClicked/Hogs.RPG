@@ -48,5 +48,49 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
                 MaxAmount = 1
             }
         };
+
+        public static List<BossLoot> Punisher = new()
+        {
+            new BossLoot
+            {
+                ItemId = "punisher_ring",
+                DropChance = 5, // slightly higher (daily boss but stronger)
+                MinAmount = 1,
+                MaxAmount = 1
+            }
+        };
+
+        public static List<BossLoot> Tyr = new()
+        {
+            new BossLoot
+            {
+                ItemId = "tyr_helm",
+                DropChance = 5, // weekly boss
+                MinAmount = 1,
+                MaxAmount = 1
+            }
+        };
+
+        public static List<BossLoot> Thorlak = new()
+        {
+            new BossLoot
+            {
+                ItemId = "thorlak_boots",
+                DropChance = 5,
+                MinAmount = 1,
+                MaxAmount = 1
+            }
+        };
+
+        public static List<BossLoot> Gullveig = new()
+        {
+            new BossLoot
+            {
+                ItemId = "gullveig_amulet",
+                DropChance = 5,
+                MinAmount = 1,
+                MaxAmount = 1
+            }
+        };
     }
 }

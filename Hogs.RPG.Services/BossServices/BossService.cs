@@ -274,35 +274,39 @@ namespace Hogs.RPG.Services.Game
                 var (levelMessage, levelsGained) = _levelService.CheckLevelUp(player);
 
                 // =========================
-                // 🎁 DROPS
+                // 🎁 DROPS (DPS GATED)
                 // =========================
                 var playerDrops = new List<string>();
 
-                foreach (var loot in lootTable)
+                // 🔥 REQUIREMENT: 10,000 DAMAGE
+                if (boss.DamageDealt.TryGetValue(userId, out var totalDamage) && totalDamage >= 10000)
                 {
-                    int roll = _rand.Next(1, 101);
-
-                    if (roll <= loot.DropChance)
+                    foreach (var loot in lootTable)
                     {
-                        int amount = _rand.Next(loot.MinAmount, loot.MaxAmount + 1);
+                        int roll = _rand.Next(1, 101);
 
-                        await _inventoryService.GiveItemAsync(userId, loot.ItemId, amount);
-
-                        // 🔥 IMPORTANT: reload player after inventory mutation
-                        player = await _playerRepository.GetByDiscordIdAsync(userId);
-
-                        if (InventoryItemDefinitions.All.TryGetValue(loot.ItemId, out var item))
+                        if (roll <= loot.DropChance)
                         {
-                            string line = $"{item.Icon} **{item.Name}**";
+                            int amount = _rand.Next(loot.MinAmount, loot.MaxAmount + 1);
 
-                            if (amount > 1)
-                                line += $" x{amount}";
+                            await _inventoryService.GiveItemAsync(userId, loot.ItemId, amount);
 
-                            playerDrops.Add(line);
-                        }
-                        else
-                        {
-                            playerDrops.Add($"**{loot.ItemId}** x{amount}");
+                            // reload player after inventory change
+                            player = await _playerRepository.GetByDiscordIdAsync(userId);
+
+                            if (InventoryItemDefinitions.All.TryGetValue(loot.ItemId, out var item))
+                            {
+                                string line = $"{item.Icon} **{item.Name}**";
+
+                                if (amount > 1)
+                                    line += $" x{amount}";
+
+                                playerDrops.Add(line);
+                            }
+                            else
+                            {
+                                playerDrops.Add($"**{loot.ItemId}** x{amount}");
+                            }
                         }
                     }
                 }
@@ -339,13 +343,15 @@ namespace Hogs.RPG.Services.Game
                 }
             }
 
+
             // =========================
-            // 🎁 OUTPUT DROPS
+            // 🎁 OUTPUT DROPS + ELIGIBILITY
             // =========================
-            if (dropResults.Count > 0)
+            if (boss.Participants.Count > 0)
             {
                 sb.AppendLine("\n🎁 **Drops:**\n");
 
+                // ✅ Players WITH drops
                 foreach (var (userId, drops) in dropResults)
                 {
                     sb.AppendLine($"<@{userId}>");
@@ -357,10 +363,31 @@ namespace Hogs.RPG.Services.Game
 
                     sb.AppendLine();
                 }
+
+                // ❌ Players WITHOUT eligibility
+                foreach (var userId in boss.Participants)
+                {
+                    // Skip players who already got drops
+                    if (dropResults.ContainsKey(userId))
+                        continue;
+
+                    // Check damage
+                    if (!boss.DamageDealt.TryGetValue(userId, out var dmg) || dmg < 10000)
+                    {
+                        sb.AppendLine($"<@{userId}>");
+                        sb.AppendLine($"  • ❌ Did not deal enough damage (10,000 required)\n");
+                    }
+                    else
+                    {
+                        // Eligible but unlucky (rolled nothing)
+                        sb.AppendLine($"<@{userId}>");
+                        sb.AppendLine($"  • 😢 No drops this time\n");
+                    }
+                }
             }
             else
             {
-                sb.AppendLine("\n🎁 *No rare drops this time...*");
+                sb.AppendLine("\n🎁 *No participants...*");
             }
 
             return sb.ToString();

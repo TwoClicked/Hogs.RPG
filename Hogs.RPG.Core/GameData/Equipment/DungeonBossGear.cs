@@ -20,7 +20,7 @@ namespace Hogs.RPG.Core.GameData.Equipment
             Slot = EquipmentSlot.Helmet,
             Defense = 20,
             Attack = 20,
-            Health = 150
+            Health = 75
         };
 
         // =========================
@@ -59,7 +59,7 @@ namespace Hogs.RPG.Core.GameData.Equipment
             Slot = EquipmentSlot.Boots,
             Defense = 25,
             Attack = 40,
-            Health = 200
+            Health = 150
         };
     }
 }

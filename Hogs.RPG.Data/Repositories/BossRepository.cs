@@ -14,6 +14,8 @@ namespace Hogs.RPG.Data.Repositories
 
         private List<BossDefinition> _bosses = new();
         private bool _loaded = false;
+        private DateTime _lastLoad = DateTime.MinValue;
+        private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5); // or 10
 
         public BossRepository(IGoogleSheetsService sheets)
         {
@@ -24,7 +26,7 @@ namespace Hogs.RPG.Data.Repositories
         {
 
             Console.WriteLine("📥 Loading bosses...");
-            if (_loaded)
+            if (_loaded && DateTime.UtcNow - _lastLoad < _cacheDuration)
                 return;
 
 
@@ -39,7 +41,7 @@ namespace Hogs.RPG.Data.Repositories
             {
                 try
                 {
-                    if (row.Count < 8) continue;
+                    if (row.Count < 9) continue;
 
                     var Id = row[0]?.ToString()?.Trim();
                     if (string.IsNullOrWhiteSpace(Id)) continue;
@@ -73,6 +75,71 @@ namespace Hogs.RPG.Data.Repositories
             }
 
             _loaded = true;
+            _lastLoad = DateTime.UtcNow;
+        }
+
+        public async Task SaveSpawnEntryAsync(DateTime date, string key)
+        {
+            await _sheets.AppendRowAsync("BossState", new List<object>
+            {
+                date.ToString("yyyy-MM-dd"),
+                key
+            });
+        }
+
+        public async Task ClearOldStateAsync(DateTime date)
+        {
+            var rows = await _sheets.ReadRangeAsync("BossState", "A2:B");
+
+            var today = date.ToString("yyyy-MM-dd");
+
+            var filtered = new List<IList<object>>();
+
+            foreach (var row in rows)
+            {
+                if (row.Count < 2) continue;
+
+                var rowDate = row[0]?.ToString();
+
+                if (rowDate == today)
+                {
+                    filtered.Add(new List<object>
+            {
+                row[0],
+                row[1]
+            });
+                }
+            }
+
+            // 🔥 Rewrite sheet (keep header row intact)
+            await _sheets.ClearRangeAsync("BossState", "A2:B");
+
+            if (filtered.Any())
+            {
+                await _sheets.WriteRangeAsync("BossState", "A2", filtered);
+            }
+        }
+
+        public async Task<HashSet<string>> LoadSpawnStateAsync(DateTime date)
+        {
+            var result = new HashSet<string>();
+
+            var rows = await _sheets.ReadRangeAsync("BossState", "A2:B");
+
+            foreach (var row in rows)
+            {
+                if (row.Count < 2) continue;
+
+                var rowDate = row[0]?.ToString();
+                var key = row[1]?.ToString();
+
+                if (rowDate == date.ToString("yyyy-MM-dd") && !string.IsNullOrEmpty(key))
+                {
+                    result.Add(key);
+                }
+            }
+
+            return result;
         }
 
         public async Task<List<BossDefinition>> GetAllAsync()
@@ -86,6 +153,7 @@ namespace Hogs.RPG.Data.Repositories
             await EnsureLoaded();
             return _bosses.Where(b => b.Type == type).ToList();
         }
+
         public async Task<BossDefinition> GetByIdAsync(string bossId)
         {
             await EnsureLoaded();

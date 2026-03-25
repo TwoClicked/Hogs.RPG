@@ -28,7 +28,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "hrothgar_ring",
             Name = "Hrothgar's Frostbound Ring",
-            Icon = "💍(Sally will make)", // replace with custom emoji later
+            Icon = "<:hrothgars_ring:1486419394920976475>",
             Type = "Equipment",
             Description = "A frozen band that pulses with the lifesteal power of the Frost-Bound Jarl."
         };
@@ -40,8 +40,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "luminara_amulet",
             Name = "Luminara's Moonlit Amulet",
-            Icon = "📿(Sally will make)", // replace later
-            Type = "Equipment",
+            Icon = "<:luminaras_amulet:1486423884688396289>",
             Description = "A glowing charm radiating deceptive beauty, masking a sinister, protective aura."
         };
 
@@ -52,7 +51,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "thorkell_boots",
             Name = "Boots of the Warborn",
-            Icon = "👢(Sally will make)", // replace later
+            Icon = "<:thorkell_boots:1486426976297418852>", 
             Type = "Equipment",
             Description = "Heavy war boots infused with divine fury, allowing the wearer to crush through all resistance."
         };

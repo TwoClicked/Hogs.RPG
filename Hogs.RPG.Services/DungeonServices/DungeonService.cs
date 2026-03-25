@@ -8,6 +8,7 @@ using Hogs.RPG.Services.InventoryServices;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Hogs.RPG.Services.GameplayServices;
 
 namespace Hogs.RPG.Services.Game
 {
@@ -18,6 +19,7 @@ namespace Hogs.RPG.Services.Game
         private readonly IMessageChannel _announcementChannel;
         private readonly DiscordSocketClient _client;
         private readonly StatService _statService;
+        private readonly LevelService _levelService;
 
         private readonly Dictionary<ulong, (ulong messageId, ulong channelId)> _lastMessages = new();
         private readonly Dictionary<ulong, DateTime> _lastAction = new();
@@ -30,13 +32,15 @@ namespace Hogs.RPG.Services.Game
             PlayerRepository playerRepository,
             InventoryService inventoryService,
             DiscordSocketClient client,
-            StatService statService)
+            StatService statService,
+            LevelService levelservice)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
 
             _client = client;
             _statService = statService;
+            _levelService = levelservice;
 
             _announcementChannel = client.GetChannel(1485357755433750549) as IMessageChannel;
         }
@@ -180,7 +184,7 @@ namespace Hogs.RPG.Services.Game
             // 💢 CRIT CHANCE (after behavior modifies damage)
             if (_random.Next(0, 100) < 10)
             {
-                enemyDamage = (int)(enemyDamage * 2.5);
+                enemyDamage = (int)(enemyDamage * 1.5);
 
                 if (string.IsNullOrEmpty(behaviorText))
                     behaviorText = "💢 Critical hit!";
@@ -365,28 +369,34 @@ namespace Hogs.RPG.Services.Game
             var dungeon = DungeonRegistry.All[session.DungeonId];
 
             player.Gold += 400;
-            player.XP += 200;
+            player.XP += 1500;
+
+            // 🔥 Handle level-up
+            var (levelMessage, levelsGained) = _levelService.CheckLevelUp(player);
 
             var dropText = "";
 
-            // 🔥 Handle dungeon-specific drops
-            foreach (var drop in dungeon.Drops)
+            // 🔥 Handle BOSS drops
+            var drops = dungeon.Boss?.Drops;
+
+            if (drops != null)
             {
-                int roll = _random.Next(1, 101); // 1–100
-
-                if (roll <= drop.ChancePercent)
+                foreach (var drop in drops)
                 {
-                    await _inventoryService.GiveItemAsync(userId, drop.ItemId, 1);
+                    int roll = _random.Next(1, 101); // 1–100
 
-                    // Get proper item name for display
-                    if (InventoryItemDefinitions.All.TryGetValue(drop.ItemId, out var item))
+                    if (roll <= drop.ChancePercent)
                     {
-                        dropText += $"\n🎁 **{item.Name}**";
-                    }
-                    else
-                    {
-                        // fallback if not registered
-                        dropText += $"\n🎁 **{drop.ItemId.Replace("_", " ")}**";
+                        await _inventoryService.GiveItemAsync(userId, drop.ItemId, 1);
+
+                        if (InventoryItemDefinitions.All.TryGetValue(drop.ItemId, out var item))
+                        {
+                            dropText += $"\n🎁 **{item.Name}**";
+                        }
+                        else
+                        {
+                            dropText += $"\n🎁 **{drop.ItemId.Replace("_", " ")}**";
+                        }
                     }
                 }
             }
@@ -397,20 +407,21 @@ namespace Hogs.RPG.Services.Game
             {
                 Embed = new EmbedBuilder()
                     .WithTitle("🏆 Dungeon Complete")
-                    .WithDescription($"+400 Gold\n+200 XP{dropText}")
+                    .WithDescription($"+400 Gold\n+1500 XP{dropText}{levelMessage}")
                     .WithColor(Color.Gold)
                     .Build(),
                 IsFinished = true
             };
 
-            // 🔥 Announcement (with drops)
+            // 🔥 Announcement (with drops + level up)
             if (_announcementChannel != null)
             {
                 await _announcementChannel.SendMessageAsync(
                     $"🏆 <@{userId}> cleared **{dungeon.Name}**\n" +
-                    $"+400 Gold\n+200 XP{dropText}"
+                    $"+400 Gold\n+1500 XP{dropText}{levelMessage}"
                 );
             }
+
             _lastDungeonRun[userId] = DateTime.UtcNow;
             return result;
         }
