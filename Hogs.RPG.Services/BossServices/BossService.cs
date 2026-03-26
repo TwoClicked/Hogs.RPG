@@ -268,17 +268,14 @@ namespace Hogs.RPG.Services.Game
                 player.Gold += reward;
                 player.XP += 5000;
 
-                // =========================
-                // 🔥 LEVEL UP CHECK (CRITICAL)
-                // =========================
+                // 🔥 LEVEL UP CHECK
                 var (levelMessage, levelsGained) = _levelService.CheckLevelUp(player);
+
+                var playerDrops = new List<string>();
 
                 // =========================
                 // 🎁 DROPS (DPS GATED)
                 // =========================
-                var playerDrops = new List<string>();
-
-                // 🔥 REQUIREMENT: 10,000 DAMAGE
                 if (boss.DamageDealt.TryGetValue(userId, out var totalDamage) && totalDamage >= 10000)
                 {
                     foreach (var loot in lootTable)
@@ -289,10 +286,8 @@ namespace Hogs.RPG.Services.Game
                         {
                             int amount = _rand.Next(loot.MinAmount, loot.MaxAmount + 1);
 
+                            // ✅ GIVE ITEM (no reload after!)
                             await _inventoryService.GiveItemAsync(userId, loot.ItemId, amount);
-
-                            // reload player after inventory change
-                            player = await _playerRepository.GetByDiscordIdAsync(userId);
 
                             if (InventoryItemDefinitions.All.TryGetValue(loot.ItemId, out var item))
                             {
@@ -315,9 +310,9 @@ namespace Hogs.RPG.Services.Game
                     dropResults[userId] = playerDrops;
 
                 // =========================
-                // 🔧 NORMALIZE HEALTH (PREVENT CRASH)
+                // 🔧 NORMALIZE HEALTH
                 // =========================
-                var (atk, def, maxHp) = _statService.CalculateStats(player);
+                var (_, _, maxHp) = _statService.CalculateStats(player);
 
                 if (player.Health <= 0)
                     player.Health = maxHp;
@@ -329,7 +324,9 @@ namespace Hogs.RPG.Services.Game
                 // =========================
                 await _playerRepository.UpdatePlayerAsync(player);
 
-                // ✅ LEVEL ANNOUNCEMENT
+                // =========================
+                // 🎉 LEVEL ANNOUNCEMENT
+                // =========================
                 if (levelsGained > 0)
                 {
                     var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
@@ -341,48 +338,61 @@ namespace Hogs.RPG.Services.Game
                         );
                     }
                 }
+
+                // 🔥 CRITICAL: prevent API overload
+                await Task.Delay(75);
             }
 
-
             // =========================
-            // 🎁 OUTPUT DROPS + ELIGIBILITY
+            // 🎁 OUTPUT DROPS (CLEAN UI)
             // =========================
             if (boss.Participants.Count > 0)
             {
                 sb.AppendLine("\n🎁 **Drops:**\n");
 
-                // ✅ Players WITH drops
-                foreach (var (userId, drops) in dropResults)
-                {
-                    sb.AppendLine($"<@{userId}>");
+                var winners = new List<string>();
+                var unlucky = new List<string>();
+                var notEligible = new List<string>();
 
-                    foreach (var drop in drops)
-                    {
-                        sb.AppendLine($"  • {drop}");
-                    }
-
-                    sb.AppendLine();
-                }
-
-                // ❌ Players WITHOUT eligibility
                 foreach (var userId in boss.Participants)
                 {
-                    // Skip players who already got drops
-                    if (dropResults.ContainsKey(userId))
-                        continue;
+                    var mention = $"<@{userId}>";
 
-                    // Check damage
-                    if (!boss.DamageDealt.TryGetValue(userId, out var dmg) || dmg < 10000)
+                    bool hasDrops = dropResults.ContainsKey(userId);
+                    boss.DamageDealt.TryGetValue(userId, out var dmg);
+
+                    if (hasDrops)
                     {
-                        sb.AppendLine($"<@{userId}>");
-                        sb.AppendLine($"  • ❌ Did not deal enough damage (10,000 required)\n");
+                        var drops = string.Join("\n  • ", dropResults[userId]);
+                        winners.Add($"{mention}\n  • {drops}");
+                    }
+                    else if (dmg >= 10000)
+                    {
+                        unlucky.Add(mention);
                     }
                     else
                     {
-                        // Eligible but unlucky (rolled nothing)
-                        sb.AppendLine($"<@{userId}>");
-                        sb.AppendLine($"  • 😢 No drops this time\n");
+                        notEligible.Add(mention);
                     }
+                }
+
+                if (winners.Count > 0)
+                {
+                    sb.AppendLine("🏆 **Loot Winners**");
+                    foreach (var w in winners)
+                        sb.AppendLine(w + "\n");
+                }
+
+                if (unlucky.Count > 0)
+                {
+                    sb.AppendLine("😢 **No Drops (Eligible)**");
+                    sb.AppendLine(string.Join(", ", unlucky) + "\n");
+                }
+
+                if (notEligible.Count > 0)
+                {
+                    sb.AppendLine("❌ **Not Enough Damage (10,000 required)**");
+                    sb.AppendLine(string.Join(", ", notEligible) + "\n");
                 }
             }
             else

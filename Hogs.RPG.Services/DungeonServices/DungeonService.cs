@@ -147,7 +147,7 @@ namespace Hogs.RPG.Services.Game
             // 🌫️ Luminara cloud effect
             if (session.CloudActive)
             {
-                enemyDefense *= 2;
+                enemyDefense *= 9999;
                 session.CloudActive = false; // one-turn effect
             }
 
@@ -184,7 +184,7 @@ namespace Hogs.RPG.Services.Game
             // 💢 CRIT CHANCE (after behavior modifies damage)
             if (_random.Next(0, 100) < 10)
             {
-                enemyDamage = (int)(enemyDamage * 1.5);
+                enemyDamage = (int)(enemyDamage * 2);
 
                 if (string.IsNullOrEmpty(behaviorText))
                     behaviorText = "💢 Critical hit!";

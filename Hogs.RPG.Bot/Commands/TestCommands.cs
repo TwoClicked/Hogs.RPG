@@ -81,42 +81,6 @@ namespace Hogs.RPG.Bot.Commands
             await FollowupAsync(builder.ToString(), ephemeral: true);
         }
 
-        // =========================
-        // FORCE WEEKLY
-        // =========================
-
-        [SlashCommand("forceweekly", "Force spawn a weekly boss (Admin Only)")]
-        public async Task ForceWeeklyBoss()
-        {
-            if (!await EnsureAdminAsync()) return;
-
-            await DeferAsync();
-
-            var boss = await _bossService.SpawnWeeklyBoss();
-
-            if (boss == null)
-            {
-                await FollowupAsync("❌ No weekly boss found.", ephemeral: true);
-                return;
-            }
-
-            var embed = _bossService.BuildBossEmbed(boss);
-
-            var components = new ComponentBuilder()
-                .WithButton("⚔ Attack", $"boss_attack:{boss.Definition.Id}", ButtonStyle.Danger)
-                .WithButton("🧪 Heal", $"boss_heal:{boss.Definition.Id}", ButtonStyle.Success)
-                .Build();
-
-            var msg = await FollowupAsync(
-                "@BossRaid 🔥 A Weekly Boss has been spawned!",
-                embed: embed,
-                components: components
-            );
-
-            // 🔥 IMPORTANT: store message for updates
-            boss.ChannelId = Context.Channel.Id;
-            boss.MessageId = msg.Id;
-        }
 
         // =========================
         // FORCE DAILY

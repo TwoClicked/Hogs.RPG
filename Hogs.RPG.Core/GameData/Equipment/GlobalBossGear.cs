@@ -67,9 +67,9 @@ public static class GlobalBossGear
         Id = "punisher_ring",
         Name = "Seal of Collection",
         Slot = EquipmentSlot.Ring,
-        Attack = 12,
-        Defense = 8,
-        Health = 120
+        Attack = 30,
+        Defense = 20,
+        Health = 150
     };
 
     public static readonly EquipmentDefinition GullveigAmulet = new()
@@ -77,8 +77,8 @@ public static class GlobalBossGear
         Id = "gullveig_amulet",
         Name = "Seiðr-Touched Amulet",
         Slot = EquipmentSlot.Amulet,
-        Attack = 20,
-        Defense = 10,
-        Health = 60
+        Attack = 40,
+        Defense = 15,
+        Health = 150
     };
 }

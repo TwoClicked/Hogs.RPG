@@ -66,7 +66,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "thorlak_leggings",
             Name = "Bloodbreaker Warleggings",
-            Icon = "<:king_thorlak_boots:1486438222698516540>",
+            Icon = "<:king_thorlak_legs:1486464708629496009>",
             Type = "Equipment",
             Description = "Leggings worn by the undead king, stained with the blood of countless battles."
         };

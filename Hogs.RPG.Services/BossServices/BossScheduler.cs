@@ -23,6 +23,8 @@ namespace Hogs.RPG.Services.Game
         private readonly BossRepository _bossRepository;
 
         private readonly Random _random = new();
+
+        // Spawn hours (currently disabled logic below, but kept for later use)
         private static readonly HashSet<int> SpawnHours = new() { 0, 3, 6, 9, 12, 15, 18, 21 };
 
         private readonly ulong _bossChannelId = 1485386835180916969;
@@ -64,17 +66,29 @@ namespace Hogs.RPG.Services.Game
                     {
                         Console.WriteLine("🔄 Syncing boss state from Google Sheets");
 
-                        await _bossRepository.ClearOldStateAsync(now);
-                        _spawnedToday = await _bossRepository.LoadSpawnStateAsync(now);
+                        try
+                        {
+                            await _bossRepository.ClearOldStateAsync(now);
+                            _spawnedToday = await _bossRepository.LoadSpawnStateAsync(now);
 
-                        _lastReset = now.Date;
+                            _lastReset = now.Date;
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"❌ Failed syncing boss state: {ex.Message}");
+
+                            // Fallback so system keeps working
+                            _spawnedToday = new HashSet<string>();
+                        }
                     }
 
+                    // 🔥 Run systems independently so one failure doesn't kill everything
                     await HandleDailyBosses(now);
                     await CleanupExpiredBosses();
                 }
                 catch (Exception ex)
                 {
+                    // 🔥 LAST LINE OF DEFENSE (should rarely hit now)
                     Console.WriteLine($"💥 Scheduler crash: {ex}");
                 }
 
@@ -89,9 +103,7 @@ namespace Hogs.RPG.Services.Game
         {
             Console.WriteLine("➡ Checking scheduled bosses...");
 
-
-
-            // ✅ Only allow spawn in first 2 minutes of valid hours
+            // ✅ Only allow spawn in first 2 minutes of valid hours (disabled for now)
             if (!SpawnHours.Contains(now.Hour) || now.Minute >= 3)
             {
                 Console.WriteLine($"   ❌ Outside spawn window ({now:HH:mm})");
@@ -107,8 +119,18 @@ namespace Hogs.RPG.Services.Game
                 return;
             }
 
-            // ✅ Get all DAILY bosses from repository
-            var allDailyBosses = await _bossRepository.GetByTypeAsync(BossType.Daily);
+            List<BossDefinition> allDailyBosses;
+
+            try
+            {
+                // 🔥 THIS WAS CRASHING YOUR SYSTEM BEFORE
+                allDailyBosses = (await _bossRepository.GetByTypeAsync(BossType.Daily)).ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Failed loading bosses: {ex.Message}");
+                return; // 🔥 DO NOT crash scheduler
+            }
 
             if (!allDailyBosses.Any())
             {
@@ -130,15 +152,24 @@ namespace Hogs.RPG.Services.Game
             // 🎲 Random selection
             var selected = availableBosses[_random.Next(availableBosses.Count)];
 
-            // ✅ Safety check (should rarely happen but good practice)
+            // ✅ Safety check
             if (_bossService.IsBossActive(selected.Id))
             {
                 Console.WriteLine($"   ❌ Boss already active: {selected.Id}");
                 return;
             }
 
-            // ✅ Spawn boss
-            var boss = await _bossService.SpawnBoss(selected.Id);
+            ActiveBoss boss = null;
+
+            try
+            {
+                boss = await _bossService.SpawnBoss(selected.Id);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Failed spawning boss: {ex.Message}");
+                return;
+            }
 
             if (boss != null)
             {
@@ -147,8 +178,15 @@ namespace Hogs.RPG.Services.Game
                 _spawnedToday.Add(selected.Id);
                 _spawnedToday.Add(timeslotKey);
 
-                await _bossRepository.SaveSpawnEntryAsync(now, selected.Id);
-                await _bossRepository.SaveSpawnEntryAsync(now, timeslotKey);
+                try
+                {
+                    await _bossRepository.SaveSpawnEntryAsync(now, selected.Id);
+                    await _bossRepository.SaveSpawnEntryAsync(now, timeslotKey);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Failed saving spawn state: {ex.Message}");
+                }
 
                 await AnnounceBoss(boss, "⚔ A mysterious boss has appeared!");
             }
@@ -165,7 +203,17 @@ namespace Hogs.RPG.Services.Game
         {
             Console.WriteLine("➡ Checking expired bosses...");
 
-            var expiredBosses = _bossService.GetExpiredBosses().ToList();
+            List<ActiveBoss> expiredBosses;
+
+            try
+            {
+                expiredBosses = _bossService.GetExpiredBosses().ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Failed retrieving expired bosses: {ex.Message}");
+                return;
+            }
 
             Console.WriteLine($"Expired bosses: {expiredBosses.Count}");
 
