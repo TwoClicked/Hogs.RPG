@@ -1,6 +1,5 @@
 ﻿using Hogs.RPG.Core.GameData.Recipes;
-using Hogs.RPG.Data.GoogleSheets;
-using Hogs.RPG.Data.Interfaces;
+using Hogs.RPG.Data;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.AlchemyServices;
 using Hogs.RPG.Services.Game;
@@ -9,6 +8,7 @@ using Hogs.RPG.Services.GatheringServices;
 using Hogs.RPG.Services.HuntServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PlayerServices;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hogs.RPG.Bot.Setup
@@ -17,19 +17,17 @@ namespace Hogs.RPG.Bot.Setup
     {
         public static void Configure(IServiceCollection services)
         {
-            services.AddSingleton<IGoogleSheetsService>(
-                new GoogleSheetsService(
-                    @"C:\Users\diego\source\repos\Hogs.RPG\credentials.json",
-                    "1pA9mu28YmNe7GSchqJyxmdw8ErAjta0Xvm3LUKjpr50"
-                )
-            );
+
+            //EF connect
+            services.AddDbContext<GameDbContext>(options =>
+                                                 options.UseSqlServer(
+                                                 "Server=(localdb)\\MSSQLLocalDB;Database=HogsRPG;Trusted_Connection=True;"));
+
             // registering Services
-            services.AddSingleton<PlayerRepository>();
             services.AddSingleton<PlayerService>();
             services.AddSingleton<HealService>();
             services.AddSingleton<StatService>();
 
-            services.AddSingleton<InventoryRepository>();
             services.AddSingleton<InventoryService>();
 
             services.AddSingleton<HuntService>();
@@ -51,13 +49,16 @@ namespace Hogs.RPG.Bot.Setup
 
             services.AddSingleton<AlchemyService>();
 
-            services.AddSingleton<BossRepository>();
             services.AddSingleton<BossService>();
 
             services.AddSingleton<BossScheduler>();
             services.AddHostedService<BossScheduler>();
 
             services.AddSingleton<DungeonService>();
+
+            services.AddScoped<PlayerRepository>();
+            services.AddScoped<InventoryRepository>();
+            services.AddScoped<BossStateRepository>();
         }
     }
 }

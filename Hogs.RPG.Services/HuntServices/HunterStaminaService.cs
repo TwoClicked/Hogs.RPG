@@ -9,6 +9,10 @@ namespace Hogs.RPG.Services.GameplayServices
 
         public void Regenerate(Player player)
         {
+
+            if (player == null)
+                return;
+
             if (string.IsNullOrEmpty(player.LastHunterStaminaUpdate))
             {
                 player.LastHunterStaminaUpdate = DateTimeOffset.UtcNow.ToString("o");

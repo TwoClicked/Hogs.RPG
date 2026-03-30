@@ -18,13 +18,13 @@ namespace Hogs.RPG.Services.Game
 {
     public class BossService
     {
-        private readonly BossRepository _bossRepository;
         private readonly PlayerService _playerService;
         private readonly PlayerRepository _playerRepository;
         private readonly StatService _statService;
         private readonly InventoryService _inventoryService;
         private readonly DiscordSocketClient _client;
         private readonly LevelService _levelService;
+        private readonly BossStateRepository _bossStateRepository;
 
         private readonly Dictionary<string, ActiveBoss> _activeBosses = new();
 
@@ -33,42 +33,21 @@ namespace Hogs.RPG.Services.Game
         private static readonly Random _rand = new();
 
         public BossService(
-            BossRepository bossRepository,
             PlayerService playerService,
             PlayerRepository playerRepository,
             StatService statService,
             InventoryService inventoryService,
             DiscordSocketClient client,
-            LevelService levelService)
+            LevelService levelService,
+            BossStateRepository bossStateRepository)
         {
-            _bossRepository = bossRepository;
             _playerService = playerService;
             _playerRepository = playerRepository;
             _statService = statService;
             _inventoryService = inventoryService;
             _client = client;
             _levelService = levelService;
-        }
-
-        // =========================
-        // SPAWNING
-        // =========================
-        public async Task<ActiveBoss> SpawnWeeklyBoss()
-        {
-            var bosses = await _bossRepository.GetByTypeAsync(BossType.Weekly);
-
-            if (!bosses.Any())
-                return null;
-
-            var boss = bosses[_rand.Next(bosses.Count)];
-
-            if (_activeBosses.ContainsKey(boss.Id))
-                return _activeBosses[boss.Id];
-
-            var activeBoss = CreateActiveBoss(boss);
-            _activeBosses[boss.Id] = activeBoss;
-
-            return activeBoss;
+            _bossStateRepository = bossStateRepository;
         }
 
         public async Task<ActiveBoss> SpawnBoss(string bossId)
@@ -76,7 +55,7 @@ namespace Hogs.RPG.Services.Game
             if (_activeBosses.ContainsKey(bossId))
                 return _activeBosses[bossId];
 
-            var boss = await _bossRepository.GetByIdAsync(bossId);
+            var boss = GlobalBossRegistry.GetById(bossId);
             if (boss == null) return null;
 
             var activeBoss = CreateActiveBoss(boss);

@@ -68,8 +68,6 @@ namespace Hogs.RPG.Bot.Commands
                 Health = 100,
                 MaxHealth = 100,
 
-                LastHunt = "",
-
                 HunterStamina = 100,
                 LastHunterStaminaUpdate = DateTimeOffset.UtcNow.ToString("o"),
 

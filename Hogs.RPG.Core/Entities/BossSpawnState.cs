@@ -6,14 +6,11 @@ using System.Threading.Tasks;
 
 namespace Hogs.RPG.Core.Entities
 {
-    public class InventoryItem
+    public class BossSpawnState
     {
-
-
         public int Id { get; set; }
-        public ulong DiscordId { get; set; }
-        public string ItemId { get; set; }
-        public int Quantity { get; set; }
 
+        public DateTime Date { get; set; }
+        public string Key { get; set; }
     }
 }

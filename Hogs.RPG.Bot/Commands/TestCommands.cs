@@ -2,6 +2,7 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.InventoryServices;
@@ -10,6 +11,7 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Hogs.RPG.Core.Entities.BossDefinition;
 
 namespace Hogs.RPG.Bot.Commands
 {
@@ -17,20 +19,17 @@ namespace Hogs.RPG.Bot.Commands
     {
         private const ulong ADMIN_ROLE_ID = 1483528182106685691;
 
-        private readonly BossRepository _bossRepository;
         private readonly PlayerService _playerService;
         private readonly BossService _bossService;
         private readonly PlayerRepository _playerRepository;
         private readonly InventoryService _inventoryService;
 
         public TestCommands(
-            BossRepository bossRepository,
             BossService bossService,
             PlayerService playerService,
             PlayerRepository playerRepository,
             InventoryService inventoryService)
         {
-            _bossRepository = bossRepository;
             _bossService = bossService;
             _playerService = playerService;
             _playerRepository = playerRepository;
@@ -63,7 +62,7 @@ namespace Hogs.RPG.Bot.Commands
 
             await DeferAsync(ephemeral: true);
 
-            var bosses = await _bossRepository.GetAllAsync();
+            var bosses = GlobalBossRegistry.GetByType(BossType.Daily);
 
             if (bosses.Count == 0)
             {

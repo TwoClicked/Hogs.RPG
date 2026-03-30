@@ -34,8 +34,6 @@ namespace Hogs.RPG.Services.PlayerServices
                 Health = 100,
                 MaxHealth = 100,
 
-                // Hunt (legacy + new system)
-                LastHunt = "",
 
                 HunterStamina = 100,
                 LastHunterStaminaUpdate = DateTimeOffset.UtcNow.ToString("o"),

@@ -1,15 +1,11 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.Hosting;
-using System;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+
 using static Hogs.RPG.Core.Entities.BossDefinition;
 
 namespace Hogs.RPG.Services.Game
@@ -20,11 +16,11 @@ namespace Hogs.RPG.Services.Game
         private readonly DiscordSocketClient _client;
         private readonly PlayerService _playerService;
         private readonly PlayerRepository _playerRepository;
-        private readonly BossRepository _bossRepository;
+        private readonly BossStateRepository _bossStateRepository;
 
         private readonly Random _random = new();
 
-        // Spawn hours (currently disabled logic below, but kept for later use)
+        // Spawn hours (currently disabled logic below, but kept for later use)  
         private static readonly HashSet<int> SpawnHours = new() { 0, 3, 6, 9, 12, 15, 18, 21 };
 
         private readonly ulong _bossChannelId = 1485386835180916969;
@@ -40,13 +36,13 @@ namespace Hogs.RPG.Services.Game
             DiscordSocketClient client,
             PlayerService playerService,
             PlayerRepository playerRepository,
-            BossRepository bossRepository)
+            BossStateRepository bossStateRepository)
         {
             _bossService = bossService;
             _client = client;
             _playerService = playerService;
             _playerRepository = playerRepository;
-            _bossRepository = bossRepository;
+            _bossStateRepository = bossStateRepository;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -64,12 +60,11 @@ namespace Hogs.RPG.Services.Game
                     // 🔥 Sync state from Google Sheets once per day (or first run)
                     if (_lastReset.Date != now.Date)
                     {
-                        Console.WriteLine("🔄 Syncing boss state from Google Sheets");
 
                         try
                         {
-                            await _bossRepository.ClearOldStateAsync(now);
-                            _spawnedToday = await _bossRepository.LoadSpawnStateAsync(now);
+                            await _bossStateRepository.ClearOldAsync(now);
+                            _spawnedToday = await _bossStateRepository.LoadForDateAsync(now);
 
                             _lastReset = now.Date;
                         }
@@ -104,11 +99,11 @@ namespace Hogs.RPG.Services.Game
             Console.WriteLine("➡ Checking scheduled bosses...");
 
             // ✅ Only allow spawn in first 2 minutes of valid hours (disabled for now)
-            if (!SpawnHours.Contains(now.Hour) || now.Minute >= 3)
-            {
-                Console.WriteLine($"   ❌ Outside spawn window ({now:HH:mm})");
-                return;
-            }
+             if (!SpawnHours.Contains(now.Hour) || now.Minute >= 3)
+             {
+                 Console.WriteLine($"   ❌ Outside spawn window ({now:HH:mm})");
+                 return;
+             }
 
             // ✅ Prevent multiple spawns in same timeslot
             var timeslotKey = $"timeslot_{now.Date:yyyyMMdd}_{now.Hour}";
@@ -123,8 +118,8 @@ namespace Hogs.RPG.Services.Game
 
             try
             {
-                // 🔥 THIS WAS CRASHING YOUR SYSTEM BEFORE
-                allDailyBosses = (await _bossRepository.GetByTypeAsync(BossType.Daily)).ToList();
+
+                allDailyBosses = GlobalBossRegistry.GetByType(BossType.Daily);
             }
             catch (Exception ex)
             {
@@ -180,8 +175,8 @@ namespace Hogs.RPG.Services.Game
 
                 try
                 {
-                    await _bossRepository.SaveSpawnEntryAsync(now, selected.Id);
-                    await _bossRepository.SaveSpawnEntryAsync(now, timeslotKey);
+                    await _bossStateRepository.SaveAsync(now, selected.Id);
+                    await _bossStateRepository.SaveAsync(now, timeslotKey);
                 }
                 catch (Exception ex)
                 {

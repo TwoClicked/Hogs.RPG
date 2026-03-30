@@ -1,153 +1,76 @@
 ﻿using Hogs.RPG.Core.Entities;
-using Hogs.RPG.Data.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Hogs.RPG.Data.Repositories
 {
     public class InventoryRepository
     {
-        private readonly IGoogleSheetsService _sheets;
+        private readonly GameDbContext _context;
 
-        public InventoryRepository(IGoogleSheetsService sheets)
+        public InventoryRepository(GameDbContext context)
         {
-            _sheets = sheets;
+            _context = context;
         }
 
-        // Load items the player owns
+        // =========================
+        // GET INVENTORY
+        // =========================
         public async Task<List<InventoryItem>> GetInventoryAsync(ulong discordId)
         {
-            var rows = await _sheets.ReadRangeAsync("Inventory", "A2:C");
-
-            var inventory = new List<InventoryItem>();
-
-            foreach (var row in rows)
-            {
-                if (row.Count < 3)
-                    continue;
-
-                if (!ulong.TryParse(row[0]?.ToString(), out var rowDiscordId))
-                    continue;
-
-                if (!int.TryParse(row[2]?.ToString(), out var quantity))
-                    quantity = 0;
-
-                var item = new InventoryItem
-                {
-                    DiscordId = rowDiscordId,
-                    ItemId = row[1]?.ToString()?.Trim(),
-                    Quantity = quantity
-                };
-
-                if (item.DiscordId == discordId)
-                    inventory.Add(item);
-            }
-
-            return inventory;
+            return await _context.InventoryItems
+                .Where(x => x.DiscordId == discordId)
+                .AsNoTracking()
+                .ToListAsync();
         }
 
-        // Add an item to the player (if the player already owns the item, it will take the old and new amounts +=
+        // =========================
+        // ADD ITEM
+        // =========================
         public async Task AddItemAsync(ulong discordId, string itemId, int amount)
         {
             if (amount <= 0)
                 return;
 
-            var rows = await _sheets.ReadRangeAsync("Inventory", "A2:C");
+            var item = await _context.InventoryItems
+                .FirstOrDefaultAsync(x => x.DiscordId == discordId && x.ItemId == itemId);
 
-            int rowIndex = 2;
-
-            foreach (var row in rows)
+            if (item == null)
             {
-                if (row.Count < 3)
+                _context.InventoryItems.Add(new InventoryItem
                 {
-                    rowIndex++;
-                    continue;
-                }
-
-                if (!ulong.TryParse(row[0]?.ToString(), out var rowDiscordId))
-                {
-                    rowIndex++;
-                    continue;
-                }
-
-                var rowItemId = row[1]?.ToString()?.Trim();
-
-                if (rowDiscordId == discordId && rowItemId == itemId)
-                {
-                    int quantity = 0;
-                    int.TryParse(row[2]?.ToString(), out quantity);
-
-                    quantity += amount;
-
-                    var values = new List<IList<object>>
-                    {
-                        new List<object> { quantity }
-                    };
-
-                    await _sheets.UpdateRangeAsync("Inventory", $"C{rowIndex}", values);
-                    return;
-                }
-
-                rowIndex++;
+                    DiscordId = discordId,
+                    ItemId = itemId,
+                    Quantity = amount
+                });
+            }
+            else
+            {
+                item.Quantity += amount;
             }
 
-            // Append new row if player doesn't have item yet
-            await _sheets.AppendRowAsync("Inventory", new List<object>
-            {
-                discordId.ToString(),
-                itemId,
-                amount
-            });
+            await _context.SaveChangesAsync();
         }
 
-        // Remove an item from the player
+        // =========================
+        // REMOVE ITEM
+        // =========================
         public async Task RemoveItemAsync(ulong discordId, string itemId, int amount)
         {
             if (amount <= 0)
                 return;
 
-            var rows = await _sheets.ReadRangeAsync("Inventory", "A2:C");
+            var item = await _context.InventoryItems
+                .FirstOrDefaultAsync(x => x.DiscordId == discordId && x.ItemId == itemId);
 
-            int rowIndex = 2;
+            if (item == null)
+                return;
 
-            foreach (var row in rows)
-            {
-                if (row.Count < 3)
-                {
-                    rowIndex++;
-                    continue;
-                }
+            item.Quantity -= amount;
 
-                if (!ulong.TryParse(row[0]?.ToString(), out var rowDiscordId))
-                {
-                    rowIndex++;
-                    continue;
-                }
+            if (item.Quantity <= 0)
+                _context.InventoryItems.Remove(item);
 
-                var rowItemId = row[1]?.ToString()?.Trim();
-
-                if (rowDiscordId == discordId && rowItemId == itemId)
-                {
-                    int quantity = 0;
-                    int.TryParse(row[2]?.ToString(), out quantity);
-
-                    quantity -= amount;
-
-                    if (quantity < 0)
-                        quantity = 0;
-
-                    var values = new List<IList<object>>
-                    {
-                        new List<object> { quantity }
-                    };
-
-                    await _sheets.UpdateRangeAsync("Inventory", $"C{rowIndex}", values);
-                    return;
-                }
-
-                rowIndex++;
-            }
+            await _context.SaveChangesAsync();
         }
     }
 }

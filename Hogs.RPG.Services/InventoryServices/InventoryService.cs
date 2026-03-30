@@ -1,6 +1,8 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Data.Repositories;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hogs.RPG.Services.InventoryServices
@@ -9,11 +11,13 @@ namespace Hogs.RPG.Services.InventoryServices
     {
         private readonly InventoryRepository _inventoryRepository;
 
+        // 🔒 Global lock to prevent concurrent sheet writes
+        private static readonly SemaphoreSlim _lock = new(1, 1);
+
         public InventoryService(InventoryRepository inventoryRepository)
         {
             _inventoryRepository = inventoryRepository;
         }
-  
 
         public async Task<List<InventoryItem>> GetInventoryAsync(ulong discordId)
         {
@@ -22,12 +26,28 @@ namespace Hogs.RPG.Services.InventoryServices
 
         public async Task GiveItemAsync(ulong discordId, string itemId, int amount)
         {
-            await _inventoryRepository.AddItemAsync(discordId, itemId, amount);
+            await _lock.WaitAsync();
+            try
+            {
+                await _inventoryRepository.AddItemAsync(discordId, itemId, amount);
+            }
+            finally
+            {
+                _lock.Release();
+            }
         }
 
         public async Task TakeItemAsync(ulong discordId, string itemId, int amount)
         {
-            await _inventoryRepository.RemoveItemAsync(discordId, itemId, amount);
+            await _lock.WaitAsync();
+            try
+            {
+                await _inventoryRepository.RemoveItemAsync(discordId, itemId, amount);
+            }
+            finally
+            {
+                _lock.Release();
+            }
         }
 
         public async Task<int> GetItemAmountAsync(ulong discordId, string itemId)
@@ -42,6 +62,4 @@ namespace Hogs.RPG.Services.InventoryServices
             return item.Quantity;
         }
     }
-
-
 }
