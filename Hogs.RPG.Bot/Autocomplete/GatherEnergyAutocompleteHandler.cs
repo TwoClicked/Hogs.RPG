@@ -1,5 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.GatheringServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,30 +9,89 @@ using System.Threading.Tasks;
 
 public class GatherEnergyAutocompleteHandler : AutocompleteHandler
 {
-    public override Task<AutocompletionResult> GenerateSuggestionsAsync(
+    public override async Task<AutocompletionResult> GenerateSuggestionsAsync(
         IInteractionContext context,
         IAutocompleteInteraction interaction,
         IParameterInfo parameter,
         IServiceProvider services)
     {
+        var playerRepo = services.GetService(typeof(PlayerRepository)) as PlayerRepository;
+        var energyService = services.GetService(typeof(EnergyService)) as EnergyService;
+
+        if (playerRepo == null || energyService == null)
+            return AutocompletionResult.FromSuccess();
+
+        var player = await playerRepo.GetByDiscordIdAsync(context.User.Id);
+
+        if (player == null)
+        {
+            return AutocompletionResult.FromSuccess(new[]
+            {
+                new AutocompleteResult("❌ Create a profile first with /startadventure", "0")
+            });
+        }
+
+        // ✅ Regenerate energy live (same as stamina)
+        energyService.RegenerateEnergy(player);
+
         var input = interaction.Data.Current.Value?.ToString() ?? "";
 
+        int currentEnergy = player.Energy;
+
+        // =========================
+        // OPTIONS BASED ON ENERGY
+        // =========================
         var options = new List<string>
         {
             "10",
             "25",
             "50",
             "100",
-            "250",
             "Max"
         };
 
+        // Filter invalid options (can't spend more than you have)
         var results = options
+            .Where(o =>
+            {
+                if (o.Equals("Max", StringComparison.OrdinalIgnoreCase))
+                    return currentEnergy > 0;
+
+                if (int.TryParse(o, out int val))
+                    return val <= currentEnergy;
+
+                return false;
+            })
             .Where(o => o.Contains(input, StringComparison.OrdinalIgnoreCase))
             .Take(25)
-            .Select(o => new AutocompleteResult(o, o))
+            .Select(o =>
+            {
+                if (o.Equals("Max", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new AutocompleteResult(
+                        $"⚡ Max ({currentEnergy})",
+                        currentEnergy.ToString()
+                    );
+                }
+
+                return new AutocompleteResult(
+                    $"⚡ {o} (Energy: {currentEnergy})",
+                    o
+                );
+            })
             .ToList();
 
-        return Task.FromResult(AutocompletionResult.FromSuccess(results));
+        // =========================
+        // FALLBACK
+        // =========================
+        if (results.Count == 0)
+        {
+            results.Add(new AutocompleteResult(
+                $"⚡ Current Energy: {currentEnergy}",
+                currentEnergy.ToString()
+            ));
+        }
+
+        return AutocompletionResult.FromSuccess(results);
     }
 }

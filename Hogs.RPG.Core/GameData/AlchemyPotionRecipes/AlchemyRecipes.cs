@@ -25,8 +25,8 @@ namespace Hogs.RPG.Core.GameData.Recipes
             ResultAmount = 1,
             Materials = new Dictionary<string, int>
             {
-                { "red_mushroom", 3 },
-                { "monster_blood", 2 }
+                { "red_mushroom", 1 },
+                { "monster_blood", 3 }
             }
         };
     }

@@ -18,18 +18,36 @@ public class GatherModule : InteractionModuleBase<SocketInteractionContext>
     {
         await DeferAsync(ephemeral: true);
 
-        int energyAmount;
-
-        if (energy.ToLower() == "max")
+        // =========================
+        // VALIDATION
+        // =========================
+        if (string.IsNullOrWhiteSpace(area))
         {
-            energyAmount = -1;
-        }
-        else if (!int.TryParse(energy, out energyAmount))
-        {
-            await FollowupAsync("Invalid energy amount. Use a number or 'max'.", ephemeral: true);
+            await FollowupAsync("Select an area to gather.", ephemeral: true);
             return;
         }
 
+        int energyAmount;
+
+        // =========================
+        // PARSE INPUT
+        // =========================
+        if (!int.TryParse(energy, out energyAmount))
+        {
+            if (energy.ToLower() == "max")
+            {
+                energyAmount = -1;
+            }
+            else
+            {
+                await FollowupAsync("Invalid energy amount. Use a number or 'max'.", ephemeral: true);
+                return;
+            }
+        }
+
+        // =========================
+        // EXECUTE
+        // =========================
         var result = await _gatherService.GatherAsync(Context.User.Id, area, energyAmount);
 
         await FollowupAsync(result, ephemeral: true);

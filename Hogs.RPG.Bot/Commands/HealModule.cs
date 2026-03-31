@@ -15,18 +15,19 @@ public class HealModule : InteractionModuleBase<SocketInteractionContext>
     [SlashCommand("heal", "Use a health potion to fully heal")]
     public async Task Heal()
     {
-        await DeferAsync();
+        await DeferAsync(ephemeral: true);
 
         var result = await _healService.HealAsync(Context.User.Id);
 
         if (!result.IsSuccess)
         {
-            await FollowupAsync(result.Message);
+            await FollowupAsync(result.Message, ephemeral: true);
             return;
         }
 
         await FollowupAsync(
-            $"❤️ You healed to full! ({result.RemainingPotions} potions left.)"
+            $"❤️ You healed to full! ({result.RemainingPotions} potions left.)",
+            ephemeral: true
         );
     }
 }

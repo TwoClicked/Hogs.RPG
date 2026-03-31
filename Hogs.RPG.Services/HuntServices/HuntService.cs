@@ -2,6 +2,7 @@
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.GameData.Hunts;
 using Hogs.RPG.Services.GameplayServices;
@@ -26,28 +27,6 @@ namespace Hogs.RPG.Services.HuntServices
         private readonly ulong _feedChannelId = 1485357755433750549;
 
         private readonly Random _random = new();
-
-        private readonly Dictionary<string, string> _rareDrops = new()
-        {
-            { "wolf", "wolf_trophy" },
-            { "boar", "boar_tusk" },
-            { "stag", "stag_antler" },
-            { "raven", "ancient_feather" },
-            { "fox", "shadow_claw" },
-
-            { "bear", "bear_heart" },
-            { "dire_wolf", "alpha_fang" },
-            { "eagle", "storm_talon" },
-
-            { "sabertooth", "saber_relic" },
-            { "griffin", "griffin_core" },
-
-            { "storm_eagle", "storm_relic" },
-            { "ancient_bear", "ancient_core" },
-
-            { "mythic_bear", "mythic_heart" },
-            { "sky_tyrant", "sky_relic" }
-        };
 
         public HuntService(
             PlayerRepository playerRepository,
@@ -88,21 +67,20 @@ namespace Hogs.RPG.Services.HuntServices
             if (player.HunterStamina < stamina)
                 return $"🏹 You only have {player.HunterStamina} stamina.";
 
+            // =========================
+            // 🎯 TARGET
+            // =========================
             HuntTarget target;
 
             if (!string.IsNullOrWhiteSpace(targetId))
             {
                 var key = targetId.Trim().ToLower();
 
-                if (HuntTargetRegistry.All.TryGetValue(key, out target))
-                {
-                    if (player.Level < target.RequiredLevel)
-                        return $"You must be level {target.RequiredLevel} to hunt **{target.Name}**.";
-                }
-                else
-                {
+                if (!HuntTargetRegistry.All.TryGetValue(key, out target))
                     return "Unknown hunt target.";
-                }
+
+                if (player.Level < target.RequiredLevel)
+                    return $"You must be level {target.RequiredLevel} to hunt **{target.Name}**.";
             }
             else
             {
@@ -119,109 +97,110 @@ namespace Hogs.RPG.Services.HuntServices
             _staminaService.Spend(player, stamina);
 
             int totalXp = 0;
-            int totalGold = 0;
             int totalDrops = 0;
 
             int eliteCount = 0;
-            int jackpotCount = 0;
             int rareCount = 0;
-            int treasureCount = 0;
 
+            int xpPotionsUsed = 0;
+            int remainingXpPotions = 0;
+
+            // =========================
+            // 🧪 XP POTION (PER 5 STAMINA)
+            // =========================
             if (player.AutoUseXpPotions)
             {
-                var inventory = await _inventoryService.GetInventoryAsync(userId);
+                int desiredPotions = stamina / 5;
 
+                var inventory = await _inventoryService.GetInventoryAsync(userId);
                 var potion = inventory.FirstOrDefault(i => i.ItemId == "xp_potion");
 
-                if (potion != null && potion.Quantity > 0)
-                {
-                    await _inventoryService.TakeItemAsync(userId, "xp_potion", 1);
+                int available = potion?.Quantity ?? 0;
 
-                    player.ActiveBuffs.Add(new ActiveBuff
+                if (desiredPotions > 0 && available > 0)
+                {
+                    int potionsToUse = Math.Min(desiredPotions, available);
+
+                    await _inventoryService.TakeItemAsync(userId, "xp_potion", potionsToUse);
+
+                    xpPotionsUsed = potionsToUse;
+                    remainingXpPotions = available - potionsToUse;
+
+                    for (int i = 0; i < potionsToUse; i++)
                     {
-                        Type = BuffType.XP,
-                        Value = 2,
-                        RemainingUses = 1
-                    });
+                        player.ActiveBuffs.Add(new ActiveBuff
+                        {
+                            Type = BuffType.XP,
+                            Value = 2,
+                            RemainingUses = 1
+                        });
+                    }
                 }
                 else
                 {
-                    player.AutoUseXpPotions = false;
+                    remainingXpPotions = available;
+
+                    if (available == 0)
+                        player.AutoUseXpPotions = false;
                 }
             }
 
+            // =========================
+            // 🔁 HUNT LOOP
+            // =========================
             for (int i = 0; i < stamina; i++)
             {
                 int xp = _random.Next(target.MinXP, target.MaxXP);
-                int gold = _random.Next(target.MinGold, target.MaxGold);
                 int dropAmount = _random.Next(target.MinDrop, target.MaxDrop + 1);
 
                 double roll = _random.NextDouble();
 
-                bool elite = false;
-                bool jackpot = false;
-                bool rareDrop = false;
-                bool treasure = false;
+                bool elite = roll < 0.16;
+                bool rareDrop = roll < 0.04;
 
-                if (roll < 0.01)
-                    treasure = true;
-                else if (roll < 0.04)
-                    rareDrop = true;
-                else if (roll < 0.08)
-                    jackpot = true;
-                else if (roll < 0.16)
-                    elite = true;
-
+                // 🔥 ELITE
                 if (elite)
                 {
                     xp = (int)(xp * 1.5);
-                    gold = (int)(gold * 1.5);
-                    dropAmount += 2;
                     eliteCount++;
+
+                    if (!string.IsNullOrEmpty(target.RareDropItem))
+                    {
+                        rareDrop = _random.NextDouble() < 0.10;
+                    }
                 }
 
                 totalXp += xp;
-                totalGold += gold;
                 totalDrops += dropAmount;
 
-                if (jackpot)
+                // ✨ RARE
+                if (rareDrop && !string.IsNullOrEmpty(target.RareDropItem))
                 {
-                    int bonus = _random.Next(5, 9);
-                    totalDrops += bonus;
-                    jackpotCount++;
-                }
-
-                if (rareDrop && _rareDrops.ContainsKey(target.Id))
-                {
-                    var rareItem = _rareDrops[target.Id];
-                    await _inventoryService.GiveItemAsync(userId, rareItem, 1);
+                    await _inventoryService.GiveItemAsync(userId, target.RareDropItem, 1);
                     rareCount++;
-                }
-
-                if (treasure)
-                {
-                    int treasureGold = _random.Next(120, 220);
-                    totalGold += treasureGold;
-                    treasureCount++;
                 }
             }
 
+            // =========================
+            // 📈 BUFFS
+            // =========================
             double xpMultiplier = _buffService.ApplyXpBuff(player);
-            double goldMultiplier = _buffService.ApplyGoldBuff(player);
-
             totalXp = (int)(totalXp * xpMultiplier);
-            totalGold = (int)(totalGold * goldMultiplier);
 
             player.XP += totalXp;
-            player.Gold += totalGold;
 
             var (levelMessage, levelsGained) = _levelService.CheckLevelUp(player);
 
+            // =========================
+            // 📦 BASE DROPS
+            // =========================
             await _inventoryService.GiveItemAsync(userId, target.DropItem, totalDrops);
 
             await _playerRepository.UpdatePlayerAsync(player);
 
-            // ✅ LEVEL ANNOUNCEMENT
+            // =========================
+            // 🎉 LEVEL UP
+            // =========================
             if (levelsGained > 0)
             {
                 var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
@@ -234,6 +213,9 @@ namespace Hogs.RPG.Services.HuntServices
                 }
             }
 
+            // =========================
+            // 🧾 RESULT
+            // =========================
             var sb = new StringBuilder();
 
             var label = usedMax ? "ALL stamina" : $"{stamina} stamina";
@@ -241,23 +223,28 @@ namespace Hogs.RPG.Services.HuntServices
             sb.AppendLine($"{target.Icon} You hunted {target.Name} using {label}!\n");
 
             sb.AppendLine($"+{totalXp} XP");
-            sb.AppendLine($"+{totalGold} Gold");
-            sb.AppendLine($"+{totalDrops} {target.DropItem}");
+            string dropName = target.DropItem;
+
+            if (InventoryItemDefinitions.All.TryGetValue(target.DropItem, out var itemDef))
+            {
+                dropName = itemDef.Name;
+            }
+
+            sb.AppendLine($"+{totalDrops} {dropName}");
+
+            if (xpPotionsUsed > 0)
+                sb.AppendLine($"✨ Used {xpPotionsUsed} XP Potion(s) ({remainingXpPotions} left)");
+            else if (player.AutoUseXpPotions)
+                sb.AppendLine($"🧪 XP Potions available: {remainingXpPotions}");
 
             if (xpMultiplier > 1)
-                sb.AppendLine($"✨ XP Potion Active ({xpMultiplier}x)");
+                sb.AppendLine($"✨ XP Multiplier Active ({xpMultiplier}x)");
 
             if (eliteCount > 0)
                 sb.AppendLine($"🔥 {eliteCount} Elite encounters!");
 
-            if (jackpotCount > 0)
-                sb.AppendLine($"💰 {jackpotCount} Jackpots!");
-
             if (rareCount > 0)
                 sb.AppendLine($"✨ {rareCount} Rare drops!");
-
-            if (treasureCount > 0)
-                sb.AppendLine($"💰 {treasureCount} Treasure finds!");
 
             sb.AppendLine($"\n🏹 Stamina: {player.HunterStamina}/100");
 

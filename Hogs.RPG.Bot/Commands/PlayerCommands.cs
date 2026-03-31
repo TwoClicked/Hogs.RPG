@@ -22,6 +22,7 @@ namespace Hogs.RPG.Bot.Commands
         private readonly EquipmentService _equipmentService;
         private readonly EnergyService _energyService; 
         private readonly HunterStaminaService _hunterStaminaService;
+        private readonly DiscordSocketClient _client;
 
         public PlayerCommands(
             PlayerService playerService,
@@ -30,7 +31,8 @@ namespace Hogs.RPG.Bot.Commands
             StatService statService,
             EquipmentService equipmentService,
             EnergyService energyService,
-            HunterStaminaService hungerStaminaService)
+            HunterStaminaService hungerStaminaService,
+            DiscordSocketClient client)
         {
             _playerService = playerService;
             _playerRepository = playerRepository;
@@ -39,6 +41,7 @@ namespace Hogs.RPG.Bot.Commands
             _equipmentService = equipmentService;
             _energyService = energyService;
             _hunterStaminaService = hungerStaminaService;
+            _client = client;
         }
 
         [SlashCommand("startadventure", "Begin your adventure")]
@@ -76,6 +79,18 @@ namespace Hogs.RPG.Bot.Commands
             };
 
             await _playerRepository.CreatePlayerAsync(newPlayer);
+
+            // =========================
+            // 🎭 ASSIGN RPG ROLE
+            // =========================
+            var guild = _client.GetGuild(Context.Guild.Id);
+            var user = guild.GetUser(Context.User.Id);
+            var role = guild.GetRole(1485387222822948934);
+
+            if (user != null && role != null)
+            {
+                await user.AddRoleAsync(role);
+            }
 
             await FollowupAsync(
                 "⚔ Your adventure begins!\n\nWelcome to **HOGS RPG**.\nUse `/hunt` to begin gathering resources.",

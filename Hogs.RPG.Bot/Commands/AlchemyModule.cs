@@ -29,17 +29,17 @@ public class AlchemyModule : InteractionModuleBase<SocketInteractionContext>
         [Autocomplete(typeof(PotionAutocompleteHandler))] string potion,
         [Autocomplete(typeof(CraftAmountAutocompleteHandler))] string amount = "1")
     {
-        await DeferAsync();
+        await DeferAsync(ephemeral: true); 
 
         int craftAmount;
 
         if (amount.ToLower() == "max")
         {
-            craftAmount = -1; // handled in service
+            craftAmount = -1;
         }
         else if (!int.TryParse(amount, out craftAmount))
         {
-            await FollowupAsync("Invalid amount.");
+            await FollowupAsync("Invalid amount.", ephemeral: true);
             return;
         }
 
@@ -49,7 +49,7 @@ public class AlchemyModule : InteractionModuleBase<SocketInteractionContext>
             craftAmount
         );
 
-        await FollowupAsync(result);
+        await FollowupAsync(result, ephemeral: true);
     }
 
     // =========================

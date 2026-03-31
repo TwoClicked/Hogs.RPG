@@ -11,14 +11,13 @@ public static class StormTargets
         Name = "Storm Eagle",
         Icon = "🦅",
         DropItem = "storm_feather",
-        MinXP = 40,
-        MaxXP = 60,
-        MinGold = 20,
-        MaxGold = 40,
+        MinXP = 15,
+        MaxXP = 20,
         MinDrop = 1,
-        MaxDrop = 3,
-        RequiredLevel = 15,
-        Category = HuntCategory.Normal
+        MaxDrop = 2,
+        RequiredLevel = 20,
+        Category = HuntCategory.Normal,
+        RareDropItem = "storm_relic"
     };
 
     public static readonly HuntTarget AncientBear = new()
@@ -27,14 +26,13 @@ public static class StormTargets
         Name = "Ancient Bear",
         Icon = "🐻",
         DropItem = "ancient_hide",
-        MinXP = 42,
-        MaxXP = 62,
-        MinGold = 22,
-        MaxGold = 42,
+        MinXP = 15,
+        MaxXP = 20,
         MinDrop = 1,
-        MaxDrop = 3,
-        RequiredLevel = 15,
-        Category = HuntCategory.Normal
+        MaxDrop = 2,
+        RequiredLevel = 20,
+        Category = HuntCategory.Normal,
+        RareDropItem = "ancient_core"
     };
 
     public static readonly HuntTarget NightStalker = new()
@@ -43,13 +41,11 @@ public static class StormTargets
         Name = "Night Stalker",
         Icon = "🐆",
         DropItem = "shadow_claw",
-        MinXP = 40,
-        MaxXP = 58,
-        MinGold = 20,
-        MaxGold = 38,
+        MinXP = 15,
+        MaxXP = 20,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 15,
+        RequiredLevel = 20,
         Category = HuntCategory.Normal
     };
 
@@ -59,13 +55,11 @@ public static class StormTargets
         Name = "Titan Elk",
         Icon = "🦌",
         DropItem = "titan_antler",
-        MinXP = 42,
-        MaxXP = 60,
-        MinGold = 22,
-        MaxGold = 40,
+        MinXP = 15,
+        MaxXP = 20,
         MinDrop = 1,
-        MaxDrop = 3,
-        RequiredLevel = 15,
+        MaxDrop = 2,
+        RequiredLevel = 20,
         Category = HuntCategory.Normal
     };
 
@@ -75,13 +69,11 @@ public static class StormTargets
         Name = "Void Raven",
         Icon = "🐦‍⬛",
         DropItem = "void_feather",
-        MinXP = 40,
-        MaxXP = 58,
-        MinGold = 20,
-        MaxGold = 38,
+        MinXP = 15,
+        MaxXP = 20,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 15,
+        RequiredLevel = 20,
         Category = HuntCategory.Normal
     };
 }

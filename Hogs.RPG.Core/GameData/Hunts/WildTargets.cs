@@ -11,14 +11,13 @@ public static class WildTargets
         Name = "Bear",
         Icon = "🐻",
         DropItem = "hide",
-        MinXP = 18,
-        MaxXP = 28,
-        MinGold = 10,
-        MaxGold = 20,
+        MinXP = 7,
+        MaxXP = 12,
         MinDrop = 1,
-        MaxDrop = 3,
-        RequiredLevel = 5,
-        Category = HuntCategory.Normal
+        MaxDrop = 2,
+        RequiredLevel = 10,
+        Category = HuntCategory.Normal,
+        RareDropItem = "bear_heart"
     };
 
     public static readonly HuntTarget Shark = new()
@@ -27,14 +26,13 @@ public static class WildTargets
         Name = "Shark",
         Icon = "🦈",
         DropItem = "fang",
-        MinXP = 20,
-        MaxXP = 30,
-        MinGold = 10,
-        MaxGold = 22,
+        MinXP = 7,
+        MaxXP = 12,
         MinDrop = 1,
-        MaxDrop = 3,
-        RequiredLevel = 5,
-        Category = HuntCategory.Normal
+        MaxDrop = 2,
+        RequiredLevel = 10,
+        Category = HuntCategory.Normal,
+        RareDropItem = "alpha_fang"
     };
 
     public static readonly HuntTarget Eagle = new()
@@ -43,14 +41,13 @@ public static class WildTargets
         Name = "Eagle",
         Icon = "🦅",
         DropItem = "talon",
-        MinXP = 18,
-        MaxXP = 26,
-        MinGold = 9,
-        MaxGold = 20,
+        MinXP = 7,
+        MaxXP = 12,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 5,
-        Category = HuntCategory.Normal
+        RequiredLevel = 10,
+        Category = HuntCategory.Normal,
+        RareDropItem = "storm_talon"
     };
 
     public static readonly HuntTarget Bull = new()
@@ -59,13 +56,11 @@ public static class WildTargets
         Name = "Bull",
         Icon = "🐂",
         DropItem = "horn",
-        MinXP = 20,
-        MaxXP = 30,
-        MinGold = 10,
-        MaxGold = 24,
+        MinXP = 7,
+        MaxXP = 12,
         MinDrop = 1,
-        MaxDrop = 3,
-        RequiredLevel = 5,
+        MaxDrop = 2,
+        RequiredLevel = 10,
         Category = HuntCategory.Normal
     };
 
@@ -75,13 +70,11 @@ public static class WildTargets
         Name = "Lynx",
         Icon = "🐆",
         DropItem = "sharp_claw",
-        MinXP = 20,
-        MaxXP = 28,
-        MinGold = 10,
-        MaxGold = 20,
+        MinXP = 7,
+        MaxXP = 12,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 5,
+        RequiredLevel = 10,
         Category = HuntCategory.Normal
     };
 }

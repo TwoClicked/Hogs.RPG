@@ -1,6 +1,4 @@
-﻿namespace Hogs.RPG.Core.GameData.Recipes;
-
-using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities;
 
 public static class Tier3WarlordRecipes
 {
@@ -12,21 +10,12 @@ public static class Tier3WarlordRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "saber_fang", 35 },
-            { "giant_antler", 25 }
-        }
-    };
-
-    public static readonly Recipe AntlerShield = new()
-    {
-        Id = "antler_shield",
-        Name = "Antler Shield",
-        ResultItem = "antler_shield",
-        ResultAmount = 1,
-        Materials = new Dictionary<string, int>
-        {
-            { "giant_antler", 35 },
-            { "thick_hide", 25 }
+            { "fang_blade", 1 },
+            { "saber_fang", 250 },
+            { "giant_antler", 180 },
+            { "fang", 120 },
+            { "sharp_claw", 100 },
+            { "saber_relic", 2 }
         }
     };
 
@@ -38,8 +27,9 @@ public static class Tier3WarlordRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "thick_hide", 40 },
-            { "hide", 20 }
+            { "hide_warcoat", 1 },
+            { "thick_hide", 180 },
+            { "hide", 120 }
         }
     };
 
@@ -51,8 +41,9 @@ public static class Tier3WarlordRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "giant_antler", 25 },
-            { "thick_hide", 20 }
+            { "raider_helm", 1 },
+            { "giant_antler", 140 },
+            { "thick_hide", 100 }
         }
     };
 
@@ -64,7 +55,8 @@ public static class Tier3WarlordRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "thick_hide", 35 }
+            { "raider_legguards", 1 },
+            { "thick_hide", 150 }
         }
     };
 
@@ -76,8 +68,9 @@ public static class Tier3WarlordRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "saber_fang", 25 },
-            { "thick_hide", 15 }
+            { "raider_boots", 1 },
+            { "saber_fang", 140 },
+            { "thick_hide", 100 }
         }
     };
 
@@ -89,7 +82,8 @@ public static class Tier3WarlordRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "saber_fang", 25 }
+            { "tracker_gloves", 1 },
+            { "saber_fang", 130 }
         }
     };
 
@@ -101,7 +95,9 @@ public static class Tier3WarlordRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "griffin_feather", 30 }
+            { "raider_band", 1 },
+            { "griffin_feather", 120 },
+            { "dark_feather", 60 }
         }
     };
 
@@ -113,8 +109,31 @@ public static class Tier3WarlordRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "dark_feather", 30 },
-            { "griffin_feather", 15 }
+            { "talon_charm", 1 },
+            { "dark_feather", 140 },
+            { "griffin_feather", 80 },
+            { "griffin_core", 2 }
         }
+    };
+
+    public static readonly Recipe AntlerShield = new()
+    {
+        Id = "antler_shield",
+        Name = "Antler Shield",
+        ResultItem = "antler_shield",
+        ResultAmount = 1,
+        Materials = new Dictionary<string, int>
+    {
+        { "horn_shield", 1 },
+
+        { "giant_antler", 200 },
+        { "thick_hide", 150 },
+
+        // carry over
+        { "horn", 100 },
+        { "hide", 80 },
+
+        { "saber_relic", 2 }
+    }
     };
 }

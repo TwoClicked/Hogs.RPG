@@ -54,7 +54,9 @@ namespace Hogs.RPG.Bot.Commands
         // RECIPES
         // =========================
         [SlashCommand("recipes", "View crafting recipes")]
-        public async Task Recipes(string slot = null)
+        public async Task Recipes(
+            [Autocomplete(typeof(RecipeSlotAutocompleteHandler))]
+             string slot = null)
         {
             await DeferAsync(ephemeral: true);
 

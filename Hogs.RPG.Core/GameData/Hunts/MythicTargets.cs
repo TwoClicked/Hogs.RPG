@@ -11,14 +11,13 @@ public static class MythicTargets
         Name = "Mythic Bear",
         Icon = "🐻",
         DropItem = "mythic_hide",
-        MinXP = 60,
-        MaxXP = 90,
-        MinGold = 30,
-        MaxGold = 55,
+        MinXP = 20,
+        MaxXP = 25,
         MinDrop = 1,
-        MaxDrop = 3,
-        RequiredLevel = 20,
-        Category = HuntCategory.Normal
+        MaxDrop = 2,
+        RequiredLevel = 25,
+        Category = HuntCategory.Normal,
+        RareDropItem = "mythic_heart"
     };
 
     public static readonly HuntTarget SkyTyrant = new()
@@ -27,14 +26,13 @@ public static class MythicTargets
         Name = "Sky Tyrant",
         Icon = "🦅",
         DropItem = "sky_talon",
-        MinXP = 60,
-        MaxXP = 88,
-        MinGold = 30,
-        MaxGold = 50,
+        MinXP = 20,
+        MaxXP = 25,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 20,
-        Category = HuntCategory.Normal
+        RequiredLevel = 25,
+        Category = HuntCategory.Normal,
+        RareDropItem = "sky_relic"
     };
 
     public static readonly HuntTarget AbyssStalker = new()
@@ -43,13 +41,11 @@ public static class MythicTargets
         Name = "Abyss Stalker",
         Icon = "🐆",
         DropItem = "abyss_claw",
-        MinXP = 62,
-        MaxXP = 90,
-        MinGold = 32,
-        MaxGold = 55,
+        MinXP = 20,
+        MaxXP = 25,
         MinDrop = 1,
-        MaxDrop = 3,
-        RequiredLevel = 20,
+        MaxDrop = 2,
+        RequiredLevel = 25,
         Category = HuntCategory.Normal
     };
 
@@ -59,13 +55,11 @@ public static class MythicTargets
         Name = "Colossus Elk",
         Icon = "🦌",
         DropItem = "colossus_antler",
-        MinXP = 60,
-        MaxXP = 88,
-        MinGold = 30,
-        MaxGold = 52,
+        MinXP = 20,
+        MaxXP = 25,
         MinDrop = 1,
-        MaxDrop = 3,
-        RequiredLevel = 20,
+        MaxDrop = 2,
+        RequiredLevel = 25,
         Category = HuntCategory.Normal
     };
 
@@ -75,13 +69,11 @@ public static class MythicTargets
         Name = "Death Raven",
         Icon = "🐦‍⬛",
         DropItem = "death_feather",
-        MinXP = 60,
-        MaxXP = 85,
-        MinGold = 30,
-        MaxGold = 50,
+        MinXP = 20,
+        MaxXP = 25,
         MinDrop = 1,
         MaxDrop = 2,
-        RequiredLevel = 20,
+        RequiredLevel = 25,
         Category = HuntCategory.Normal
     };
 }

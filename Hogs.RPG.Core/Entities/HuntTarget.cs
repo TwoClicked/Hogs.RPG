@@ -21,10 +21,6 @@ namespace Hogs.RPG.Core.Entities
 
         public int MaxXP { get; set; }
 
-        public int MinGold { get; set; }
-
-        public int MaxGold { get; set; }
-
         public int MinDrop { get; set; }
         public int MaxDrop { get; set; }
 
@@ -32,6 +28,8 @@ namespace Hogs.RPG.Core.Entities
 
 
         // Seperating the material gathering for Alchemy and Gear, Discord limits the autocomp at 25
-        public HuntCategory Category { get; set; } = HuntCategory.Normal; 
+        public HuntCategory Category { get; set; } = HuntCategory.Normal;
+
+        public string? RareDropItem { get; set; }
     }
 }

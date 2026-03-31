@@ -1,6 +1,4 @@
-﻿namespace Hogs.RPG.Core.GameData.Recipes;
-
-using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities;
 
 public static class Tier2RaiderRecipes
 {
@@ -12,21 +10,11 @@ public static class Tier2RaiderRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "fang", 30 },
-            { "sharp_claw", 20 }
-        }
-    };
-
-    public static readonly Recipe HornShield = new()
-    {
-        Id = "horn_shield",
-        Name = "Horn Shield",
-        ResultItem = "horn_shield",
-        ResultAmount = 1,
-        Materials = new Dictionary<string, int>
-        {
-            { "horn", 30 },
-            { "hide", 20 }
+            { "claw_dagger", 1 },
+            { "fang", 120 },
+            { "sharp_claw", 80 },
+            { "claws", 60 },
+            { "bone", 30 }
         }
     };
 
@@ -38,8 +26,10 @@ public static class Tier2RaiderRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "hide", 35 },
-            { "leather", 15 }
+            { "leather_vest", 1 },
+            { "hide", 120 },
+            { "leather", 60 },
+            { "fur", 40 }
         }
     };
 
@@ -51,8 +41,9 @@ public static class Tier2RaiderRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "horn", 20 },
-            { "hide", 15 }
+            { "bone_helm", 1 },
+            { "horn", 80 },
+            { "hide", 60 }
         }
     };
 
@@ -64,7 +55,8 @@ public static class Tier2RaiderRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "hide", 30 }
+            { "hunter_leggings", 1 },
+            { "hide", 100 }
         }
     };
 
@@ -76,8 +68,9 @@ public static class Tier2RaiderRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "hide", 20 },
-            { "leather", 10 }
+            { "hide_boots", 1 },
+            { "hide", 80 },
+            { "leather", 40 }
         }
     };
 
@@ -89,8 +82,28 @@ public static class Tier2RaiderRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "hide", 18 }
+            { "fur_gloves", 1 },
+            { "hide", 70 }
         }
+    };
+
+    public static readonly Recipe HornShield = new()
+    {
+        Id = "horn_shield",
+        Name = "Horn Shield",
+        ResultItem = "horn_shield",
+        ResultAmount = 1,
+        Materials = new Dictionary<string, int>
+    {
+        { "bone_buckler", 1 },
+
+        { "horn", 120 },
+        { "hide", 100 },
+
+        // carry over
+        { "bone", 40 },
+        { "leather", 30 }
+    }
     };
 
     public static readonly Recipe RaiderBand = new()
@@ -101,7 +114,9 @@ public static class Tier2RaiderRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "talon", 20 }
+            { "feather_band", 1 },
+            { "talon", 80 },
+            { "feather", 40 }
         }
     };
 
@@ -113,8 +128,9 @@ public static class Tier2RaiderRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "talon", 25 },
-            { "fang", 10 }
+            { "raven_charm", 1 },
+            { "talon", 100 },
+            { "fang", 40 }
         }
     };
 }

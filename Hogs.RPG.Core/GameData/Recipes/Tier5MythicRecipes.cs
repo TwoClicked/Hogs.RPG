@@ -1,6 +1,4 @@
-﻿namespace Hogs.RPG.Core.GameData.Recipes;
-
-using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities;
 
 public static class Tier5MythicRecipes
 {
@@ -12,8 +10,16 @@ public static class Tier5MythicRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "abyss_claw", 50 },
-            { "colossus_antler", 35 }
+            { "titan_blade", 1 },
+            { "abyss_claw", 800 },
+            { "colossus_antler", 600 },
+            { "shadow_claw", 300 },
+            { "titan_antler", 250 },
+            { "saber_relic", 10 },
+            { "griffin_core", 10 },
+            { "storm_relic", 10 },
+            { "ancient_core", 10 },
+            { "mythic_heart", 10 }
         }
     };
 
@@ -24,10 +30,21 @@ public static class Tier5MythicRecipes
         ResultItem = "colossus_shield",
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
-        {
-            { "colossus_antler", 50 },
-            { "mythic_hide", 35 }
-        }
+    {
+        { "titan_shield", 1 },
+
+        { "colossus_antler", 600 },
+        { "mythic_hide", 450 },
+
+        // carry over
+        { "titan_antler", 250 },
+        { "ancient_hide", 200 },
+
+        // full gate (but lighter than weapon)
+        { "ancient_core", 8 },
+        { "storm_relic", 8 },
+        { "mythic_heart", 8 }
+    }
     };
 
     public static readonly Recipe BeastslayerPlate = new()
@@ -38,8 +55,10 @@ public static class Tier5MythicRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "mythic_hide", 60 },
-            { "ancient_hide", 30 }
+            { "champion_plate", 1 },
+            { "mythic_hide", 500 },
+            { "ancient_hide", 300 },
+            { "mythic_heart", 8 }
         }
     };
 
@@ -51,8 +70,9 @@ public static class Tier5MythicRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "colossus_antler", 40 },
-            { "mythic_hide", 25 }
+            { "champion_helm", 1 },
+            { "colossus_antler", 350 },
+            { "mythic_hide", 200 }
         }
     };
 
@@ -64,7 +84,8 @@ public static class Tier5MythicRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "mythic_hide", 55 }
+            { "champion_greaves", 1 },
+            { "mythic_hide", 420 }
         }
     };
 
@@ -76,8 +97,9 @@ public static class Tier5MythicRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "sky_talon", 40 },
-            { "mythic_hide", 25 }
+            { "shadowstep_boots", 1 },
+            { "sky_talon", 280 },
+            { "mythic_hide", 180 }
         }
     };
 
@@ -89,7 +111,8 @@ public static class Tier5MythicRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "abyss_claw", 40 }
+            { "storm_gauntlets", 1 },
+            { "abyss_claw", 300 }
         }
     };
 
@@ -101,7 +124,10 @@ public static class Tier5MythicRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "death_feather", 45 }
+            { "storm_ring", 1 },
+            { "death_feather", 300 },
+            { "sky_relic", 6 },
+            { "mythic_heart", 6 }
         }
     };
 
@@ -113,8 +139,10 @@ public static class Tier5MythicRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "death_feather", 40 },
-            { "sky_talon", 20 }
+            { "void_pendant", 1 },
+            { "death_feather", 280 },
+            { "sky_talon", 150 },
+            { "sky_relic", 6 }
         }
     };
 }

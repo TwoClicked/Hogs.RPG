@@ -23,18 +23,36 @@ namespace Hogs.RPG.Bot.Commands
         {
             await DeferAsync(ephemeral: true);
 
-            int stamina;
-
-            if (amount.ToLower() == "max")
+            // =========================
+            // VALIDATION
+            // =========================
+            if (string.IsNullOrWhiteSpace(target))
             {
-                stamina = -1;
-            }
-            else if (!int.TryParse(amount, out stamina))
-            {
-                await FollowupAsync("Invalid amount. Use a number or 'max'.", ephemeral: true);
+                await FollowupAsync("Select a target to hunt.", ephemeral: true);
                 return;
             }
 
+            int stamina;
+
+            // =========================
+            // PARSE INPUT
+            // =========================
+            if (!int.TryParse(amount, out stamina))
+            {
+                if (amount.ToLower() == "max")
+                {
+                    stamina = -1;
+                }
+                else
+                {
+                    await FollowupAsync("Invalid amount. Use a number or 'max'.", ephemeral: true);
+                    return;
+                }
+            }
+
+            // =========================
+            // EXECUTE
+            // =========================
             var result = await _huntService.HuntAsync(Context.User.Id, target, stamina);
 
             await FollowupAsync(result, ephemeral: true);

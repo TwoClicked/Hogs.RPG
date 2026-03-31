@@ -1,7 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities;
 
-namespace Hogs.RPG.Core.GameData.Recipes;
-
 public static class Tier1HunterRecipes
 {
     public static readonly Recipe ClawDagger = new()
@@ -12,21 +10,8 @@ public static class Tier1HunterRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "claws", 20 },
-            { "bone", 10 }
-        }
-    };
-
-    public static readonly Recipe BoneBuckler = new()
-    {
-        Id = "bone_buckler",
-        Name = "Bone Buckler",
-        ResultItem = "bone_buckler",
-        ResultAmount = 1,
-        Materials = new Dictionary<string, int>
-        {
-            { "bone", 25 },
-            { "leather", 15 }
+            { "claws", 50 },
+            { "bone", 30 }
         }
     };
 
@@ -38,8 +23,8 @@ public static class Tier1HunterRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "leather", 30 },
-            { "fur", 20 }
+            { "leather", 80 },
+            { "fur", 50 }
         }
     };
 
@@ -51,8 +36,8 @@ public static class Tier1HunterRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "bone", 15 },
-            { "leather", 5 }
+            { "bone", 40 },
+            { "leather", 20 }
         }
     };
 
@@ -64,7 +49,7 @@ public static class Tier1HunterRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "leather", 25 }
+            { "leather", 70 }
         }
     };
 
@@ -76,8 +61,8 @@ public static class Tier1HunterRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "fur", 15 },
-            { "leather", 10 }
+            { "fur", 40 },
+            { "leather", 30 }
         }
     };
 
@@ -89,7 +74,7 @@ public static class Tier1HunterRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "fur", 15 }
+            { "fur", 40 }
         }
     };
 
@@ -101,7 +86,7 @@ public static class Tier1HunterRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "feather", 20 }
+            { "feather", 60 }
         }
     };
 
@@ -113,8 +98,20 @@ public static class Tier1HunterRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "feather", 25 },
-            { "bone", 10 }
+            { "feather", 70 },
+            { "bone", 30 }
         }
+    };
+    public static readonly Recipe BoneBuckler = new()
+    {
+        Id = "bone_buckler",
+        Name = "Bone Buckler",
+        ResultItem = "bone_buckler",
+        ResultAmount = 1,
+        Materials = new Dictionary<string, int>
+    {
+        { "bone", 30 },
+        { "leather", 20 }
+    }
     };
 }
