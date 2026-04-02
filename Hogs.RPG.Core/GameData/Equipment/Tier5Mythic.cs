@@ -1,6 +1,4 @@
-﻿namespace Hogs.RPG.Core.GameData.Equipment;
-
-using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
 
 public static class Tier5Mythic
@@ -10,8 +8,8 @@ public static class Tier5Mythic
         Id = "mythic_crown",
         Name = "Mythic Crown",
         Slot = EquipmentSlot.Helmet,
-        Defense = 18,
-        Attack = 15
+        Defense = 45,
+        Attack = 18
     };
 
     public static readonly EquipmentDefinition BeastslayerPlate = new()
@@ -19,7 +17,7 @@ public static class Tier5Mythic
         Id = "beastslayer_plate",
         Name = "Beastslayer Plate",
         Slot = EquipmentSlot.Body,
-        Defense = 26
+        Defense = 58
     };
 
     public static readonly EquipmentDefinition ColossusLegguards = new()
@@ -27,7 +25,7 @@ public static class Tier5Mythic
         Id = "colossus_legguards",
         Name = "Colossus Legguards",
         Slot = EquipmentSlot.Legs,
-        Defense = 22
+        Defense = 50
     };
 
     public static readonly EquipmentDefinition AbyssGauntlets = new()
@@ -35,7 +33,7 @@ public static class Tier5Mythic
         Id = "abyss_gauntlets",
         Name = "Abyss Gauntlets",
         Slot = EquipmentSlot.Gloves,
-        Defense = 14
+        Defense = 42
     };
 
     public static readonly EquipmentDefinition SkystriderBoots = new()
@@ -43,7 +41,7 @@ public static class Tier5Mythic
         Id = "skystrider_boots",
         Name = "Skystrider Boots",
         Slot = EquipmentSlot.Boots,
-        Defense = 14
+        Defense = 40
     };
 
     public static readonly EquipmentDefinition WorldbreakerBlade = new()
@@ -51,7 +49,7 @@ public static class Tier5Mythic
         Id = "worldbreaker_blade",
         Name = "Worldbreaker Blade",
         Slot = EquipmentSlot.MainHand,
-        Attack = 35
+        Attack = 48
     };
 
     public static readonly EquipmentDefinition ColossusShield = new()
@@ -59,7 +57,8 @@ public static class Tier5Mythic
         Id = "colossus_shield",
         Name = "Colossus Shield",
         Slot = EquipmentSlot.OffHand,
-        Defense = 30
+        Health = 130,
+        Defense = 35
     };
 
     public static readonly EquipmentDefinition RavenKingBand = new()
@@ -67,7 +66,9 @@ public static class Tier5Mythic
         Id = "raven_king_band",
         Name = "Raven King Band",
         Slot = EquipmentSlot.Ring,
-        Health = 140
+        Health = 150,
+        Defense = 14,
+        Attack = 8
     };
 
     public static readonly EquipmentDefinition PendantOfTheWild = new()
@@ -75,6 +76,8 @@ public static class Tier5Mythic
         Id = "pendant_of_the_wild",
         Name = "Pendant of the Wild",
         Slot = EquipmentSlot.Amulet,
+        Health = 150,
+        Defense = 14,
         Attack = 20
     };
 }

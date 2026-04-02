@@ -1,6 +1,4 @@
-﻿namespace Hogs.RPG.Core.GameData.Equipment;
-
-using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
 
 public static class Tier3Warlord
@@ -10,7 +8,7 @@ public static class Tier3Warlord
         Id = "warlord_helm",
         Name = "Warlord Helm",
         Slot = EquipmentSlot.Helmet,
-        Defense = 8
+        Defense = 26
     };
 
     public static readonly EquipmentDefinition WarlordArmor = new()
@@ -18,7 +16,7 @@ public static class Tier3Warlord
         Id = "warlord_armor",
         Name = "Warlord Armor",
         Slot = EquipmentSlot.Body,
-        Defense = 12
+        Defense = 32
     };
 
     public static readonly EquipmentDefinition WarlordGreaves = new()
@@ -26,7 +24,7 @@ public static class Tier3Warlord
         Id = "warlord_greaves",
         Name = "Warlord Greaves",
         Slot = EquipmentSlot.Legs,
-        Defense = 10
+        Defense = 28
     };
 
     public static readonly EquipmentDefinition ClawGauntlets = new()
@@ -34,7 +32,7 @@ public static class Tier3Warlord
         Id = "claw_gauntlets",
         Name = "Claw Gauntlets",
         Slot = EquipmentSlot.Gloves,
-        Defense = 6
+        Defense = 24
     };
 
     public static readonly EquipmentDefinition SabertoothBoots = new()
@@ -42,7 +40,7 @@ public static class Tier3Warlord
         Id = "sabertooth_boots",
         Name = "Sabertooth Boots",
         Slot = EquipmentSlot.Boots,
-        Defense = 6
+        Defense = 22
     };
 
     public static readonly EquipmentDefinition SaberFangBlade = new()
@@ -50,7 +48,7 @@ public static class Tier3Warlord
         Id = "saber_fang_blade",
         Name = "Saber Fang Blade",
         Slot = EquipmentSlot.MainHand,
-        Attack = 18
+        Attack = 26
     };
 
     public static readonly EquipmentDefinition AntlerShield = new()
@@ -58,7 +56,8 @@ public static class Tier3Warlord
         Id = "antler_shield",
         Name = "Antler Shield",
         Slot = EquipmentSlot.OffHand,
-        Defense = 14
+        Health = 70,
+        Defense = 18
     };
 
     public static readonly EquipmentDefinition GriffinBand = new()
@@ -66,7 +65,9 @@ public static class Tier3Warlord
         Id = "griffin_band",
         Name = "Griffin Band",
         Slot = EquipmentSlot.Ring,
-        Health = 60
+        Health = 80,
+        Defense = 8,
+        Attack = 5
     };
 
     public static readonly EquipmentDefinition RavenEyePendant = new()
@@ -74,6 +75,8 @@ public static class Tier3Warlord
         Id = "raven_eye_pendant",
         Name = "Raven Eye Pendant",
         Slot = EquipmentSlot.Amulet,
-        Attack = 9
+        Health = 80,
+        Defense = 8,
+        Attack = 10
     };
 }

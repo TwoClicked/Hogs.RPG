@@ -16,7 +16,7 @@ public static class Tier1Hunter
         Id = "bone_helm",
         Name = "Bone Helm",
         Slot = EquipmentSlot.Helmet,
-        Defense = 2
+        Defense = 15
     };
 
     public static readonly EquipmentDefinition LeatherVest = new()
@@ -24,7 +24,7 @@ public static class Tier1Hunter
         Id = "leather_vest",
         Name = "Leather Vest",
         Slot = EquipmentSlot.Body,
-        Defense = 4
+        Defense = 18
     };
 
     public static readonly EquipmentDefinition HunterLeggings = new()
@@ -32,7 +32,7 @@ public static class Tier1Hunter
         Id = "hunter_leggings",
         Name = "Hunter Leggings",
         Slot = EquipmentSlot.Legs,
-        Defense = 3
+        Defense = 16
     };
 
     public static readonly EquipmentDefinition FurGloves = new ()
@@ -40,7 +40,7 @@ public static class Tier1Hunter
         Id = "fur_gloves",
         Name = "Fur Gloves",
         Slot = EquipmentSlot.Gloves,
-        Defense = 2
+        Defense = 14
     };
 
     public static readonly EquipmentDefinition HideBoots = new()
@@ -48,7 +48,7 @@ public static class Tier1Hunter
         Id = "hide_boots",
         Name = "Hide Boots",
         Slot = EquipmentSlot.Boots,
-        Defense = 2
+        Defense = 12
     };
 
     public static readonly EquipmentDefinition ClawDagger = new()
@@ -56,7 +56,7 @@ public static class Tier1Hunter
         Id = "claw_dagger",
         Name = "Claw Dagger",
         Slot = EquipmentSlot.MainHand,
-        Attack = 6
+        Attack = 15
     };
 
     public static readonly EquipmentDefinition BoneBuckler = new()
@@ -64,7 +64,8 @@ public static class Tier1Hunter
         Id = "bone_buckler",
         Name = "Bone Buckler",
         Slot = EquipmentSlot.OffHand,
-        Defense = 6
+        Health = 35,
+        Defense = 10
     };
 
     public static readonly EquipmentDefinition FeatherBand = new()
@@ -72,8 +73,9 @@ public static class Tier1Hunter
         Id = "feather_band",
         Name = "Feather Band",
         Slot = EquipmentSlot.Amulet,
-        Attack = 4,
-        Defense = 4
+        Health = 50,
+        Defense = 5,
+        Attack = 5
     };
 
     public static readonly EquipmentDefinition RavenCharm = new()
@@ -81,6 +83,8 @@ public static class Tier1Hunter
         Id = "raven_charm",
         Name = "Raven Charm",
         Slot = EquipmentSlot.Ring,
-        Health = 15
+        Health = 50,
+        Defense = 5,
+        Attack = 3
     };
 }

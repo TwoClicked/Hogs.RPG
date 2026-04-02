@@ -1,6 +1,4 @@
-﻿namespace Hogs.RPG.Core.GameData.Equipment;
-
-using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
 
 public static class Tier2Raider
@@ -10,7 +8,7 @@ public static class Tier2Raider
         Id = "raider_helm",
         Name = "Raider Helm",
         Slot = EquipmentSlot.Helmet,
-        Defense = 5
+        Defense = 20
     };
 
     public static readonly EquipmentDefinition HideWarcoat = new()
@@ -18,7 +16,7 @@ public static class Tier2Raider
         Id = "hide_warcoat",
         Name = "Hide Warcoat",
         Slot = EquipmentSlot.Body,
-        Defense = 8
+        Defense = 24
     };
 
     public static readonly EquipmentDefinition RaiderLegguards = new()
@@ -26,7 +24,7 @@ public static class Tier2Raider
         Id = "raider_legguards",
         Name = "Raider Legguards",
         Slot = EquipmentSlot.Legs,
-        Defense = 6
+        Defense = 21
     };
 
     public static readonly EquipmentDefinition TrackerGloves = new()
@@ -34,7 +32,7 @@ public static class Tier2Raider
         Id = "tracker_gloves",
         Name = "Tracker Gloves",
         Slot = EquipmentSlot.Gloves,
-        Defense = 4
+        Defense = 18
     };
 
     public static readonly EquipmentDefinition RaiderBoots = new()
@@ -42,7 +40,7 @@ public static class Tier2Raider
         Id = "raider_boots",
         Name = "Raider Boots",
         Slot = EquipmentSlot.Boots,
-        Defense = 4
+        Defense = 16
     };
 
     public static readonly EquipmentDefinition FangBlade = new()
@@ -50,7 +48,7 @@ public static class Tier2Raider
         Id = "fang_blade",
         Name = "Fang Blade",
         Slot = EquipmentSlot.MainHand,
-        Attack = 12
+        Attack = 20
     };
 
     public static readonly EquipmentDefinition HornShield = new()
@@ -58,7 +56,8 @@ public static class Tier2Raider
         Id = "horn_shield",
         Name = "Horn Shield",
         Slot = EquipmentSlot.OffHand,
-        Defense = 10
+        Health = 50,
+        Defense = 14
     };
 
     public static readonly EquipmentDefinition RaiderBand = new()
@@ -66,7 +65,9 @@ public static class Tier2Raider
         Id = "raider_band",
         Name = "Raider Band",
         Slot = EquipmentSlot.Ring,
-        Health = 35
+        Health = 65,
+        Defense = 6,
+        Attack = 4
     };
 
     public static readonly EquipmentDefinition TalonCharm = new()
@@ -74,6 +75,8 @@ public static class Tier2Raider
         Id = "talon_charm",
         Name = "Talon Charm",
         Slot = EquipmentSlot.Amulet,
-        Attack = 6
+        Health = 65,
+        Defense = 6,
+        Attack = 7
     };
 }

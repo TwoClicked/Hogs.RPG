@@ -31,7 +31,7 @@ namespace Hogs.RPG.Core.GameData.Dungeons
             Name = "Forsaken Catacombs",
 
             RequiredLevel = 15,
-            Floors = 8,
+            Floors = 7,
 
             BaseEnemyHealth = 160,
             EnemyHealthScaling = 55,
@@ -51,7 +51,7 @@ namespace Hogs.RPG.Core.GameData.Dungeons
             Name = "Spirit Forest",
 
             RequiredLevel = 20,
-            Floors = 10,
+            Floors = 9,
 
             BaseEnemyHealth = 240,
             EnemyHealthScaling = 70,
@@ -71,7 +71,7 @@ namespace Hogs.RPG.Core.GameData.Dungeons
             Name = "Temple of Ruin",
 
             RequiredLevel = 25,
-            Floors = 12,
+            Floors = 11,
 
             BaseEnemyHealth = 350,
             EnemyHealthScaling = 90,

@@ -10,7 +10,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             new BossLoot
             {
                 ItemId = "gravelmaw_shield",
-                DropChance = 5,
+                DropChance = 1,
                 MinAmount = 1,
                 MaxAmount = 1
             }
@@ -21,7 +21,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             new BossLoot
             {
                 ItemId = "serpent_gloves",
-                DropChance = 5,
+                DropChance = 1,
                 MinAmount = 1,
                 MaxAmount = 1
             }
@@ -32,7 +32,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             new BossLoot
             {
                 ItemId = "xerathul_armor",
-                DropChance = 5,
+                DropChance = 1,
                 MinAmount = 1,
                 MaxAmount = 1
             }
@@ -43,7 +43,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             new BossLoot
             {
                 ItemId = "aurelius_sword",
-                DropChance = 5,
+                DropChance = 1,
                 MinAmount = 1,
                 MaxAmount = 1
             }
@@ -54,7 +54,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             new BossLoot
             {
                 ItemId = "punisher_ring",
-                DropChance = 5, // slightly higher (daily boss but stronger)
+                DropChance = 1, // slightly higher (daily boss but stronger)
                 MinAmount = 1,
                 MaxAmount = 1
             }
@@ -65,7 +65,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             new BossLoot
             {
                 ItemId = "tyr_helm",
-                DropChance = 5, // weekly boss
+                DropChance = 1, // weekly boss
                 MinAmount = 1,
                 MaxAmount = 1
             }
@@ -76,7 +76,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             new BossLoot
             {
                 ItemId = "thorlak_boots",
-                DropChance = 5,
+                DropChance = 1,
                 MinAmount = 1,
                 MaxAmount = 1
             }
@@ -87,7 +87,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             new BossLoot
             {
                 ItemId = "gullveig_amulet",
-                DropChance = 5,
+                DropChance = 1,
                 MinAmount = 1,
                 MaxAmount = 1
             }

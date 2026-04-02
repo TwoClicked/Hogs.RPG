@@ -329,7 +329,9 @@ namespace Hogs.RPG.Services.Game
 
             // 🔥 Apply penalties
             player.Gold = Math.Max(0, player.Gold - 250);
-            player.XP = 0;
+
+            // Remove 20% of current XP instead of wiping it
+            player.XP = Math.Max(0, (int)(player.XP * 0.8f));
 
             // 🔥 CRITICAL FIX: restore HP INCLUDING gear
             var (attack, defense, maxHealth) = _statService.CalculateStats(player);
@@ -351,7 +353,7 @@ namespace Hogs.RPG.Services.Game
             {
                 Embed = new EmbedBuilder()
                     .WithTitle("💀 You Died")
-                    .WithDescription("Lost 250 gold and all XP.\n❤️ You were restored to full health.")
+                    .WithDescription("Lost 250 gold and 20% of your current XP.\n❤️ You were restored to full health.")
                     .WithColor(Color.DarkRed)
                     .Build(),
                 IsFinished = true
@@ -517,7 +519,7 @@ namespace Hogs.RPG.Services.Game
             // Apply triple damage if enraged
             if (session.RageTriggered)
             {
-                enemyDamage *= 3;
+                enemyDamage *= 2;
             }
 
             return null;

@@ -1,6 +1,4 @@
-﻿namespace Hogs.RPG.Core.GameData.Equipment;
-
-using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
 
 public static class Tier4Champion
@@ -10,7 +8,7 @@ public static class Tier4Champion
         Id = "champion_helm",
         Name = "Champion Helm",
         Slot = EquipmentSlot.Helmet,
-        Defense = 12
+        Defense = 32
     };
 
     public static readonly EquipmentDefinition ChampionPlate = new()
@@ -18,7 +16,7 @@ public static class Tier4Champion
         Id = "champion_plate",
         Name = "Champion Plate",
         Slot = EquipmentSlot.Body,
-        Defense = 18
+        Defense = 40
     };
 
     public static readonly EquipmentDefinition ChampionGreaves = new()
@@ -26,7 +24,7 @@ public static class Tier4Champion
         Id = "champion_greaves",
         Name = "Champion Greaves",
         Slot = EquipmentSlot.Legs,
-        Defense = 15
+        Defense = 35
     };
 
     public static readonly EquipmentDefinition StormGauntlets = new()
@@ -34,7 +32,7 @@ public static class Tier4Champion
         Id = "storm_gauntlets",
         Name = "Storm Gauntlets",
         Slot = EquipmentSlot.Gloves,
-        Defense = 10
+        Defense = 30
     };
 
     public static readonly EquipmentDefinition ShadowstepBoots = new()
@@ -42,7 +40,7 @@ public static class Tier4Champion
         Id = "shadowstep_boots",
         Name = "Shadowstep Boots",
         Slot = EquipmentSlot.Boots,
-        Defense = 10
+        Defense = 28
     };
 
     public static readonly EquipmentDefinition TitanBlade = new()
@@ -50,7 +48,7 @@ public static class Tier4Champion
         Id = "titan_blade",
         Name = "Titan Blade",
         Slot = EquipmentSlot.MainHand,
-        Attack = 25
+        Attack = 34
     };
 
     public static readonly EquipmentDefinition TitanShield = new()
@@ -58,7 +56,8 @@ public static class Tier4Champion
         Id = "titan_shield",
         Name = "Titan Shield",
         Slot = EquipmentSlot.OffHand,
-        Defense = 20
+        Health = 95,
+        Defense = 24
     };
 
     public static readonly EquipmentDefinition StormRing = new()
@@ -66,7 +65,9 @@ public static class Tier4Champion
         Id = "storm_ring",
         Name = "Storm Ring",
         Slot = EquipmentSlot.Ring,
-        Health = 90
+        Health = 100,
+        Defense = 10,
+        Attack = 6
     };
 
     public static readonly EquipmentDefinition VoidPendant = new()
@@ -74,6 +75,8 @@ public static class Tier4Champion
         Id = "void_pendant",
         Name = "Void Pendant",
         Slot = EquipmentSlot.Amulet,
+        Health = 100,
+        Defense = 10,
         Attack = 14
     };
 }

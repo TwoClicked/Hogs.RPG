@@ -27,7 +27,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
                 new DungeonDrop
                 {
                     ItemId = "fanculo_helm",
-                    ChancePercent = 5
+                    ChancePercent = 3
                 }
             }
         };
@@ -55,7 +55,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
                 new DungeonDrop
                 {
                     ItemId = "hrothgar_ring",
-                    ChancePercent = 5
+                    ChancePercent = 3
                 }
             }
         };
@@ -83,7 +83,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
                 new DungeonDrop
                 {
                     ItemId = "luminara_amulet",
-                    ChancePercent = 5
+                    ChancePercent = 3
                 }
             }
         };
@@ -111,7 +111,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
                 new DungeonDrop
                 {
                     ItemId = "thorkell_boots",
-                    ChancePercent = 5
+                    ChancePercent = 3
                 }
             }
         };
