@@ -14,6 +14,11 @@ namespace Hogs.RPG.Services.PlayerServices
             _playerRepository = playerRepository;
         }
 
+        public async Task<Player> GetPlayerAsync(ulong discordId)
+        {
+            return await _playerRepository.GetByDiscordIdAsync(discordId);
+        }
+
         public async Task<Player> GetOrCreatePlayerAsync(ulong discordId, string username)
         {
 

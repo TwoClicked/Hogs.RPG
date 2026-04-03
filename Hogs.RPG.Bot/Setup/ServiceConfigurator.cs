@@ -1,4 +1,5 @@
-﻿using Hogs.RPG.Core.GameData.Recipes;
+﻿using Discord.WebSocket;
+using Hogs.RPG.Core.GameData.Recipes;
 using Hogs.RPG.Data;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.AlchemyServices;
@@ -8,6 +9,7 @@ using Hogs.RPG.Services.GatheringServices;
 using Hogs.RPG.Services.HuntServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PlayerServices;
+using Hogs.RPG.Services.TradeServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -55,6 +57,10 @@ namespace Hogs.RPG.Bot.Setup
             services.AddHostedService<BossScheduler>();
 
             services.AddSingleton<DungeonService>();
+
+
+            services.AddSingleton<TradeService>();
+            services.AddSingleton<TradeCleanupService>();
 
             services.AddScoped<PlayerRepository>();
             services.AddScoped<InventoryRepository>();

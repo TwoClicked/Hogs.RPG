@@ -3,6 +3,7 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Bot.Setup;
 using Hogs.RPG.Services.Game; // 🔥 IMPORTANT (for BossScheduler)
+using Hogs.RPG.Services.TradeServices;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading;
@@ -76,6 +77,8 @@ namespace Hogs.RPG.Bot
         {
             Console.WriteLine("🔥 Discord client READY");
 
+
+
             _interactionService = _services.GetRequiredService<InteractionService>();
             _interactionService.Log += LogAsync;
 
@@ -97,8 +100,12 @@ namespace Hogs.RPG.Bot
                 Console.WriteLine("🚀 Starting BossScheduler...");
 
                 var scheduler = _services.GetRequiredService<BossScheduler>();
-
                 _ = scheduler.StartAsync(CancellationToken.None);
+
+                Console.WriteLine("🚀 Starting TradeCleanupService...");
+
+                var tradeCleanup = _services.GetRequiredService<TradeCleanupService>();
+                _ = tradeCleanup.StartAsync(CancellationToken.None);
 
                 _schedulerStarted = true;
             }
