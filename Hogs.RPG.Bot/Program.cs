@@ -2,8 +2,10 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Bot.Setup;
-using Hogs.RPG.Services.Game; // 🔥 IMPORTANT (for BossScheduler)
+using Hogs.RPG.Data;
+using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.TradeServices;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading;
@@ -17,7 +19,6 @@ namespace Hogs.RPG.Bot
         private IServiceProvider _services;
         private InteractionService _interactionService;
 
-        // 🔥 Keep reference so it doesn't start twice
         private bool _schedulerStarted = false;
 
         public static void Main(string[] args)
@@ -34,11 +35,9 @@ namespace Hogs.RPG.Bot
 
             var services = new ServiceCollection();
 
-            // ✅ Register Discord client properly
             services.AddSingleton(_client);
             services.AddSingleton<DiscordSocketClient>(_client);
 
-            // ✅ InteractionService
             services.AddSingleton<InteractionService>(provider =>
                 new InteractionService(
                     provider.GetRequiredService<DiscordSocketClient>(),
@@ -48,7 +47,6 @@ namespace Hogs.RPG.Bot
                         DefaultRunMode = RunMode.Async
                     }));
 
-            // ✅ Your services (includes BossScheduler registration)
             ServiceConfigurator.Configure(services);
 
             _services = services.BuildServiceProvider();
@@ -77,7 +75,20 @@ namespace Hogs.RPG.Bot
         {
             Console.WriteLine("🔥 Discord client READY");
 
-
+            // ✅ Auto-migrate database on startup
+            try
+            {
+                using (var scope = _services.CreateScope())
+                {
+                    var db = scope.ServiceProvider.GetRequiredService<GameDbContext>();
+                    await db.Database.MigrateAsync();
+                    Console.WriteLine("✅ Database migrated successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Database migration failed: {ex.Message}");
+            }
 
             _interactionService = _services.GetRequiredService<InteractionService>();
             _interactionService.Log += LogAsync;
@@ -92,23 +103,20 @@ namespace Hogs.RPG.Bot
 
             Console.WriteLine("[Init] Slash commands registered.");
 
-            // =========================
-            // 🔥 START SCHEDULER HERE
-            // =========================
-           if (!_schedulerStarted)
-           {
-               Console.WriteLine("🚀 Starting BossScheduler...");
-           
-               var scheduler = _services.GetRequiredService<BossScheduler>();
-               _ = scheduler.StartAsync(CancellationToken.None);
-              
-               Console.WriteLine("🚀 Starting TradeCleanupService...");
-              
-               var tradeCleanup = _services.GetRequiredService<TradeCleanupService>();
-               _ = tradeCleanup.StartAsync(CancellationToken.None);
-           
-               _schedulerStarted = true;
-           }
+            if (!_schedulerStarted)
+            {
+                Console.WriteLine("🚀 Starting BossScheduler...");
+
+                var scheduler = _services.GetRequiredService<BossScheduler>();
+                _ = scheduler.StartAsync(CancellationToken.None);
+
+                Console.WriteLine("🚀 Starting TradeCleanupService...");
+
+                var tradeCleanup = _services.GetRequiredService<TradeCleanupService>();
+                _ = tradeCleanup.StartAsync(CancellationToken.None);
+
+                _schedulerStarted = true;
+            }
         }
 
         private async Task HandleInteractionAsync(SocketInteraction arg)
@@ -118,7 +126,6 @@ namespace Hogs.RPG.Bot
             Console.WriteLine($"   Type: {arg.Type}");
             Console.WriteLine($"   Created at (Discord timestamp): {arg.CreatedAt:HH:mm:ss.fff}");
 
-            // 🔥 THIS IS THE KEY LOG - how old is the interaction when we get it?
             var discordAge = receivedAt - arg.CreatedAt.UtcDateTime;
             Console.WriteLine($"   ⏱ Interaction age when received: {discordAge.TotalMilliseconds:F1}ms");
 
