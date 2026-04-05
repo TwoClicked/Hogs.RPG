@@ -111,6 +111,13 @@ namespace Hogs.RPG.Bot.Commands
         [SlashCommand("profile", "View your character")]
         public async Task Profile()
         {
+
+            if (Context.Channel.Id != 1486017679016857752UL)
+            {
+                await RespondAsync("❌ This command can only be used in <#1486017679016857752>.", ephemeral: true);
+                return;
+            }
+
             await DeferAsync();
 
             var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
