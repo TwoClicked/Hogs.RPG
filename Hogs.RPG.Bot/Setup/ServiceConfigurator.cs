@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.GameData.Recipes;
+using System;
 using Hogs.RPG.Data;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.AlchemyServices;
@@ -23,8 +24,13 @@ namespace Hogs.RPG.Bot.Setup
             // 🗄️ DATABASE
             // =========================
             services.AddDbContext<GameDbContext>(options =>
-                options.UseSqlServer(
-                    "Server=(localdb)\\MSSQLLocalDB;Database=HogsRPG;Trusted_Connection=True;"));
+            {
+                var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
+                if (!string.IsNullOrEmpty(connectionString))
+                    options.UseNpgsql(connectionString);
+                else
+                    options.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=HogsRPG;Trusted_Connection=True;");
+            });
 
             // =========================
             // 📦 REPOSITORIES (Scoped)

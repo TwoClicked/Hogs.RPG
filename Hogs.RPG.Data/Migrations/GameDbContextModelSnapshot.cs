@@ -17,7 +17,7 @@ namespace Hogs.RPG.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -173,6 +173,12 @@ namespace Hogs.RPG.Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<int>("Level")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Passive1")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Passive2")
                         .HasColumnType("int");
 
                     b.Property<string>("PetId")
