@@ -39,7 +39,7 @@ namespace Hogs.RPG.Bot.Setup
             });
 
             // =========================
-            // 📦 REPOSITORIES
+            // 📦 REPOSITORIES (Scoped)
             // =========================
             services.AddScoped<PlayerRepository>();
             services.AddScoped<PetRepository>();
@@ -52,45 +52,30 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<PlayerService>();
             services.AddScoped<HealService>();
             services.AddScoped<StatService>();
-
             services.AddScoped<InventoryService>();
-
             services.AddScoped<HuntService>();
             services.AddScoped<HunterStaminaService>();
             services.AddScoped<LevelService>();
-
             services.AddScoped<ItemService>();
-
             services.AddScoped<CraftingService>();
-
             services.AddScoped<EquipService>();
             services.AddScoped<EquipmentService>();
-
             services.AddScoped<BuffService>();
             services.AddScoped<PotionService>();
-
             services.AddScoped<EnergyService>();
             services.AddScoped<GatherService>();
-
             services.AddScoped<AlchemyService>();
-
-            services.AddSingleton<BossService>();
-
             services.AddScoped<DungeonService>();
-
             services.AddScoped<TradeService>();
-
             services.AddScoped<PetService>();
             services.AddScoped<PetPassiveService>();
 
+            // =========================
+            // 🔒 SINGLETONS (no DB injection)
+            // =========================
+            services.AddSingleton<BossService>();
             services.AddSingleton<BossScheduler>();
             services.AddSingleton<TradeCleanupService>();
-
-            // =========================
-            // 🔄 BACKGROUND SERVICES (Hosted ONLY)
-            // =========================
-            services.AddHostedService<BossScheduler>();
-            services.AddHostedService<TradeCleanupService>();
         }
     }
 }

@@ -7,8 +7,8 @@ using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
-using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,36 +20,17 @@ namespace Hogs.RPG.Services.Game
 {
     public class BossService
     {
-        private readonly PlayerService _playerService;
-        private readonly PlayerRepository _playerRepository;
-        private readonly StatService _statService;
-        private readonly InventoryService _inventoryService;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly DiscordSocketClient _client;
-        private readonly LevelService _levelService;
-        private readonly BossStateRepository _bossStateRepository;
 
         private readonly Dictionary<string, ActiveBoss> _activeBosses = new();
-
         private readonly ulong _feedChannelId = 1485357755433750549;
-
         private static readonly Random _rand = new();
 
-        public BossService(
-            PlayerService playerService,
-            PlayerRepository playerRepository,
-            StatService statService,
-            InventoryService inventoryService,
-            DiscordSocketClient client,
-            LevelService levelService,
-            BossStateRepository bossStateRepository)
+        public BossService(IServiceScopeFactory scopeFactory, DiscordSocketClient client)
         {
-            _playerService = playerService;
-            _playerRepository = playerRepository;
-            _statService = statService;
-            _inventoryService = inventoryService;
+            _scopeFactory = scopeFactory;
             _client = client;
-            _levelService = levelService;
-            _bossStateRepository = bossStateRepository;
         }
 
         public async Task<ActiveBoss> SpawnBoss(string bossId)
@@ -87,25 +68,26 @@ namespace Hogs.RPG.Services.Game
             if (boss.IsDead || DateTime.UtcNow >= boss.ExpireAt)
                 return;
 
-            var player = await _playerRepository.GetByDiscordIdAsync(userId);
-            if (player == null)
-                return;
+            using var scope = _scopeFactory.CreateScope();
+            var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+            var statService = scope.ServiceProvider.GetRequiredService<StatService>();
 
-            var (attack, defense, maxHp) = _statService.CalculateStats(player);
+            var player = await playerRepo.GetByDiscordIdAsync(userId);
+            if (player == null) return;
+
+            var (attack, defense, maxHp) = await statService.CalculateStatsAsync(player);
 
             int damage = (int)(attack * (100.0 / (100 + boss.Definition.Defense)));
             damage = Math.Max(1, damage);
 
             boss.CurrentHealth = Math.Max(0, boss.CurrentHealth - damage);
 
-            // Track DPS
             if (!boss.DamageDealt.ContainsKey(userId))
                 boss.DamageDealt[userId] = 0;
 
             boss.DamageDealt[userId] += damage;
             boss.Participants.Add(userId);
 
-            // 🔥 Death check (safe)
             if (boss.CurrentHealth <= 0 && !boss.IsDead)
             {
                 boss.IsDead = true;
@@ -141,26 +123,28 @@ namespace Hogs.RPG.Services.Game
             int reward = (int)(boss.Definition.RewardGold * 0.5);
 
             var sb = new StringBuilder();
-
             sb.AppendLine($"💨 **{boss.Definition.Name} fled!**\n");
             sb.AppendLine($"💰 Everyone receives {reward} gold\n");
 
+            using var scope = _scopeFactory.CreateScope();
+            var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+            var playerService = scope.ServiceProvider.GetRequiredService<PlayerService>();
+            var statService = scope.ServiceProvider.GetRequiredService<StatService>();
+
             foreach (var userId in boss.Participants)
             {
-                var player = await _playerService.GetOrCreatePlayerAsync(userId, "Unknown");
+                var player = await playerService.GetOrCreatePlayerAsync(userId, "Unknown");
 
-                // 💰 Apply reward
                 player.Gold += reward;
 
-                // 🔥 CRITICAL: normalize HP to prevent 0 / invalid state
-                var (atk, def, maxHp) = _statService.CalculateStats(player);
+                var (atk, def, maxHp) = await statService.CalculateStatsAsync(player);
 
                 if (player.Health <= 0)
                     player.Health = maxHp;
 
                 player.Health = Math.Min(player.Health, maxHp);
 
-                await _playerRepository.UpdatePlayerAsync(player);
+                await playerRepo.UpdatePlayerAsync(player);
 
                 sb.AppendLine($"<@{userId}> +{reward} gold");
             }
@@ -203,60 +187,45 @@ namespace Hogs.RPG.Services.Game
         public async Task<string> HandleBossDeathAsync(ActiveBoss boss)
         {
             var sb = new StringBuilder();
-
             sb.AppendLine($"👑 **{boss.Definition.Name} defeated!**\n");
 
-            // =========================
-            // 🏆 DPS LEADERBOARD
-            // =========================
             sb.AppendLine("🏆 **Top DPS:**");
-
             var leaderboard = boss.DamageDealt
                 .OrderByDescending(x => x.Value)
                 .Take(5)
                 .ToList();
 
             foreach (var (userId, dmg) in leaderboard)
-            {
                 sb.AppendLine($"• <@{userId}> — **{dmg} dmg**");
-            }
 
             sb.AppendLine();
 
-            // =========================
-            // 💰 GOLD + XP
-            // =========================
             int reward = boss.Definition.RewardGold;
-
             sb.AppendLine($"💰 **Everyone receives {reward} gold AND 5000 XP**\n");
 
-            // =========================
-            // 🎁 DROPS
-            // =========================
             if (!BossDropRegistry.Drops.TryGetValue(boss.Definition.Id, out var lootTable))
                 lootTable = new List<BossLoot>();
 
             var dropResults = new Dictionary<ulong, List<string>>();
 
-            // =========================
-            // 👥 REWARD LOOP
-            // =========================
+            using var scope = _scopeFactory.CreateScope();
+            var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+            var playerService = scope.ServiceProvider.GetRequiredService<PlayerService>();
+            var statService = scope.ServiceProvider.GetRequiredService<StatService>();
+            var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
+            var levelService = scope.ServiceProvider.GetRequiredService<LevelService>();
+
             foreach (var userId in boss.Participants)
             {
-                var player = await _playerService.GetOrCreatePlayerAsync(userId, "Unknown");
+                var player = await playerService.GetOrCreatePlayerAsync(userId, "Unknown");
 
-                // 💰 Apply rewards
                 player.Gold += reward;
                 player.XP += 2500;
 
-                // 🔥 LEVEL UP CHECK
-                var (levelMessage, levelsGained) = _levelService.CheckLevelUp(player);
+                var (levelMessage, levelsGained) = levelService.CheckLevelUp(player);
 
                 var playerDrops = new List<string>();
 
-                // =========================
-                // 🎁 DROPS (DPS GATED)
-                // =========================
                 if (boss.DamageDealt.TryGetValue(userId, out var totalDamage) && totalDamage >= 10000)
                 {
                     foreach (var loot in lootTable)
@@ -267,16 +236,12 @@ namespace Hogs.RPG.Services.Game
                         {
                             int amount = _rand.Next(loot.MinAmount, loot.MaxAmount + 1);
 
-                            // ✅ GIVE ITEM (no reload after!)
-                            await _inventoryService.GiveItemAsync(userId, loot.ItemId, amount);
+                            await inventoryService.GiveItemAsync(userId, loot.ItemId, amount);
 
                             if (InventoryItemDefinitions.All.TryGetValue(loot.ItemId, out var item))
                             {
                                 string line = $"{item.Icon} **{item.Name}**";
-
-                                if (amount > 1)
-                                    line += $" x{amount}";
-
+                                if (amount > 1) line += $" x{amount}";
                                 playerDrops.Add(line);
                             }
                             else
@@ -290,43 +255,25 @@ namespace Hogs.RPG.Services.Game
                 if (playerDrops.Count > 0)
                     dropResults[userId] = playerDrops;
 
-                // =========================
-                // 🔧 NORMALIZE HEALTH
-                // =========================
-                var (_, _, maxHp) = _statService.CalculateStats(player);
+                var (_, _, maxHp) = await statService.CalculateStatsAsync(player);
 
                 if (player.Health <= 0)
                     player.Health = maxHp;
 
                 player.Health = Math.Min(player.Health, maxHp);
 
-                // =========================
-                // 💾 SAVE PLAYER
-                // =========================
-                await _playerRepository.UpdatePlayerAsync(player);
+                await playerRepo.UpdatePlayerAsync(player);
 
-                // =========================
-                // 🎉 LEVEL ANNOUNCEMENT
-                // =========================
                 if (levelsGained > 0)
                 {
                     var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
-
                     if (channel != null)
-                    {
-                        await channel.SendMessageAsync(
-                            $"🎉 <@{player.DiscordId}> reached **Level {player.Level}**!"
-                        );
-                    }
+                        await channel.SendMessageAsync($"🎉 <@{player.DiscordId}> reached **Level {player.Level}**!");
                 }
 
-                // 🔥 CRITICAL: prevent API overload
                 await Task.Delay(75);
             }
 
-            // =========================
-            // 🎁 OUTPUT DROPS (CLEAN UI)
-            // =========================
             if (boss.Participants.Count > 0)
             {
                 sb.AppendLine("\n🎁 **Drops:**\n");
@@ -338,7 +285,6 @@ namespace Hogs.RPG.Services.Game
                 foreach (var userId in boss.Participants)
                 {
                     var mention = $"<@{userId}>";
-
                     bool hasDrops = dropResults.ContainsKey(userId);
                     boss.DamageDealt.TryGetValue(userId, out var dmg);
 
@@ -348,13 +294,9 @@ namespace Hogs.RPG.Services.Game
                         winners.Add($"{mention}\n  • {drops}");
                     }
                     else if (dmg >= 10000)
-                    {
                         unlucky.Add(mention);
-                    }
                     else
-                    {
                         notEligible.Add(mention);
-                    }
                 }
 
                 if (winners.Count > 0)
