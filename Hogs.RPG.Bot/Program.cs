@@ -114,8 +114,18 @@ namespace Hogs.RPG.Bot
         private async Task HandleInteractionAsync(SocketInteraction arg)
         {
             var receivedAt = DateTime.UtcNow;
+            Console.WriteLine($"\n⚡ Interaction received at {receivedAt:HH:mm:ss.fff}");
+            Console.WriteLine($"   Type: {arg.Type}");
+            Console.WriteLine($"   Created at (Discord timestamp): {arg.CreatedAt:HH:mm:ss.fff}");
 
-            Console.WriteLine($"⚡ Interaction received at {receivedAt:HH:mm:ss.fff}");
+            // 🔥 THIS IS THE KEY LOG - how old is the interaction when we get it?
+            var discordAge = receivedAt - arg.CreatedAt.UtcDateTime;
+            Console.WriteLine($"   ⏱ Interaction age when received: {discordAge.TotalMilliseconds:F1}ms");
+
+            if (discordAge.TotalMilliseconds > 2000)
+                Console.WriteLine($"   ☠️ ALREADY DEAD ON ARRIVAL - interaction is {discordAge.TotalMilliseconds:F1}ms old before we even start");
+            else if (discordAge.TotalMilliseconds > 1000)
+                Console.WriteLine($"   ⚠️ WARNING - interaction is already {discordAge.TotalMilliseconds:F1}ms old");
 
             if (arg == null)
             {
@@ -125,7 +135,9 @@ namespace Hogs.RPG.Bot
 
             try
             {
+                var ctxStart = DateTime.UtcNow;
                 var ctx = new SocketInteractionContext(_client, arg);
+                Console.WriteLine($"   Context built in {(DateTime.UtcNow - ctxStart).TotalMilliseconds:F1}ms");
 
                 if (_interactionService == null)
                 {
@@ -134,12 +146,12 @@ namespace Hogs.RPG.Bot
                 }
 
                 var beforeExecute = DateTime.UtcNow;
-                Console.WriteLine($"➡️ Executing command at {beforeExecute:HH:mm:ss.fff} (+{(beforeExecute - receivedAt).TotalMilliseconds}ms)");
+                Console.WriteLine($"➡️ Executing command at {beforeExecute:HH:mm:ss.fff} (+{(beforeExecute - receivedAt).TotalMilliseconds:F1}ms since received)");
 
                 var result = await _interactionService.ExecuteCommandAsync(ctx, _services);
 
                 var afterExecute = DateTime.UtcNow;
-                Console.WriteLine($"✅ Command finished at {afterExecute:HH:mm:ss.fff} (+{(afterExecute - receivedAt).TotalMilliseconds}ms)");
+                Console.WriteLine($"✅ Command finished at {afterExecute:HH:mm:ss.fff} (+{(afterExecute - receivedAt).TotalMilliseconds:F1}ms since received, {(afterExecute - beforeExecute).TotalMilliseconds:F1}ms execution)");
 
                 if (!result.IsSuccess)
                 {

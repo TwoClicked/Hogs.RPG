@@ -1,15 +1,14 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-
 public class DungeonAutocompleteHandler : AutocompleteHandler
 {
     private readonly PlayerRepository _playerRepository;
-
     public DungeonAutocompleteHandler(PlayerRepository playerRepository)
     {
         _playerRepository = playerRepository;
@@ -21,13 +20,16 @@ public class DungeonAutocompleteHandler : AutocompleteHandler
         IParameterInfo parameter,
         IServiceProvider services)
     {
-        var userId = context.User.Id;
-        var input = interaction.Data.Current.Value?.ToString() ?? "";
-
-        var player = await _playerRepository.GetByDiscordIdAsync(userId);
+        var player = await AutocompleteCache<Player>.GetOrCreateAsync(
+            context.User.Id,
+            TimeSpan.FromSeconds(15),
+            () => _playerRepository.GetByDiscordIdAsync(context.User.Id)
+        );
 
         if (player == null)
             return AutocompletionResult.FromSuccess();
+
+        var input = interaction.Data.Current.Value?.ToString() ?? "";
 
         var results = DungeonRegistry.All.Values
             .Where(d => d.Name.Contains(input, StringComparison.OrdinalIgnoreCase))
