@@ -39,7 +39,7 @@ namespace Hogs.RPG.Bot.Setup
             });
 
             // =========================
-            // 📦 REPOSITORIES (Scoped)
+            // 📦 REPOSITORIES
             // =========================
             services.AddScoped<PlayerRepository>();
             services.AddScoped<PetRepository>();
@@ -74,7 +74,7 @@ namespace Hogs.RPG.Bot.Setup
 
             services.AddScoped<AlchemyService>();
 
-            services.AddScoped<BossService>();
+            services.AddSingleton<BossService>();
 
             services.AddScoped<DungeonService>();
 
