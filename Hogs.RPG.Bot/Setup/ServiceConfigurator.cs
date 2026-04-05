@@ -27,7 +27,13 @@ namespace Hogs.RPG.Bot.Setup
             {
                 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
                 if (!string.IsNullOrEmpty(connectionString))
-                    options.UseNpgsql(connectionString);
+                {
+                    // Convert Railway's postgres URL to Npgsql connection string
+                    var uri = new Uri(connectionString);
+                    var userInfo = uri.UserInfo.Split(':');
+                    var npgsqlConnection = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true;";
+                    options.UseNpgsql(npgsqlConnection);
+                }
                 else
                     options.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=HogsRPG;Trusted_Connection=True;");
             });
