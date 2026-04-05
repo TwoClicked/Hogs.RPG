@@ -1,14 +1,15 @@
 ﻿using Discord;
+using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
-using Discord.WebSocket;
+using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
+using Hogs.RPG.Services.PetServices;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Hogs.RPG.Services.GameplayServices;
 
 namespace Hogs.RPG.Services.Game
 {
@@ -20,6 +21,8 @@ namespace Hogs.RPG.Services.Game
         private readonly DiscordSocketClient _client;
         private readonly StatService _statService;
         private readonly LevelService _levelService;
+        private readonly PetService _petService;
+        private readonly PetPassiveService _petPassiveService;
 
         private readonly Dictionary<ulong, (ulong messageId, ulong channelId)> _lastMessages = new();
         private readonly Dictionary<ulong, DateTime> _lastAction = new();
@@ -33,7 +36,9 @@ namespace Hogs.RPG.Services.Game
             InventoryService inventoryService,
             DiscordSocketClient client,
             StatService statService,
-            LevelService levelservice)
+            LevelService levelservice,
+            PetService petService,
+            PetPassiveService petPassiveService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
@@ -43,6 +48,8 @@ namespace Hogs.RPG.Services.Game
             _levelService = levelservice;
 
             _announcementChannel = client.GetChannel(1485357755433750549) as IMessageChannel;
+            _petService = petService;
+            _petPassiveService = petPassiveService;
         }
 
         // =========================
@@ -130,6 +137,15 @@ namespace Hogs.RPG.Services.Game
             if (!_active.TryGetValue(userId, out var session))
                 return Simple("You are not in a dungeon.");
 
+            // 🐾 GET PET
+            var pet = await _petService.GetEquippedPetAsync(userId);
+            PetDefinition petDef = null;
+
+            if (pet != null)
+            {
+                PetRegistry.All.TryGetValue(pet.PetId, out petDef);
+            }
+
             if (IsOnCooldown(userId, 1, out int remaining))
             {
                 return Wrap(BuildEmbed(session,
@@ -140,23 +156,39 @@ namespace Hogs.RPG.Services.Game
             var dungeon = DungeonRegistry.All[session.DungeonId];
 
             // =========================
-            // PLAYER ATTACK
+            // ⚔ PLAYER ATTACK
             // =========================
             int enemyDefense = GetEnemyDefense(session);
 
-            // 🌫️ Luminara cloud effect
             if (session.CloudActive)
             {
                 enemyDefense *= 9999;
-                session.CloudActive = false; // one-turn effect
+                session.CloudActive = false;
             }
 
             int playerDamage = (int)(session.Attack * (100.0 / (100 + enemyDefense)));
             playerDamage = Math.Max(1, playerDamage);
 
+            // 🐾 APPLY PET DAMAGE MODIFIERS
+            playerDamage = _petPassiveService.ModifyOutgoingDamage(
+                playerDamage,
+                pet,
+                petDef,
+                session.EnemyHealth,
+                session.EnemyMaxHealth
+            );
+
             session.EnemyHealth = Math.Max(0, session.EnemyHealth - playerDamage);
 
             var text = $"⚔ You deal {playerDamage} damage!\n";
+
+            // 🐾 LIFESTEAL
+            int heal = _petPassiveService.ApplyOnHitEffects(playerDamage, null, pet);
+            if (heal > 0)
+            {
+                session.PlayerHealth = Math.Min(session.MaxHealth, session.PlayerHealth + heal);
+                text += $"🩸 Lifesteal heals you for {heal}!\n";
+            }
 
             if (session.EnemyHealth <= 0)
             {
@@ -165,14 +197,15 @@ namespace Hogs.RPG.Services.Game
             }
 
             // =========================
-            // ENEMY ATTACK
+            // 👹 ENEMY ATTACK
             // =========================
             int enemyAttack = GetEnemyAttack(session, dungeon);
 
             int enemyDamage = (int)(enemyAttack * (100.0 / (100 + session.Defense)));
-
-            // 🔥 Minimum damage safeguard
             enemyDamage = Math.Max(5, enemyDamage);
+
+            // 🐾 DEFENSIVE PASSIVES
+            enemyDamage = _petPassiveService.ModifyIncomingDamage(enemyDamage, pet);
 
             string behaviorText = null;
 
@@ -181,7 +214,6 @@ namespace Hogs.RPG.Services.Game
                 behaviorText = HandleBossBehavior(session, dungeon.Boss, ref enemyDamage);
             }
 
-            // 💢 CRIT CHANCE (after behavior modifies damage)
             if (_random.Next(0, 100) < 10)
             {
                 enemyDamage = (int)(enemyDamage * 2);
@@ -195,6 +227,14 @@ namespace Hogs.RPG.Services.Game
             session.PlayerHealth = Math.Max(0, session.PlayerHealth - enemyDamage);
 
             text += $"👹 Enemy hits you for {enemyDamage}!";
+
+            // 🐾 THORNS
+            int reflect = _petPassiveService.ApplyOnHitTaken(enemyDamage, pet);
+            if (reflect > 0)
+            {
+                session.EnemyHealth = Math.Max(0, session.EnemyHealth - reflect);
+                text += $"\n🌵 Thorns reflects {reflect} damage!";
+            }
 
             if (!string.IsNullOrEmpty(behaviorText))
                 text += "\n" + behaviorText;
@@ -370,8 +410,24 @@ namespace Hogs.RPG.Services.Game
             var player = await _playerRepository.GetByDiscordIdAsync(userId);
             var dungeon = DungeonRegistry.All[session.DungeonId];
 
-            player.Gold += 400;
-            player.XP += 1500;
+            player.Gold += 250;
+            player.XP += 1000;
+            // =========================
+            // 🐾 PET XP (DUNGEON)
+            // =========================
+            var (petLeveledUp, petNewLevel) = await _petService.AddXPAsync(userId, 50);
+
+            string petLevelMessage = "";
+
+            if (petLeveledUp)
+            {
+                var pet = await _petService.GetEquippedPetAsync(userId);
+
+                if (pet != null && PetRegistry.All.TryGetValue(pet.PetId, out var petDef))
+                {
+                    petLevelMessage = $"\n\n🐾 **{petDef.Icon} {petDef.Name}** leveled up! It is now **Level {petNewLevel}** 🎉";
+                }
+            }
 
             // 🔥 Handle level-up
             var (levelMessage, levelsGained) = _levelService.CheckLevelUp(player);
@@ -409,7 +465,7 @@ namespace Hogs.RPG.Services.Game
             {
                 Embed = new EmbedBuilder()
                     .WithTitle("🏆 Dungeon Complete")
-                    .WithDescription($"+400 Gold\n+1500 XP{dropText}{levelMessage}")
+                    .WithDescription($"+250 Gold\n+1000 XP and 50 pet XP{dropText}{levelMessage}{petLevelMessage}")
                     .WithColor(Color.Gold)
                     .Build(),
                 IsFinished = true
@@ -420,7 +476,7 @@ namespace Hogs.RPG.Services.Game
             {
                 await _announcementChannel.SendMessageAsync(
                     $"🏆 <@{userId}> cleared **{dungeon.Name}**\n" +
-                    $"+400 Gold\n+1500 XP{dropText}{levelMessage}"
+                    $"+400 Gold\n+1500 XP{dropText}{levelMessage}{petLevelMessage}"
                 );
             }
 

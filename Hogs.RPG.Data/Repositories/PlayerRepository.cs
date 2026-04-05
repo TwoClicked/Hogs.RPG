@@ -42,5 +42,6 @@ namespace Hogs.RPG.Data.Repositories
             _context.Players.Update(player);
             await _context.SaveChangesAsync();
         }
+
     }
 }

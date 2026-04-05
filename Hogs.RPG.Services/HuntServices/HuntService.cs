@@ -3,10 +3,12 @@ using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.InventoryItems;
+using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.GameData.Hunts;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
+using Hogs.RPG.Services.PetServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,6 +25,7 @@ namespace Hogs.RPG.Services.HuntServices
         private readonly BuffService _buffService;
         private readonly HunterStaminaService _staminaService;
         private readonly DiscordSocketClient _client;
+        private readonly PetService _petService;
 
         private readonly ulong _feedChannelId = 1485357755433750549;
 
@@ -34,7 +37,8 @@ namespace Hogs.RPG.Services.HuntServices
             LevelService levelService,
             BuffService buffService,
             HunterStaminaService staminaService,
-            DiscordSocketClient client)
+            DiscordSocketClient client,
+            PetService petService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
@@ -42,6 +46,7 @@ namespace Hogs.RPG.Services.HuntServices
             _buffService = buffService;
             _staminaService = staminaService;
             _client = client;
+            _petService = petService;
         }
 
         public async Task<string> HuntAsync(ulong userId, string targetId = null, int stamina = 10)
@@ -106,7 +111,7 @@ namespace Hogs.RPG.Services.HuntServices
             int remainingXpPotions = 0;
 
             // =========================
-            // 🧪 XP POTION (PER 5 STAMINA)
+            // 🧪 XP POTION
             // =========================
             if (player.AutoUseXpPotions)
             {
@@ -158,7 +163,6 @@ namespace Hogs.RPG.Services.HuntServices
                 bool elite = roll < 0.16;
                 bool rareDrop = roll < 0.04;
 
-                // 🔥 ELITE
                 if (elite)
                 {
                     xp = (int)(xp * 1.5);
@@ -173,7 +177,6 @@ namespace Hogs.RPG.Services.HuntServices
                 totalXp += xp;
                 totalDrops += dropAmount;
 
-                // ✨ RARE
                 if (rareDrop && !string.IsNullOrEmpty(target.RareDropItem))
                 {
                     await _inventoryService.GiveItemAsync(userId, target.RareDropItem, 1);
@@ -192,6 +195,24 @@ namespace Hogs.RPG.Services.HuntServices
             var (levelMessage, levelsGained) = _levelService.CheckLevelUp(player);
 
             // =========================
+            // 🐾 PET XP
+            // =========================
+            int petXp = Math.Max(1, stamina / 2);
+            var (petLeveledUp, petNewLevel) = await _petService.AddXPAsync(userId, petXp);
+
+            string petLevelMessage = "";
+
+            if (petLeveledUp)
+            {
+                var pet = await _petService.GetEquippedPetAsync(userId);
+
+                if (pet != null && PetRegistry.All.TryGetValue(pet.PetId, out var petDef))
+                {
+                    petLevelMessage = $"\n\n🐾 **{petDef.Icon} {petDef.Name}** leveled up! It is now **Level {petNewLevel}** 🎉";
+                }
+            }
+
+            // =========================
             // 📦 BASE DROPS
             // =========================
             await _inventoryService.GiveItemAsync(userId, target.DropItem, totalDrops);
@@ -199,7 +220,7 @@ namespace Hogs.RPG.Services.HuntServices
             await _playerRepository.UpdatePlayerAsync(player);
 
             // =========================
-            // 🎉 LEVEL UP
+            // 🎉 PLAYER LEVEL UP
             // =========================
             if (levelsGained > 0)
             {
@@ -223,6 +244,7 @@ namespace Hogs.RPG.Services.HuntServices
             sb.AppendLine($"{target.Icon} You hunted {target.Name} using {label}!\n");
 
             sb.AppendLine($"+{totalXp} XP");
+
             string dropName = target.DropItem;
 
             if (InventoryItemDefinitions.All.TryGetValue(target.DropItem, out var itemDef))
@@ -249,6 +271,9 @@ namespace Hogs.RPG.Services.HuntServices
             sb.AppendLine($"\n🏹 Stamina: {player.HunterStamina}/100");
 
             sb.AppendLine(levelMessage);
+
+            // 🐾 Append pet level message here (clean UX)
+            sb.AppendLine(petLevelMessage);
 
             return sb.ToString();
         }

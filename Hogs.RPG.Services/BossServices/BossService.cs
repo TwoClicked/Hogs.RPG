@@ -2,10 +2,12 @@
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.InventoryItems;
+using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
+using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
 using System;
 using System.Collections.Generic;
@@ -245,7 +247,7 @@ namespace Hogs.RPG.Services.Game
 
                 // 💰 Apply rewards
                 player.Gold += reward;
-                player.XP += 5000;
+                player.XP += 2500;
 
                 // 🔥 LEVEL UP CHECK
                 var (levelMessage, levelsGained) = _levelService.CheckLevelUp(player);

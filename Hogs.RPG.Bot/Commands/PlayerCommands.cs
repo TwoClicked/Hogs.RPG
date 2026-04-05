@@ -3,9 +3,11 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.InventoryItems;
+using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.GatheringServices;
+using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
 using System;
 using System.Collections.Generic;
@@ -23,6 +25,7 @@ namespace Hogs.RPG.Bot.Commands
         private readonly EnergyService _energyService; 
         private readonly HunterStaminaService _hunterStaminaService;
         private readonly DiscordSocketClient _client;
+        private readonly PetService _petService;
 
         public PlayerCommands(
             PlayerService playerService,
@@ -32,7 +35,8 @@ namespace Hogs.RPG.Bot.Commands
             EquipmentService equipmentService,
             EnergyService energyService,
             HunterStaminaService hungerStaminaService,
-            DiscordSocketClient client)
+            DiscordSocketClient client,
+            PetService petService)
         {
             _playerService = playerService;
             _playerRepository = playerRepository;
@@ -42,6 +46,7 @@ namespace Hogs.RPG.Bot.Commands
             _energyService = energyService;
             _hunterStaminaService = hungerStaminaService;
             _client = client;
+            _petService = petService;
         }
 
         [SlashCommand("startadventure", "Begin your adventure")]
@@ -54,7 +59,9 @@ namespace Hogs.RPG.Bot.Commands
             if (player != null)
             {
                 await FollowupAsync(
-                    "⚔ Your adventure has already begun!\nUse `/profile` to view your character.",
+                    "⚔ Your adventure begins!\n\n" +
+                    "🐾 You feel a presence... a **Verdant Wisp** has bonded with you.\n\n" +
+                    "Use `/hunt` to begin gathering resources.",
                     ephemeral: true);
                 return;
             }
@@ -80,6 +87,10 @@ namespace Hogs.RPG.Bot.Commands
 
             await _playerRepository.CreatePlayerAsync(newPlayer);
 
+            // 🐾 Give starter pet
+            await _petService.GivePetAsync(Context.User.Id, "verdant_wisp");
+            await _petService.EquipPetAsync(Context.User.Id, "verdant_wisp");
+
             // =========================
             // 🎭 ASSIGN RPG ROLE
             // =========================
@@ -103,12 +114,14 @@ namespace Hogs.RPG.Bot.Commands
             await DeferAsync();
 
             var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
-
-
+            var pet = await _petService.GetEquippedPetAsync(Context.User.Id);
 
             if (player == null)
             {
-                await FollowupAsync("You haven't started your adventure yet. Use `/startadventure`.");
+                await ModifyOriginalResponseAsync(msg =>
+                {
+                    msg.Content = "You haven't started your adventure yet. Use `/startadventure`.";
+                });
                 return;
             }
 
@@ -145,22 +158,45 @@ namespace Hogs.RPG.Bot.Commands
 
                 .AddField(
                     "⚒ Equipment",
-                    $"Main Hand:{FormatItem(player.MainHand)}\n" +
-                    $"Off Hand: {FormatItem(player.OffHand)}\n" +
-                    $"Helmet:   {FormatItem(player.Helmet)}\n" +
-                    $"Body:     {FormatItem(player.Body)}\n" +
-                    $"Legs:     {FormatItem(player.Legs)}\n" +
-                    $"Gloves:   {FormatItem(player.Gloves)}\n" +
-                    $"Boots:    {FormatItem(player.Boots)}\n" +
-                    $"Ring:     {FormatItem(player.Ring)}\n" +
-                    $"Amulet:   {FormatItem(player.Amulet)}",
-                    false)
+                    $"Main Hand: {FormatItem(player.MainHand)}\n" +
+                    $"Off Hand:  {FormatItem(player.OffHand)}\n" +
+                    $"Helmet:    {FormatItem(player.Helmet)}\n" +
+                    $"Body:      {FormatItem(player.Body)}\n" +
+                    $"Legs:      {FormatItem(player.Legs)}\n" +
+                    $"Gloves:    {FormatItem(player.Gloves)}\n" +
+                    $"Boots:     {FormatItem(player.Boots)}\n" +
+                    $"Ring:      {FormatItem(player.Ring)}\n" +
+                    $"Amulet:    {FormatItem(player.Amulet)}",
+                    false);
 
-                .WithFooter("HOGS RPG")
-                .WithTimestamp(DateTime.UtcNow)
-                .Build();
+            if (pet != null && PetRegistry.All.TryGetValue(pet.PetId, out var def))
+            {
+                var (atk, defStat, hp) = _petService.CalculateStats(pet);
 
-            await FollowupAsync(embed: embed);
+                int xpRequiredPet = 20 + (pet.Level * pet.Level * 15);
+                double petProgress = (double)pet.XP / xpRequiredPet;
+
+                int filled = (int)(petProgress * 10);
+                string petBar = new string('█', filled) + new string('░', 10 - filled);
+
+                embed
+                    .AddField("🐾 Pet", $"{def.Icon} {def.Name}", false)
+                    .AddField("Level", $"Lv. {pet.Level}", true)
+                    .AddField("XP", $"{pet.XP} / {xpRequiredPet}", true)
+                    .AddField("Progress", petBar, false)
+
+                    .AddField("Attack", $"🗡 {atk}", true)
+                    .AddField("Defense", $"🛡 {defStat}", true)
+                    .AddField("Health", $"❤️ {hp}", true)
+                    .AddField("Passive 1", PetPassiveFormatter.Format(pet.Passive1), true)
+                    .AddField("Passive 2", PetPassiveFormatter.Format(pet.Passive2), true);
+            }
+            else
+            {
+                embed.AddField("🐾 Pet", "No pet equipped", false);
+            }
+
+            await FollowupAsync(embed: embed.Build());
         }
 
         private string FormatItem(string id)

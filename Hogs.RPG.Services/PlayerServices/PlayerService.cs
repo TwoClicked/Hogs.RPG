@@ -8,15 +8,12 @@ namespace Hogs.RPG.Services.PlayerServices
     {
 
         private readonly PlayerRepository _playerRepository;
+        private readonly PetRepository _petRepository;
 
-        public PlayerService(PlayerRepository playerRepository)
+        public PlayerService(PlayerRepository playerRepository, PetRepository petRepository)
         {
             _playerRepository = playerRepository;
-        }
-
-        public async Task<Player> GetPlayerAsync(ulong discordId)
-        {
-            return await _playerRepository.GetByDiscordIdAsync(discordId);
+            _petRepository = petRepository;
         }
 
         public async Task<Player> GetOrCreatePlayerAsync(ulong discordId, string username)
@@ -52,6 +49,42 @@ namespace Hogs.RPG.Services.PlayerServices
 
             return newPlayer;
 
+        }
+
+        public async Task UpdatePlayerAsync(Player player)
+        {
+            await _playerRepository.UpdatePlayerAsync(player);
+        }
+
+        public async Task<Player> GetPlayerAsync(ulong discordId)
+        {
+            var player = await _playerRepository.GetByDiscordIdAsync(discordId);
+
+            if (player == null)
+                throw new Exception("Player not found.");
+
+            return player;
+        }
+
+        public async Task<List<PlayerPet>> GetPlayerPets(ulong discordId)
+        {
+            return await _petRepository.GetPetsAsync(discordId);
+        }
+
+        public async Task TransferPet(int petId, ulong fromUserId, ulong toUserId)
+        {
+            var pet = await _petRepository.GetByIdAsync(petId);
+
+            if (pet == null)
+                throw new Exception("Pet not found.");
+
+            if (pet.DiscordId != fromUserId)
+                throw new Exception("You do not own this pet.");
+
+            if (pet.IsEquipped)
+                throw new Exception("Cannot trade equipped pet.");
+
+            await _petRepository.TransferPetAsync(petId, toUserId);
         }
 
     }

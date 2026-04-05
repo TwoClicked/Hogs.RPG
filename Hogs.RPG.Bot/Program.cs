@@ -95,25 +95,27 @@ namespace Hogs.RPG.Bot
             // =========================
             // 🔥 START SCHEDULER HERE
             // =========================
-            if (!_schedulerStarted)
-            {
-                Console.WriteLine("🚀 Starting BossScheduler...");
-
-                var scheduler = _services.GetRequiredService<BossScheduler>();
-                _ = scheduler.StartAsync(CancellationToken.None);
-
-                Console.WriteLine("🚀 Starting TradeCleanupService...");
-
-                var tradeCleanup = _services.GetRequiredService<TradeCleanupService>();
-                _ = tradeCleanup.StartAsync(CancellationToken.None);
-
-                _schedulerStarted = true;
-            }
+           if (!_schedulerStarted)
+           {
+               Console.WriteLine("🚀 Starting BossScheduler...");
+           
+               var scheduler = _services.GetRequiredService<BossScheduler>();
+               _ = scheduler.StartAsync(CancellationToken.None);
+              
+               Console.WriteLine("🚀 Starting TradeCleanupService...");
+              
+               var tradeCleanup = _services.GetRequiredService<TradeCleanupService>();
+               _ = tradeCleanup.StartAsync(CancellationToken.None);
+           
+               _schedulerStarted = true;
+           }
         }
 
         private async Task HandleInteractionAsync(SocketInteraction arg)
         {
-            Console.WriteLine("🔥 Interaction received");
+            var receivedAt = DateTime.UtcNow;
+
+            Console.WriteLine($"⚡ Interaction received at {receivedAt:HH:mm:ss.fff}");
 
             if (arg == null)
             {
@@ -131,7 +133,13 @@ namespace Hogs.RPG.Bot
                     return;
                 }
 
+                var beforeExecute = DateTime.UtcNow;
+                Console.WriteLine($"➡️ Executing command at {beforeExecute:HH:mm:ss.fff} (+{(beforeExecute - receivedAt).TotalMilliseconds}ms)");
+
                 var result = await _interactionService.ExecuteCommandAsync(ctx, _services);
+
+                var afterExecute = DateTime.UtcNow;
+                Console.WriteLine($"✅ Command finished at {afterExecute:HH:mm:ss.fff} (+{(afterExecute - receivedAt).TotalMilliseconds}ms)");
 
                 if (!result.IsSuccess)
                 {
