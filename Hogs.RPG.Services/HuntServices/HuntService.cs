@@ -28,7 +28,6 @@ namespace Hogs.RPG.Services.HuntServices
         private readonly PetService _petService;
 
         private readonly ulong _feedChannelId = 1485357755433750549;
-
         private readonly Random _random = new();
 
         public HuntService(
@@ -103,52 +102,10 @@ namespace Hogs.RPG.Services.HuntServices
 
             int totalXp = 0;
             int totalDrops = 0;
-
             int eliteCount = 0;
             int rareCount = 0;
-
             int xpPotionsUsed = 0;
             int remainingXpPotions = 0;
-
-            // =========================
-            // 🧪 XP POTION
-            // =========================
-            if (player.AutoUseXpPotions)
-            {
-                int desiredPotions = stamina / 5;
-
-                var inventory = await _inventoryService.GetInventoryAsync(userId);
-                var potion = inventory.FirstOrDefault(i => i.ItemId == "xp_potion");
-
-                int available = potion?.Quantity ?? 0;
-
-                if (desiredPotions > 0 && available > 0)
-                {
-                    int potionsToUse = Math.Min(desiredPotions, available);
-
-                    await _inventoryService.TakeItemAsync(userId, "xp_potion", potionsToUse);
-
-                    xpPotionsUsed = potionsToUse;
-                    remainingXpPotions = available - potionsToUse;
-
-                    for (int i = 0; i < potionsToUse; i++)
-                    {
-                        player.ActiveBuffs.Add(new ActiveBuff
-                        {
-                            Type = BuffType.XP,
-                            Value = 2,
-                            RemainingUses = 1
-                        });
-                    }
-                }
-                else
-                {
-                    remainingXpPotions = available;
-
-                    if (available == 0)
-                        player.AutoUseXpPotions = false;
-                }
-            }
 
             // =========================
             // 🔁 HUNT LOOP
@@ -169,9 +126,7 @@ namespace Hogs.RPG.Services.HuntServices
                     eliteCount++;
 
                     if (!string.IsNullOrEmpty(target.RareDropItem))
-                    {
                         rareDrop = _random.NextDouble() < 0.10;
-                    }
                 }
 
                 totalXp += xp;
@@ -185,10 +140,44 @@ namespace Hogs.RPG.Services.HuntServices
             }
 
             // =========================
-            // 📈 BUFFS
+            // 🧪 XP POTION (applied directly, no buff stacking)
+            // =========================
+            if (player.AutoUseXpPotions)
+            {
+                int desiredPotions = stamina / 5;
+
+                var inventory = await _inventoryService.GetInventoryAsync(userId);
+                var potion = inventory.FirstOrDefault(i => i.ItemId == "xp_potion");
+
+                int available = potion?.Quantity ?? 0;
+
+                if (desiredPotions > 0 && available > 0)
+                {
+                    int potionsToUse = Math.Min(desiredPotions, available);
+
+                    await _inventoryService.TakeItemAsync(userId, "xp_potion", potionsToUse);
+
+                    xpPotionsUsed = potionsToUse;
+                    remainingXpPotions = available - potionsToUse;
+
+                    // ✅ Apply boost directly to XP, no ActiveBuffs touched
+                    totalXp = (int)(totalXp * 2.0);
+                }
+                else
+                {
+                    remainingXpPotions = available;
+
+                    if (available == 0)
+                        player.AutoUseXpPotions = false;
+                }
+            }
+
+            // =========================
+            // 📈 OTHER ACTIVE BUFFS (non-potion)
             // =========================
             double xpMultiplier = _buffService.ApplyXpBuff(player);
-            totalXp = (int)(totalXp * xpMultiplier);
+            if (xpMultiplier > 1)
+                totalXp = (int)(totalXp * xpMultiplier);
 
             player.XP += totalXp;
 
@@ -207,9 +196,7 @@ namespace Hogs.RPG.Services.HuntServices
                 var pet = await _petService.GetEquippedPetAsync(userId);
 
                 if (pet != null && PetRegistry.All.TryGetValue(pet.PetId, out var petDef))
-                {
                     petLevelMessage = $"\n\n🐾 **{petDef.Icon} {petDef.Name}** leveled up! It is now **Level {petNewLevel}** 🎉";
-                }
             }
 
             // =========================
@@ -227,11 +214,7 @@ namespace Hogs.RPG.Services.HuntServices
                 var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
 
                 if (channel != null)
-                {
-                    await channel.SendMessageAsync(
-                        $"🎉 <@{player.DiscordId}> reached **Level {player.Level}**!"
-                    );
-                }
+                    await channel.SendMessageAsync($"🎉 <@{player.DiscordId}> reached **Level {player.Level}**!");
             }
 
             // =========================
@@ -242,15 +225,11 @@ namespace Hogs.RPG.Services.HuntServices
             var label = usedMax ? "ALL stamina" : $"{stamina} stamina";
 
             sb.AppendLine($"{target.Icon} You hunted {target.Name} using {label}!\n");
-
             sb.AppendLine($"+{totalXp} XP");
 
             string dropName = target.DropItem;
-
             if (InventoryItemDefinitions.All.TryGetValue(target.DropItem, out var itemDef))
-            {
                 dropName = itemDef.Name;
-            }
 
             sb.AppendLine($"+{totalDrops} {dropName}");
 
@@ -269,10 +248,7 @@ namespace Hogs.RPG.Services.HuntServices
                 sb.AppendLine($"✨ {rareCount} Rare drops!");
 
             sb.AppendLine($"\n🏹 Stamina: {player.HunterStamina}/100");
-
             sb.AppendLine(levelMessage);
-
-            // 🐾 Append pet level message here (clean UX)
             sb.AppendLine(petLevelMessage);
 
             return sb.ToString();
