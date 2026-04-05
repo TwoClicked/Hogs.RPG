@@ -1,10 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hogs.RPG.Data
 {
@@ -13,10 +9,8 @@ namespace Hogs.RPG.Data
         public GameDbContext CreateDbContext(string[] args)
         {
             var optionsBuilder = new DbContextOptionsBuilder<GameDbContext>();
-
-            optionsBuilder.UseSqlServer(
-                "Server=(localdb)\\MSSQLLocalDB;Database=HogsRPG;Trusted_Connection=True;");
-
+            optionsBuilder.UseNpgsql(
+                "Host=localhost;Database=HogsRPG;Username=postgres;Password=postgres;");
             return new GameDbContext(optionsBuilder.Options);
         }
     }
