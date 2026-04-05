@@ -29,9 +29,6 @@ namespace Hogs.RPG.Bot.Commands
             _playerService = playerService;
         }
 
-        /// <summary>
-        /// Ensures trade commands are only used in the designated trade channel
-        /// </summary>
         private async Task<bool> EnsureTradeChannel()
         {
             if (Context.Channel.Id != TRADE_CHANNEL_ID)
@@ -39,31 +36,23 @@ namespace Hogs.RPG.Bot.Commands
                 await RespondAsync(
                     $"❌ Trading can only be done in <#{TRADE_CHANNEL_ID}>.",
                     ephemeral: true);
-
                 return false;
             }
-
             return true;
         }
 
-        /// <summary>
-        /// Builds the trade embed UI
-        /// </summary>
         private Embed BuildTradeEmbed(TradeSession trade)
         {
             string Format(Dictionary<string, int> offer, int gold, List<int> pets)
             {
                 var lines = new List<string>();
 
-                // 💰 GOLD
                 if (gold > 0)
                     lines.Add($"💰 Gold: {gold}");
 
-                // 🐾 PETS
                 if (pets.Any())
                     lines.AddRange(pets.Select(p => $"🐾 Pet #{p}"));
 
-                // 📦 ITEMS
                 if (offer.Any())
                 {
                     lines.AddRange(offer.Select(x =>
@@ -71,7 +60,6 @@ namespace Hogs.RPG.Bot.Commands
                         var def = InventoryItemDefinitions.All.TryGetValue(x.Key, out var d) ? d : null;
                         var name = def?.Name ?? x.Key;
                         var icon = def?.Icon ?? "📦";
-
                         return $"{icon} {name} x{x.Value}";
                     }));
                 }
@@ -97,9 +85,6 @@ namespace Hogs.RPG.Bot.Commands
                 .Build();
         }
 
-        /// <summary>
-        /// Starts a trade request with another player (Pending state)
-        /// </summary>
         [SlashCommand("trade", "Request a trade with another player")]
         public async Task Trade(SocketGuildUser target)
         {
@@ -130,9 +115,6 @@ namespace Hogs.RPG.Bot.Commands
                 $"Use `/tradeaccept` to accept.");
         }
 
-        /// <summary>
-        /// Adds gold to the current trade
-        /// </summary>
         [SlashCommand("tradeaddgold", "Add gold to trade")]
         public async Task TradeAddGold(int amount)
         {
@@ -179,9 +161,6 @@ namespace Hogs.RPG.Bot.Commands
                 embed: BuildTradeEmbed(trade));
         }
 
-        /// <summary>
-        /// Adds a pet to the trade
-        /// </summary>
         [SlashCommand("tradeaddpet", "Add pet to trade")]
         public async Task TradeAddPet(int petId)
         {
@@ -236,9 +215,6 @@ namespace Hogs.RPG.Bot.Commands
                 embed: BuildTradeEmbed(trade));
         }
 
-        /// <summary>
-        /// Cancels the current trade session for both players
-        /// </summary>
         [SlashCommand("tradecancel", "Cancel the current trade")]
         public async Task TradeCancel()
         {
@@ -261,9 +237,6 @@ namespace Hogs.RPG.Bot.Commands
             _tradeService.RemoveTrade(trade);
         }
 
-        /// <summary>
-        /// Accepts a pending trade request and activates the trade
-        /// </summary>
         [SlashCommand("tradeaccept", "Accept a trade request")]
         public async Task TradeAccept()
         {
@@ -298,9 +271,6 @@ namespace Hogs.RPG.Bot.Commands
                 $"Use `/tradeadd`, `/tradeaddpet`, or `/tradeaddgold`.");
         }
 
-        /// <summary>
-        /// Adds an item to the current trade offer
-        /// </summary>
         [SlashCommand("tradeadd", "Add item to trade")]
         public async Task TradeAdd(
             [Autocomplete(typeof(TradeItemAutocompleteHandler))] string itemId,
@@ -355,9 +325,6 @@ namespace Hogs.RPG.Bot.Commands
                 embed: BuildTradeEmbed(trade));
         }
 
-        /// <summary>
-        /// Displays both players' trade offers
-        /// </summary>
         [SlashCommand("tradeview", "View current trade")]
         public async Task TradeView()
         {
@@ -374,9 +341,6 @@ namespace Hogs.RPG.Bot.Commands
             await RespondAsync(embed: BuildTradeEmbed(trade));
         }
 
-        /// <summary>
-        /// Handles double confirmation logic and completes the trade
-        /// </summary>
         [SlashCommand("tradeconfirm", "Confirm the trade")]
         public async Task TradeConfirm()
         {
@@ -418,7 +382,6 @@ namespace Hogs.RPG.Bot.Commands
                 {
                     await ExecuteTrade(trade);
                     _tradeService.RemoveTrade(trade);
-
                     await RespondAsync("🎉 Trade completed successfully!");
                 }
                 catch (Exception ex)
@@ -432,9 +395,6 @@ namespace Hogs.RPG.Bot.Commands
             }
         }
 
-        /// <summary>
-        /// Executes the trade safely with full validation (anti-duplication)
-        /// </summary>
         private async Task ExecuteTrade(TradeSession trade)
         {
             // ✅ VALIDATE ITEMS
@@ -452,7 +412,7 @@ namespace Hogs.RPG.Bot.Commands
                     throw new Exception("Player 2 no longer has required items.");
             }
 
-            // 🔥 👉 ADD GOLD LOGIC HERE
+            // ✅ VALIDATE GOLD
             var p1 = await _playerService.GetPlayerAsync(trade.Player1Id);
             var p2 = await _playerService.GetPlayerAsync(trade.Player2Id);
 
@@ -462,19 +422,56 @@ namespace Hogs.RPG.Bot.Commands
             if (p2.Gold < trade.Player2Gold)
                 throw new Exception("Player 2 no longer has enough gold.");
 
+            // ✅ VALIDATE PETS
+            var p1Pets = await _playerService.GetPlayerPets(trade.Player1Id);
+            var p2Pets = await _playerService.GetPlayerPets(trade.Player2Id);
+
+            foreach (var petId in trade.Player1Pets)
+            {
+                var pet = p1Pets.FirstOrDefault(p => p.Id == petId);
+                if (pet == null)
+                    throw new Exception($"Player 1 no longer owns pet #{petId}.");
+                if (pet.IsEquipped)
+                    throw new Exception($"Player 1 has pet #{petId} equipped.");
+            }
+
+            foreach (var petId in trade.Player2Pets)
+            {
+                var pet = p2Pets.FirstOrDefault(p => p.Id == petId);
+                if (pet == null)
+                    throw new Exception($"Player 2 no longer owns pet #{petId}.");
+                if (pet.IsEquipped)
+                    throw new Exception($"Player 2 has pet #{petId} equipped.");
+            }
+
+            // ✅ TRANSFER GOLD
             p1.Gold -= trade.Player1Gold;
             p2.Gold += trade.Player1Gold;
-
             p2.Gold -= trade.Player2Gold;
             p1.Gold += trade.Player2Gold;
 
-            // ⚠️ IMPORTANT: save players
             await _playerService.UpdatePlayerAsync(p1);
             await _playerService.UpdatePlayerAsync(p2);
 
-            // ✅ PET VALIDATION
-            var p1Pets = await _playerService.GetPlayerPets(trade.Player1Id);
-            var p2Pets = await _playerService.GetPlayerPets(trade.Player2Id);
+            // ✅ TRANSFER ITEMS
+            foreach (var item in trade.Player1Offer)
+            {
+                await _inventoryService.TakeItemAsync(trade.Player1Id, item.Key, item.Value);
+                await _inventoryService.GiveItemAsync(trade.Player2Id, item.Key, item.Value);
+            }
+
+            foreach (var item in trade.Player2Offer)
+            {
+                await _inventoryService.TakeItemAsync(trade.Player2Id, item.Key, item.Value);
+                await _inventoryService.GiveItemAsync(trade.Player1Id, item.Key, item.Value);
+            }
+
+            // ✅ TRANSFER PETS
+            foreach (var petId in trade.Player1Pets)
+                await _playerService.TransferPet(petId, trade.Player1Id, trade.Player2Id);
+
+            foreach (var petId in trade.Player2Pets)
+                await _playerService.TransferPet(petId, trade.Player2Id, trade.Player1Id);
         }
     }
 }
