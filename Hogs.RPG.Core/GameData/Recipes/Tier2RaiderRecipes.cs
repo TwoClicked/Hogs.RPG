@@ -114,7 +114,7 @@ public static class Tier2RaiderRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "feather_band", 1 },
+            { "raven_charm", 1 },
             { "talon", 80 },
             { "feather", 40 }
         }
@@ -128,7 +128,7 @@ public static class Tier2RaiderRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "raven_charm", 1 },
+            { "feather_band", 1 },
             { "talon", 100 },
             { "fang", 40 }
         }
