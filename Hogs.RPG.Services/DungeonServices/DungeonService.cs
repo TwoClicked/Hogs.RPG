@@ -7,6 +7,7 @@ using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -15,41 +16,21 @@ namespace Hogs.RPG.Services.Game
 {
     public class DungeonService
     {
-        private readonly PlayerRepository _playerRepository;
-        private readonly InventoryService _inventoryService;
-        private readonly IMessageChannel _announcementChannel;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly DiscordSocketClient _client;
-        private readonly StatService _statService;
-        private readonly LevelService _levelService;
-        private readonly PetService _petService;
-        private readonly PetPassiveService _petPassiveService;
+        private readonly IMessageChannel _announcementChannel;
 
         private readonly Dictionary<ulong, (ulong messageId, ulong channelId)> _lastMessages = new();
         private readonly Dictionary<ulong, DateTime> _lastAction = new();
         private readonly Dictionary<ulong, DateTime> _lastDungeonRun = new();
-
         private readonly Dictionary<ulong, ActiveDungeon> _active = new();
         private readonly Random _random = new();
 
-        public DungeonService(
-            PlayerRepository playerRepository,
-            InventoryService inventoryService,
-            DiscordSocketClient client,
-            StatService statService,
-            LevelService levelservice,
-            PetService petService,
-            PetPassiveService petPassiveService)
+        public DungeonService(IServiceScopeFactory scopeFactory, DiscordSocketClient client)
         {
-            _playerRepository = playerRepository;
-            _inventoryService = inventoryService;
-
+            _scopeFactory = scopeFactory;
             _client = client;
-            _statService = statService;
-            _levelService = levelservice;
-
             _announcementChannel = client.GetChannel(1485357755433750549) as IMessageChannel;
-            _petService = petService;
-            _petPassiveService = petPassiveService;
         }
 
         // =========================
@@ -57,11 +38,15 @@ namespace Hogs.RPG.Services.Game
         // =========================
         public async Task<DungeonResult> StartDungeonAsync(ulong userId, string dungeonId)
         {
-            // 🔥 Prevent multiple active sessions
+            using var scope = _scopeFactory.CreateScope();
+            var playerRepository = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+            var statService = scope.ServiceProvider.GetRequiredService<StatService>();
+
+            // Prevent multiple active sessions
             if (_active.ContainsKey(userId))
                 return Simple("You are already in a dungeon.");
 
-            // 🔥 Dungeon cooldown check
+            // Dungeon cooldown check
             const int COOLDOWN_HOURS = 1;
 
             if (_lastDungeonRun.TryGetValue(userId, out var lastRun))
@@ -83,7 +68,7 @@ namespace Hogs.RPG.Services.Game
                 }
             }
 
-            var player = await _playerRepository.GetByDiscordIdAsync(userId);
+            var player = await playerRepository.GetByDiscordIdAsync(userId);
 
             if (player == null)
                 return Simple("Use /startadventure first.");
@@ -93,35 +78,26 @@ namespace Hogs.RPG.Services.Game
             if (player.Level < dungeon.RequiredLevel)
                 return Simple($"You must be level {dungeon.RequiredLevel}.");
 
-            // 🔥 USE YOUR EXISTING STAT SERVICE
-            var (attack, defense, health) = _statService.CalculateStats(player);
+            var (attack, defense, health) = statService.CalculateStats(player);
 
             var session = new ActiveDungeon
             {
                 PlayerId = userId,
                 DungeonId = dungeonId,
                 Floor = 1,
-
-                // ✅ SNAPSHOT STATS (critical fix)
                 Attack = attack,
                 Defense = defense,
-
                 MaxHealth = health,
                 PlayerHealth = health,
-
                 EnemyMaxHealth = dungeon.BaseEnemyHealth,
                 EnemyHealth = dungeon.BaseEnemyHealth,
-
                 IsBoss = false,
                 CurrentImageUrl = null
             };
 
             _active[userId] = session;
-
-            // 🔥 IMPORTANT: actually start cooldown
             _lastDungeonRun[userId] = DateTime.UtcNow;
 
-            // 🔥 Announcement (safe)
             if (_announcementChannel != null)
             {
                 await _announcementChannel.SendMessageAsync(
@@ -132,13 +108,19 @@ namespace Hogs.RPG.Services.Game
             return Wrap(BuildEmbed(session, "🏰 You enter the dungeon..."));
         }
 
+        // =========================
+        // ATTACK
+        // =========================
         public async Task<DungeonResult> AttackAsync(ulong userId)
         {
+            using var scope = _scopeFactory.CreateScope();
+            var petService = scope.ServiceProvider.GetRequiredService<PetService>();
+            var petPassiveService = scope.ServiceProvider.GetRequiredService<PetPassiveService>();
+
             if (!_active.TryGetValue(userId, out var session))
                 return Simple("You are not in a dungeon.");
 
-            // 🐾 GET PET
-            var pet = await _petService.GetEquippedPetAsync(userId);
+            var pet = await petService.GetEquippedPetAsync(userId);
             PetDefinition petDef = null;
 
             if (pet != null)
@@ -169,8 +151,7 @@ namespace Hogs.RPG.Services.Game
             int playerDamage = (int)(session.Attack * (100.0 / (100 + enemyDefense)));
             playerDamage = Math.Max(1, playerDamage);
 
-            // 🐾 APPLY PET DAMAGE MODIFIERS
-            playerDamage = _petPassiveService.ModifyOutgoingDamage(
+            playerDamage = petPassiveService.ModifyOutgoingDamage(
                 playerDamage,
                 pet,
                 petDef,
@@ -182,8 +163,7 @@ namespace Hogs.RPG.Services.Game
 
             var text = $"⚔ You deal {playerDamage} damage!\n";
 
-            // 🐾 LIFESTEAL
-            int heal = _petPassiveService.ApplyOnHitEffects(playerDamage, null, pet);
+            int heal = petPassiveService.ApplyOnHitEffects(playerDamage, null, pet);
             if (heal > 0)
             {
                 session.PlayerHealth = Math.Min(session.MaxHealth, session.PlayerHealth + heal);
@@ -200,12 +180,10 @@ namespace Hogs.RPG.Services.Game
             // 👹 ENEMY ATTACK
             // =========================
             int enemyAttack = GetEnemyAttack(session, dungeon);
-
             int enemyDamage = (int)(enemyAttack * (100.0 / (100 + session.Defense)));
             enemyDamage = Math.Max(5, enemyDamage);
 
-            // 🐾 DEFENSIVE PASSIVES
-            enemyDamage = _petPassiveService.ModifyIncomingDamage(enemyDamage, pet);
+            enemyDamage = petPassiveService.ModifyIncomingDamage(enemyDamage, pet);
 
             string behaviorText = null;
 
@@ -228,8 +206,7 @@ namespace Hogs.RPG.Services.Game
 
             text += $"👹 Enemy hits you for {enemyDamage}!";
 
-            // 🐾 THORNS
-            int reflect = _petPassiveService.ApplyOnHitTaken(enemyDamage, pet);
+            int reflect = petPassiveService.ApplyOnHitTaken(enemyDamage, pet);
             if (reflect > 0)
             {
                 session.EnemyHealth = Math.Max(0, session.EnemyHealth - reflect);
@@ -255,10 +232,12 @@ namespace Hogs.RPG.Services.Game
         // =========================
         public async Task<DungeonResult> HealAsync(ulong userId)
         {
+            using var scope = _scopeFactory.CreateScope();
+            var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
+
             if (!_active.TryGetValue(userId, out var session))
                 return Simple("You are not in a dungeon.");
 
-            // 🔥 COOLDOWN CHECK
             if (IsOnCooldown(userId, 2, out int remaining))
             {
                 return Wrap(BuildEmbed(session,
@@ -269,17 +248,16 @@ namespace Hogs.RPG.Services.Game
             if (session.PlayerHealth == session.MaxHealth)
                 return Wrap(BuildEmbed(session, "❤️ You are already at full health.", session.CurrentImageUrl));
 
-            var inventory = await _inventoryService.GetInventoryAsync(userId);
+            var inventory = await inventoryService.GetInventoryAsync(userId);
             var potion = inventory.Find(i => i.ItemId == "health_potion");
 
             if (potion == null || potion.Quantity <= 0)
                 return Wrap(BuildEmbed(session, "❌ You have no health potions.", session.CurrentImageUrl));
 
-            await _inventoryService.TakeItemAsync(userId, "health_potion", 1);
+            await inventoryService.TakeItemAsync(userId, "health_potion", 1);
 
             session.PlayerHealth = session.MaxHealth;
 
-            // 🔥 APPLY COOLDOWN
             _lastAction[userId] = DateTime.UtcNow;
 
             return Wrap(BuildEmbed(session, "🧪 You healed to full!", session.CurrentImageUrl));
@@ -297,14 +275,15 @@ namespace Hogs.RPG.Services.Game
 
             var dungeon = DungeonRegistry.All[session.DungeonId];
 
-            // 🔥 Announcement
             if (_announcementChannel != null)
             {
                 await _announcementChannel.SendMessageAsync(
                     $"🏃 <@{userId}> fled **{dungeon.Name}**"
                 );
             }
+
             _lastDungeonRun[userId] = DateTime.UtcNow;
+
             return new DungeonResult
             {
                 Embed = new EmbedBuilder()
@@ -342,7 +321,7 @@ namespace Hogs.RPG.Services.Game
                     session.CurrentImageUrl));
             }
 
-            // NORMAL FLOOR (uses dungeon scaling)
+            // NORMAL FLOOR
             session.EnemyMaxHealth =
                 dungeon.BaseEnemyHealth +
                 (session.Floor * dungeon.EnemyHealthScaling);
@@ -359,27 +338,26 @@ namespace Hogs.RPG.Services.Game
         // =========================
         private async Task<DungeonResult> HandleDeath(ulong userId)
         {
+            using var scope = _scopeFactory.CreateScope();
+            var playerRepository = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+            var statService = scope.ServiceProvider.GetRequiredService<StatService>();
+
             if (!_active.TryGetValue(userId, out var session))
                 return Simple("You are not in a dungeon.");
 
             _active.Remove(userId);
 
-            var player = await _playerRepository.GetByDiscordIdAsync(userId);
+            var player = await playerRepository.GetByDiscordIdAsync(userId);
             var dungeon = DungeonRegistry.All[session.DungeonId];
 
-            // 🔥 Apply penalties
             player.Gold = Math.Max(0, player.Gold - 250);
-
-            // Remove 20% of current XP instead of wiping it
             player.XP = Math.Max(0, (int)(player.XP * 0.8f));
 
-            // 🔥 CRITICAL FIX: restore HP INCLUDING gear
-            var (attack, defense, maxHealth) = _statService.CalculateStats(player);
+            var (attack, defense, maxHealth) = statService.CalculateStats(player);
             player.Health = maxHealth;
 
-            await _playerRepository.UpdatePlayerAsync(player);
+            await playerRepository.UpdatePlayerAsync(player);
 
-            // 🔥 Announcement
             if (_announcementChannel != null)
             {
                 await _announcementChannel.SendMessageAsync(
@@ -405,23 +383,30 @@ namespace Hogs.RPG.Services.Game
         // =========================
         private async Task<DungeonResult> CompleteDungeon(ulong userId, ActiveDungeon session)
         {
+            using var scope = _scopeFactory.CreateScope();
+            var playerRepository = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+            var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
+            var petService = scope.ServiceProvider.GetRequiredService<PetService>();
+            var levelService = scope.ServiceProvider.GetRequiredService<LevelService>();
+
             _active.Remove(userId);
 
-            var player = await _playerRepository.GetByDiscordIdAsync(userId);
+            var player = await playerRepository.GetByDiscordIdAsync(userId);
             var dungeon = DungeonRegistry.All[session.DungeonId];
 
             player.Gold += 250;
             player.XP += 1000;
+
             // =========================
             // 🐾 PET XP (DUNGEON)
             // =========================
-            var (petLeveledUp, petNewLevel) = await _petService.AddXPAsync(userId, 50);
+            var (petLeveledUp, petNewLevel) = await petService.AddXPAsync(userId, 50);
 
             string petLevelMessage = "";
 
             if (petLeveledUp)
             {
-                var pet = await _petService.GetEquippedPetAsync(userId);
+                var pet = await petService.GetEquippedPetAsync(userId);
 
                 if (pet != null && PetRegistry.All.TryGetValue(pet.PetId, out var petDef))
                 {
@@ -429,23 +414,20 @@ namespace Hogs.RPG.Services.Game
                 }
             }
 
-            // 🔥 Handle level-up
-            var (levelMessage, levelsGained) = _levelService.CheckLevelUp(player);
+            var (levelMessage, levelsGained) = levelService.CheckLevelUp(player);
 
             var dropText = "";
-
-            // 🔥 Handle BOSS drops
             var drops = dungeon.Boss?.Drops;
 
             if (drops != null)
             {
                 foreach (var drop in drops)
                 {
-                    int roll = _random.Next(1, 101); // 1–100
+                    int roll = _random.Next(1, 101);
 
                     if (roll <= drop.ChancePercent)
                     {
-                        await _inventoryService.GiveItemAsync(userId, drop.ItemId, 1);
+                        await inventoryService.GiveItemAsync(userId, drop.ItemId, 1);
 
                         if (InventoryItemDefinitions.All.TryGetValue(drop.ItemId, out var item))
                         {
@@ -459,7 +441,7 @@ namespace Hogs.RPG.Services.Game
                 }
             }
 
-            await _playerRepository.UpdatePlayerAsync(player);
+            await playerRepository.UpdatePlayerAsync(player);
 
             var result = new DungeonResult
             {
@@ -471,7 +453,6 @@ namespace Hogs.RPG.Services.Game
                 IsFinished = true
             };
 
-            // 🔥 Announcement (with drops + level up)
             if (_announcementChannel != null)
             {
                 await _announcementChannel.SendMessageAsync(
@@ -485,7 +466,7 @@ namespace Hogs.RPG.Services.Game
         }
 
         // =========================
-        // UPDATE MESSAGE (FIXED)
+        // UPDATE MESSAGE
         // =========================
         public async Task UpdateDungeonMessageAsync(ulong userId, DungeonResult result)
         {
@@ -508,7 +489,6 @@ namespace Hogs.RPG.Services.Game
                 return;
             }
 
-            // 🔥 FIXED: Proper channel resolution
             var channel = _client.GetChannel(channelId) as IMessageChannel;
 
             if (channel == null)
@@ -556,12 +536,12 @@ namespace Hogs.RPG.Services.Game
             Console.WriteLine($"✅ Dungeon message updated for {userId}");
         }
 
-        //Boss ability section
+        // =========================
+        // BOSS BEHAVIORS
+        // =========================
 
-        // Fanculo
         private string HandleRage(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
         {
-            // Trigger rage at 50% HP
             if (!session.RageTriggered && session.EnemyHealth <= boss.MaxHealth * 0.3)
             {
                 session.RageTriggered = true;
@@ -572,7 +552,6 @@ namespace Hogs.RPG.Services.Game
                 return $"🔥 **{boss.Name} enters SCOOTER ROAD RAGE! (+{heal} HP)**";
             }
 
-            // Apply triple damage if enraged
             if (session.RageTriggered)
             {
                 enemyDamage *= 2;
@@ -580,10 +559,9 @@ namespace Hogs.RPG.Services.Game
 
             return null;
         }
-        // Hrothgar
+
         private string HandleLifestealSmash(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
         {
-            // 25% chance
             if (_random.Next(0, 100) < 25)
             {
                 enemyDamage = (int)(enemyDamage * 1.8);
@@ -599,7 +577,6 @@ namespace Hogs.RPG.Services.Game
 
         private string HandleDefensiveCloud(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
         {
-            // 30% chance to reduce incoming player damage next turn
             if (_random.Next(0, 100) < 30)
             {
                 session.CloudActive = true;
@@ -609,13 +586,10 @@ namespace Hogs.RPG.Services.Game
             return null;
         }
 
-        // Thorkell
         private string HandleCrushingBlow(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
         {
-            // 20% chance
             if (_random.Next(0, 100) < 20)
             {
-                // Ignore 50% defense
                 int reducedDefense = session.Defense / 2;
 
                 enemyDamage = (int)(boss.Attack * (100.0 / (100 + reducedDefense)));
@@ -647,7 +621,7 @@ namespace Hogs.RPG.Services.Game
             return true;
         }
 
-        private string HandleBossBehavior(ActiveDungeon session,DungeonBossDefinition boss, ref int enemyDamage)
+        private string HandleBossBehavior(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
         {
             if (boss == null || string.IsNullOrEmpty(boss.BehaviorId))
                 return null;
@@ -670,7 +644,6 @@ namespace Hogs.RPG.Services.Game
                     return null;
             }
         }
-
 
         private DungeonResult Wrap(Embed embed) => new() { Embed = embed };
 
@@ -696,17 +669,14 @@ namespace Hogs.RPG.Services.Game
         {
             int total = 10;
 
-            // ✅ HARD SAFETY
             if (max <= 0)
                 max = 1;
 
-            // clamp current
             current = Math.Max(0, Math.Min(current, max));
 
             double percent = (double)current / max;
             int filled = (int)(percent * total);
 
-            // ✅ HARD CLAMP AGAIN
             filled = Math.Max(0, Math.Min(filled, total));
 
             return new string('█', filled) + new string('░', total - filled);

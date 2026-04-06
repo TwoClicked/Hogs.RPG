@@ -65,7 +65,6 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<EnergyService>();
             services.AddScoped<GatherService>();
             services.AddScoped<AlchemyService>();
-            services.AddScoped<DungeonService>();
             services.AddScoped<TradeService>();
             services.AddScoped<PetService>();
             services.AddScoped<PetPassiveService>();
@@ -76,6 +75,11 @@ namespace Hogs.RPG.Bot.Setup
             services.AddSingleton<BossService>();
             services.AddSingleton<BossScheduler>();
             services.AddSingleton<TradeCleanupService>();
+
+            // DungeonService is Singleton because it holds in-memory session state
+            // (_active, _lastDungeonRun, etc.) that must persist across requests.
+            // It resolves scoped DB dependencies via IServiceScopeFactory internally.
+            services.AddSingleton<DungeonService>();
         }
     }
 }
