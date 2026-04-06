@@ -25,12 +25,31 @@ public class LeaderboardUpdater : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await Task.Delay(5000);
+        Console.WriteLine("🏆 LeaderboardUpdater started");
+
+        // Wait for Discord to actually be ready (VERY IMPORTANT)
+        while (_client.ConnectionState != ConnectionState.Connected)
+        {
+            Console.WriteLine("⏳ Waiting for Discord connection...");
+            await Task.Delay(1000);
+        }
+
+        Console.WriteLine("✅ Discord connected, starting leaderboard loop");
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            await UpdateLeaderboard();
-            await Task.Delay(TimeSpan.FromHours(1), stoppingToken);
+            try
+            {
+                Console.WriteLine("🏆 Updating leaderboards...");
+                await UpdateLeaderboard();
+                Console.WriteLine("✅ Leaderboards updated");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Leaderboard error: {ex}");
+            }
+
+            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken); // TEMP for debugging
         }
     }
 
@@ -40,7 +59,13 @@ public class LeaderboardUpdater : BackgroundService
         var service = scope.ServiceProvider.GetRequiredService<LeaderboardService>();
 
         var channel = _client.GetChannel(CHANNEL_ID) as IMessageChannel;
-        if (channel == null) return;
+        if (channel == null)
+        {
+            Console.WriteLine($"❌ Channel not found: {CHANNEL_ID}");
+            return;
+        }
+
+        Console.WriteLine($"✅ Channel found: {channel.Id}");
 
         var gold = await service.GetTopGold(5);
         var xp = await service.GetTopXP(5);

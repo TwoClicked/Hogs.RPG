@@ -79,8 +79,8 @@ namespace Hogs.RPG.Bot.Setup
             // =========================
             // 🏆 LEADERBOARDS
             // =========================
-            services.AddScoped<LeaderboardService>();   
-            services.AddSingleton<LeaderboardUpdater>();
+            services.AddScoped<LeaderboardService>();
+            services.AddHostedService<LeaderboardUpdater>();
 
             // =========================
             // 🔒 SINGLETONS (Schedulers / Systems)
