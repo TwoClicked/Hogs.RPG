@@ -201,12 +201,20 @@ namespace Hogs.RPG.Services.Game
             sb.AppendLine();
 
             int reward = boss.Definition.RewardGold;
-            sb.AppendLine($"💰 **Everyone receives {reward} gold AND 5000 XP**\n");
+            sb.AppendLine($"💰 **Everyone receives {reward} gold AND 2500 XP**\n");
 
             if (!BossDropRegistry.Drops.TryGetValue(boss.Definition.Id, out var lootTable))
                 lootTable = new List<BossLoot>();
 
             var dropResults = new Dictionary<ulong, List<string>>();
+
+            var top3 = boss.DamageDealt
+                .OrderByDescending(x => x.Value)
+                .Take(3)
+                .Select(x => x.Key)
+                .ToHashSet();
+
+            var top3Mentions = new List<string>();
 
             using var scope = _scopeFactory.CreateScope();
             var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
@@ -221,6 +229,13 @@ namespace Hogs.RPG.Services.Game
 
                 player.Gold += reward;
                 player.XP += 2500;
+
+                if (top3.Contains(userId))
+                {
+                    player.Gold += 250;
+                    player.XP += 2500;
+                    top3Mentions.Add($"<@{userId}>");
+                }
 
                 var (levelMessage, levelsGained) = levelService.CheckLevelUp(player);
 
@@ -273,6 +288,9 @@ namespace Hogs.RPG.Services.Game
 
                 await Task.Delay(75);
             }
+
+            if (top3Mentions.Count > 0)
+                sb.AppendLine($"🌟 **Top 3 Bonus:** {string.Join(", ", top3Mentions)} received an extra **250 gold** and **2500 XP** for their outstanding damage!\n");
 
             if (boss.Participants.Count > 0)
             {
