@@ -72,7 +72,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<EnergyService>();
             services.AddScoped<GatherService>();
             services.AddScoped<AlchemyService>();
-            services.AddScoped<TradeService>();
+            
             services.AddScoped<PetService>();
             services.AddScoped<PetPassiveService>();
 
@@ -87,6 +87,7 @@ namespace Hogs.RPG.Bot.Setup
             // =========================
             services.AddSingleton<BossService>();
             services.AddSingleton<BossScheduler>();
+            services.AddSingleton<TradeService>();
             services.AddSingleton<TradeCleanupService>();
 
             // DungeonService keeps in-memory state → must stay singleton
