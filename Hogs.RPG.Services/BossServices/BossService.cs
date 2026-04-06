@@ -255,7 +255,7 @@ namespace Hogs.RPG.Services.Game
 
                             if (InventoryItemDefinitions.All.TryGetValue(loot.ItemId, out var item))
                             {
-                                string line = $"{item.Icon} **{item.Name}**";s
+                                string line = $"{item.Icon} **{item.Name}**";
                                 if (amount > 1) line += $" x{amount}";
                                 playerDrops.Add(line);
                             }
