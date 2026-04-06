@@ -103,6 +103,12 @@ namespace Hogs.RPG.Bot
 
             Console.WriteLine("[Init] Slash commands registered.");
 
+            Console.WriteLine("🚀 Starting LeaderboardUpdater...");
+
+            var leaderboard = _services.GetRequiredService<LeaderboardUpdater>();
+
+            _ = Task.Run(() => leaderboard.RunAsync());
+
             if (!_schedulerStarted)
             {
                 Console.WriteLine("🚀 Starting BossScheduler...");

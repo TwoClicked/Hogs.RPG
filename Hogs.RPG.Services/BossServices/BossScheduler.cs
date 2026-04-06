@@ -99,12 +99,12 @@ namespace Hogs.RPG.Services.Game
             Console.WriteLine("➡ Checking scheduled bosses...");
 
             // ✅ Only allow spawn in first 2 minutes of valid hours (disabled for now)
-            if (!SpawnHours.Contains(now.Hour) || now.Minute >= 3)
-            {
-                Console.WriteLine($"   ❌ Outside spawn window ({now:HH:mm})");
-                return;
-            }
-
+           //if (!SpawnHours.Contains(now.Hour) || now.Minute >= 3)
+           //{
+           //    Console.WriteLine($"   ❌ Outside spawn window ({now:HH:mm})");
+           //    return;
+           //}
+           //
             // ✅ Prevent multiple spawns in same timeslot
             var timeslotKey = $"timeslot_{now.Date:yyyyMMdd}_{now.Hour}";
 

@@ -8,7 +8,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-public class LeaderboardUpdater : BackgroundService
+public class LeaderboardUpdater 
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly DiscordSocketClient _client;
@@ -23,11 +23,10 @@ public class LeaderboardUpdater : BackgroundService
         _client = client;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task RunAsync()
     {
         Console.WriteLine("🏆 LeaderboardUpdater started");
 
-        // Wait for Discord to actually be ready (VERY IMPORTANT)
         while (_client.ConnectionState != ConnectionState.Connected)
         {
             Console.WriteLine("⏳ Waiting for Discord connection...");
@@ -36,7 +35,7 @@ public class LeaderboardUpdater : BackgroundService
 
         Console.WriteLine("✅ Discord connected, starting leaderboard loop");
 
-        while (!stoppingToken.IsCancellationRequested)
+        while (true)
         {
             try
             {
@@ -49,7 +48,7 @@ public class LeaderboardUpdater : BackgroundService
                 Console.WriteLine($"❌ Leaderboard error: {ex}");
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken); // TEMP for debugging
+            await Task.Delay(TimeSpan.FromMinutes(1));
         }
     }
 
