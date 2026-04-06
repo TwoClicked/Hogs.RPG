@@ -418,6 +418,7 @@ namespace Hogs.RPG.Services.Game
 
             var dropText = "";
             var drops = dungeon.Boss?.Drops;
+            player.DungeonRunsCompleted++;
 
             if (drops != null)
             {
@@ -457,7 +458,7 @@ namespace Hogs.RPG.Services.Game
             {
                 await _announcementChannel.SendMessageAsync(
                     $"🏆 <@{userId}> cleared **{dungeon.Name}**\n" +
-                    $"+400 Gold\n+1500 XP{dropText}{levelMessage}{petLevelMessage}"
+                    $"+400 Gold\n+1000 XP{dropText}{levelMessage}{petLevelMessage}"
                 );
             }
 

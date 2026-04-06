@@ -32,6 +32,12 @@ namespace Hogs.RPG.Data
 
             // We save as a string for now, Will move to 1 - many later when more active buffs come
             modelBuilder.Ignore<ActiveBuff>();
+
+            modelBuilder.Entity<PlayerPet>()
+                .HasOne(p => p.Player)
+                .WithMany()
+                .HasForeignKey(p => p.DiscordId)
+                .HasPrincipalKey(p => p.DiscordId);
         }
     }
 }

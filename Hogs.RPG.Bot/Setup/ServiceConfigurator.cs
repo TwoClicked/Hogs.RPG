@@ -2,6 +2,7 @@
 using System;
 using Hogs.RPG.Data;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services;
 using Hogs.RPG.Services.AlchemyServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.GameplayServices;
@@ -26,16 +27,22 @@ namespace Hogs.RPG.Bot.Setup
             services.AddDbContext<GameDbContext>(options =>
             {
                 var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL");
+
                 if (!string.IsNullOrEmpty(connectionString))
                 {
-                    // Convert Railway's postgres URL to Npgsql connection string
                     var uri = new Uri(connectionString);
                     var userInfo = uri.UserInfo.Split(':');
-                    var npgsqlConnection = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true;";
+
+                    var npgsqlConnection =
+                        $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+                        $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true;";
+
                     options.UseNpgsql(npgsqlConnection);
                 }
                 else
+                {
                     options.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=HogsRPG;Trusted_Connection=True;");
+                }
             });
 
             // =========================
@@ -70,15 +77,19 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<PetPassiveService>();
 
             // =========================
-            // 🔒 SINGLETONS (no DB injection)
+            // 🏆 LEADERBOARDS
+            // =========================
+            services.AddScoped<LeaderboardService>();   
+            services.AddSingleton<LeaderboardUpdater>();
+
+            // =========================
+            // 🔒 SINGLETONS (Schedulers / Systems)
             // =========================
             services.AddSingleton<BossService>();
             services.AddSingleton<BossScheduler>();
             services.AddSingleton<TradeCleanupService>();
 
-            // DungeonService is Singleton because it holds in-memory session state
-            // (_active, _lastDungeonRun, etc.) that must persist across requests.
-            // It resolves scoped DB dependencies via IServiceScopeFactory internally.
+            // DungeonService keeps in-memory state → must stay singleton
             services.AddSingleton<DungeonService>();
         }
     }

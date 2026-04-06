@@ -75,6 +75,17 @@ namespace Hogs.RPG.Services.PetServices
             return (atk, defense, hp);
         }
 
+        public int GetPetGearScore(PlayerPet pet)
+        {
+            var def = PetRegistry.Get(pet.PetId);
+
+            int attack = def.BaseAttack + (int)(pet.Level * def.Scaling);
+            int defense = def.BaseDefense + (int)(pet.Level * def.Scaling);
+            int health = def.BaseHealth + (int)(pet.Level * def.Scaling);
+
+            return attack + defense + health;
+        }
+
         // =========================
         // 📈 ADD XP
         // =========================

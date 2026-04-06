@@ -115,6 +115,11 @@ namespace Hogs.RPG.Bot
                 var tradeCleanup = _services.GetRequiredService<TradeCleanupService>();
                 _ = tradeCleanup.StartAsync(CancellationToken.None);
 
+                Console.WriteLine("🚀 Starting LeaderBoardService...");
+
+                var leaderboard = _services.GetRequiredService<LeaderboardUpdater>();
+                _ = leaderboard.StartAsync(CancellationToken.None);
+
                 _schedulerStarted = true;
             }
         }

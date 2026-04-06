@@ -11,6 +11,8 @@ namespace Hogs.RPG.Core.Entities
     {
         public int Id { get; set; }
         public ulong DiscordId { get; set; }
+
+        public Player Player { get; set; }
         public string PetId { get; set; }
 
         public int Level { get; set; } = 1;

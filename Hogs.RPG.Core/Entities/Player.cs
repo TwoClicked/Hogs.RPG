@@ -49,6 +49,9 @@ namespace Hogs.RPG.Core.Entities
         // Bosses
         public string? LastBossAttack { get; set; }
 
+        //LeaderBoard
+        public int DungeonRunsCompleted { get; set; }
+
         // =========================
         // 🔄 BUFF SERIALIZATION
         // =========================

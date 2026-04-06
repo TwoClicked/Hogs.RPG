@@ -2,9 +2,6 @@
 using Hogs.RPG.Core.GameData.Pets;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hogs.RPG.Core.GameData.Registries
 {
@@ -12,17 +9,25 @@ namespace Hogs.RPG.Core.GameData.Registries
     {
         public static readonly Dictionary<string, PetDefinition> All = new()
         {
-
-            //Start pet
+            // Start pet
             { StarterPets.VerdantWisp.Id, StarterPets.VerdantWisp },
 
-            //Dungeon pets
+            // Dungeon pets
             { DungeonPets.IronhideBoar.Id, DungeonPets.IronhideBoar },
             { DungeonPets.EmberfangLynx.Id, DungeonPets.EmberfangLynx },
             { DungeonPets.StoneheartTortoise.Id, DungeonPets.StoneheartTortoise },
 
-            //Raid pets
+            // Raid pets
             { RaidPets.AetherionDrake.Id, RaidPets.AetherionDrake }
         };
+
+        // ✅ ADD THIS
+        public static PetDefinition Get(string id)
+        {
+            if (!All.TryGetValue(id, out var pet))
+                throw new Exception($"Pet '{id}' not found in registry.");
+
+            return pet;
+        }
     }
 }

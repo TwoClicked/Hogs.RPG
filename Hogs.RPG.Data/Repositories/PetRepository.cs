@@ -60,6 +60,30 @@ namespace Hogs.RPG.Data.Repositories
             await _context.SaveChangesAsync();
         }
 
+        // =========================
+        // 🐾 TOP PET LEVEL WITH PLAYER
+        // =========================
+        public async Task<List<PlayerPet>> GetTopPetLevelWithPlayerAsync(int count)
+        {
+            return await _context.PlayerPets
+                .Include(p => p.Player)
+                .OrderByDescending(p => p.Level)
+                .Take(count)
+                .ToListAsync();
+        }
+
+        // =========================
+        // 🐾 PET GEAR SCORE WITH PLAYER
+        // =========================
+        public async Task<List<PlayerPet>> GetTopForPetGearScoreWithPlayerAsync(int count)
+        {
+            return await _context.PlayerPets
+                .Include(p => p.Player)
+                .OrderByDescending(p => p.Level)
+                .Take(count)
+                .ToListAsync();
+        }
+
         public async Task SaveAsync()
         {
             await _context.SaveChangesAsync();

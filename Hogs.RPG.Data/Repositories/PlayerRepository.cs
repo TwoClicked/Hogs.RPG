@@ -43,5 +43,62 @@ namespace Hogs.RPG.Data.Repositories
             await _context.SaveChangesAsync();
         }
 
+        // =========================
+        // LEADERBOARD QUERIES
+        // =========================
+
+        public async Task<List<Player>> GetTopGoldAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.Gold)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players)
+                p.DeserializeBuffs();
+
+            return players;
+        }
+
+        public async Task<List<Player>> GetTopXPAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.Level)
+                .ThenByDescending(p => p.XP)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players)
+                p.DeserializeBuffs();
+
+            return players;
+        }
+
+        public async Task<List<Player>> GetTopDungeonRunsAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.DungeonRunsCompleted)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players)
+                p.DeserializeBuffs();
+
+            return players;
+        }
+
+        public async Task<List<Player>> GetTopForGearScoreAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.Level)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players)
+                p.DeserializeBuffs();
+
+            return players;
+        }
+
     }
 }
