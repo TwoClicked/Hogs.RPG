@@ -4,16 +4,18 @@ using Hogs.RPG.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-public class LeaderboardUpdater 
+public class LeaderboardUpdater
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly DiscordSocketClient _client;
 
     private const ulong CHANNEL_ID = 1490715637075546192;
+    private const ulong GUILD_ID = 1109193500664287336;
 
     private ulong _mainMsgId;
 
@@ -52,6 +54,17 @@ public class LeaderboardUpdater
         }
     }
 
+    // =========================
+    // 🏷️ DISPLAY NAME HELPER
+    // =========================
+
+    private string GetDisplayName(ulong userId, string fallback)
+    {
+        var guild = _client.GetGuild(GUILD_ID);
+        var member = guild?.GetUser(userId);
+        return member?.DisplayName ?? member?.GlobalName ?? member?.Username ?? fallback;
+    }
+
     private async Task UpdateLeaderboard()
     {
         using var scope = _scopeFactory.CreateScope();
@@ -62,6 +75,12 @@ public class LeaderboardUpdater
         {
             Console.WriteLine($"❌ Channel not found: {CHANNEL_ID}");
             return;
+        }
+
+        // Recover message ID after restart
+        if (_mainMsgId == 0)
+        {
+            _mainMsgId = await FindExistingMessage(channel);
         }
 
         Console.WriteLine($"✅ Channel found: {channel.Id}");
@@ -105,45 +124,55 @@ public class LeaderboardUpdater
         };
     }
 
-    private string FormatGold(System.Collections.Generic.List<Hogs.RPG.Core.Entities.Player> players)
+    private string FormatGold(List<Hogs.RPG.Core.Entities.Player> players)
     {
         return string.Join("\n", players.Select((p, i) =>
-            $"{GetMedal(i + 1)} {p.Username} — **{p.Gold:N0}**"));
+            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.Gold:N0}**"));
     }
 
-    private string FormatXP(System.Collections.Generic.List<Hogs.RPG.Core.Entities.Player> players)
+    private string FormatXP(List<Hogs.RPG.Core.Entities.Player> players)
     {
         return string.Join("\n", players.Select((p, i) =>
-            $"{GetMedal(i + 1)} {p.Username} — **Lv.{p.Level}** ({p.XP:N0})"));
+            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **Lv.{p.Level}** ({p.XP:N0})"));
     }
 
-    private string FormatGear(System.Collections.Generic.List<(Hogs.RPG.Core.Entities.Player player, int score)> data)
+    private string FormatGear(List<(Hogs.RPG.Core.Entities.Player player, int score)> data)
     {
         return string.Join("\n", data.Select((x, i) =>
-            $"{GetMedal(i + 1)} {x.player.Username} — **{x.score:N0}**"));
+            $"{GetMedal(i + 1)} {GetDisplayName(x.player.DiscordId, x.player.Username)} — **{x.score:N0}**"));
     }
 
-    private string FormatDungeons(System.Collections.Generic.List<Hogs.RPG.Core.Entities.Player> players)
+    private string FormatDungeons(List<Hogs.RPG.Core.Entities.Player> players)
     {
         return string.Join("\n", players.Select((p, i) =>
-            $"{GetMedal(i + 1)} {p.Username} — **{p.DungeonRunsCompleted}**"));
+            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.DungeonRunsCompleted}**"));
     }
 
-    private string FormatPetLevel(System.Collections.Generic.List<(Hogs.RPG.Core.Entities.Player player, Hogs.RPG.Core.Entities.PlayerPet pet)> data)
+    private string FormatPetLevel(List<(Hogs.RPG.Core.Entities.Player player, Hogs.RPG.Core.Entities.PlayerPet pet)> data)
     {
         return string.Join("\n", data.Select((x, i) =>
-            $"{GetMedal(i + 1)} {x.player.Username} — **Lv.{x.pet.Level}**"));
+            $"{GetMedal(i + 1)} {GetDisplayName(x.player.DiscordId, x.player.Username)} — **Lv.{x.pet.Level}**"));
     }
 
-    private string FormatPetGear(System.Collections.Generic.List<(Hogs.RPG.Core.Entities.Player player, Hogs.RPG.Core.Entities.PlayerPet pet, int score)> data)
+    private string FormatPetGear(List<(Hogs.RPG.Core.Entities.Player player, Hogs.RPG.Core.Entities.PlayerPet pet, int score)> data)
     {
         return string.Join("\n", data.Select((x, i) =>
-            $"{GetMedal(i + 1)} {x.player.Username} — **{x.score}**"));
+            $"{GetMedal(i + 1)} {GetDisplayName(x.player.DiscordId, x.player.Username)} — **{x.score}**"));
     }
 
     // =========================
     // 🔄 MESSAGE HANDLER
     // =========================
+
+    private async Task<ulong> FindExistingMessage(IMessageChannel channel)
+    {
+        var messages = await channel.GetMessagesAsync(10).FlattenAsync();
+        var existing = messages.FirstOrDefault(m =>
+            m.Author.Id == _client.CurrentUser.Id &&
+            m is IUserMessage);
+
+        return existing?.Id ?? 0;
+    }
 
     private async Task<ulong> SendOrUpdate(IMessageChannel channel, Embed embed, ulong messageId)
     {
