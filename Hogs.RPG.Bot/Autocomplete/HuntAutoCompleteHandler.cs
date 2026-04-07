@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+
 public class HuntAutocompleteHandler : AutocompleteHandler
 {
     public override async Task<AutocompletionResult> GenerateSuggestionsAsync(
@@ -56,6 +57,24 @@ public class HuntAutocompleteHandler : AutocompleteHandler
             return $"[Lv {start}-{end}]";
         }
 
+        string BuildLabel(HuntTarget h)
+        {
+            var materialName = InventoryItemDefinitions.All.TryGetValue(h.DropItem, out var item)
+                ? item.Name : h.DropItem;
+
+            var prefix = h.Category == HuntCategory.Alchemy ? "🧪 " : "";
+
+            var label = $"{GetTierLabel(h.RequiredLevel)} {prefix}{h.Icon} {h.Name} → ✦ {materialName}";
+
+            if (!string.IsNullOrEmpty(h.RareDropItem) &&
+                InventoryItemDefinitions.All.TryGetValue(h.RareDropItem, out var rareDef))
+            {
+                label += $" | ★ {rareDef.Name}";
+            }
+
+            return label;
+        }
+
         var hunts = HuntTargetRegistry.All.Values
             .Where(h => player.Level >= h.RequiredLevel)
             .Where(h => h.Category == selectedCategory)
@@ -64,15 +83,7 @@ public class HuntAutocompleteHandler : AutocompleteHandler
             .OrderBy(h => h.RequiredLevel)
             .ThenBy(h => h.Name)
             .Take(25)
-            .Select(h =>
-            {
-                var materialName = InventoryItemDefinitions.All.TryGetValue(h.DropItem, out var item)
-                    ? item.Name : h.DropItem;
-                var prefix = h.Category == HuntCategory.Alchemy ? "🧪 " : "";
-                return new AutocompleteResult(
-                    $"{GetTierLabel(h.RequiredLevel)} {prefix}{h.Icon} {h.Name} → ✦ {materialName}",
-                    h.Id);
-            })
+            .Select(h => new AutocompleteResult(BuildLabel(h), h.Id))
             .ToList();
 
         if (hunts.Count == 0)
@@ -83,15 +94,7 @@ public class HuntAutocompleteHandler : AutocompleteHandler
                 .OrderBy(h => h.RequiredLevel)
                 .ThenBy(h => h.Name)
                 .Take(5)
-                .Select(h =>
-                {
-                    var materialName = InventoryItemDefinitions.All.TryGetValue(h.DropItem, out var item)
-                        ? item.Name : h.DropItem;
-                    var prefix = h.Category == HuntCategory.Alchemy ? "🧪 " : "";
-                    return new AutocompleteResult(
-                        $"{GetTierLabel(h.RequiredLevel)} {prefix}{h.Icon} {h.Name} → ✦ {materialName}",
-                        h.Id);
-                })
+                .Select(h => new AutocompleteResult(BuildLabel(h), h.Id))
                 .ToList();
         }
 
