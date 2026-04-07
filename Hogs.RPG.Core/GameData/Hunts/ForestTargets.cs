@@ -74,7 +74,6 @@ public static class ForestTargets
         MaxDrop = 2,
         RequiredLevel = 1,
         Category = HuntCategory.Normal,
-        RareDropItem = "shadow_claw"
     };
 
     // Sub item for Health Potions (Lowest level
