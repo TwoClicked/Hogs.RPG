@@ -11,6 +11,7 @@ public static class Tier3WarlordRecipes
         Materials = new Dictionary<string, int>
         {
             { "fang_blade", 1 },
+            { "wolf_trophy", 5 },
             { "saber_fang", 250 },
             { "giant_antler", 180 },
             { "fang", 120 },
