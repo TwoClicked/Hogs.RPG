@@ -36,6 +36,15 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
+        // HELPERS
+        // =========================
+        private static string GetStars(int? tier) =>
+            tier.HasValue ? string.Concat(Enumerable.Repeat("⭐", tier.Value)) : "";
+
+        private static int? GetItemTier(string itemId) =>
+            InventoryItemDefinitions.All.TryGetValue(itemId, out var def) ? def.Tier : null;
+
+        // =========================
         // CRAFT
         // =========================
         [SlashCommand("craft", "Craft an item")]
@@ -116,6 +125,9 @@ namespace Hogs.RPG.Bot.Commands
 
             foreach (var recipe in slotRecipes)
             {
+                // =========================
+                // CAN CRAFT CHECK
+                // =========================
                 bool canCraft = true;
 
                 foreach (var mat in recipe.Materials)
@@ -127,33 +139,56 @@ namespace Hogs.RPG.Bot.Commands
                     }
                 }
 
-                var icon = canCraft ? "✅" : "❌";
-
+                var craftIcon = canCraft ? "✅" : "❌";
                 var item = EquipmentRegistry.All[recipe.ResultItem];
 
-                builder.AppendLine($"{icon} **{recipe.Name}**");
+                // =========================
+                // ITEM TIER (from highest tier material)
+                // =========================
+                int? recipeTier = recipe.Materials.Keys
+                    .Select(GetItemTier)
+                    .Where(t => t.HasValue)
+                    .Select(t => t!.Value)
+                    .DefaultIfEmpty(0)
+                    .Max() is int t and > 0 ? t : (int?)null;
+
+                // =========================
+                // HEADER: icon + name + stars
+                // =========================
+                builder.AppendLine($"{craftIcon} **{recipe.Name}** {GetStars(recipeTier)}");
 
                 // =========================
                 // STATS
                 // =========================
                 if (item.Attack > 0)
-                    builder.AppendLine($"  ⚔ Attack +{item.Attack}");
+                    builder.AppendLine($"⚔ Attack +{item.Attack}");
 
                 if (item.Defense > 0)
-                    builder.AppendLine($"  🛡 Defense +{item.Defense}");
+                    builder.AppendLine($"🛡 Defense +{item.Defense}");
 
                 if (item.Health > 0)
-                    builder.AppendLine($"  ❤️ Health +{item.Health}");
+                    builder.AppendLine($"❤️ Health +{item.Health}");
 
                 // =========================
-                // MATERIALS (WITH NAMES)
+                // MATERIALS GROUPED BY TIER
                 // =========================
-                foreach (var mat in recipe.Materials)
+                var tierGroups = recipe.Materials
+                    .GroupBy(mat => GetItemTier(mat.Key) ?? 0)
+                    .OrderBy(g => g.Key);
+
+                foreach (var tierGroup in tierGroups)
                 {
-                    if (InventoryItemDefinitions.All.TryGetValue(mat.Key, out var matDef))
-                        builder.AppendLine($"  {matDef.Name} x{mat.Value}");
-                    else
-                        builder.AppendLine($"  {mat.Key} x{mat.Value}"); // fallback
+                    if (tierGroup.Key > 0)
+                        builder.AppendLine($"**Tier {tierGroup.Key}**");
+
+                    foreach (var mat in tierGroup)
+                    {
+                        var matDef = InventoryItemDefinitions.All.TryGetValue(mat.Key, out var d) ? d : null;
+                        var name = matDef?.Name ?? mat.Key;
+                        var matIcon = matDef?.SubCategory == "Rare" ? "★" : "✦";
+
+                        builder.AppendLine($"{matIcon} {name} x{mat.Value}");
+                    }
                 }
 
                 builder.AppendLine();

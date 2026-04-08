@@ -15,7 +15,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Claw Dagger",
             Icon = "<:claw_dagger:1484928258805076019>",
             Type = "Equipment",
-            Description = "A crude dagger made from sharpened claws."
+            Description = "A crude dagger made from sharpened claws.",
+            Tier = 1
         };
 
         public static readonly ItemDefinition BoneBuckler = new()
@@ -24,7 +25,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Bone Buckler",
             Icon = "<:bone_buckler:1484920792125935647>",
             Type = "Equipment",
-            Description = "A small shield crafted from reinforced bone."
+            Description = "A small shield crafted from reinforced bone.",
+            Tier = 1
         };
 
         public static readonly ItemDefinition LeatherVest = new()
@@ -33,7 +35,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Leather Vest",
             Icon = "<:leather_vest:1484922630359355442>",
             Type = "Equipment",
-            Description = "Basic leather armor for hunters."
+            Description = "Basic leather armor for hunters.",
+            Tier = 1
         };
 
         public static readonly ItemDefinition BoneHelm = new()
@@ -42,7 +45,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Bone Helm",
             Icon = "<:bone_helm:1484923093796524123>",
             Type = "Equipment",
-            Description = "A helmet formed from hardened bone."
+            Description = "A helmet formed from hardened bone.",
+             Tier = 1
         };
 
         public static readonly ItemDefinition HunterLeggings = new()
@@ -51,7 +55,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Hunter Leggings",
             Icon = "<:hunter_leggings:1484923823022411906>",
             Type = "Equipment",
-            Description = "Flexible leggings favored by hunters."
+            Description = "Flexible leggings favored by hunters.",
+            Tier = 1
         };
 
         public static readonly ItemDefinition HideBoots = new()
@@ -60,7 +65,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Hide Boots",
             Icon = "<:hide_boots:1484924359012257893>",
             Type = "Equipment",
-            Description = "Boots made from animal hide."
+            Description = "Boots made from animal hide.",
+            Tier = 1
         };
 
         public static readonly ItemDefinition FurGloves = new()
@@ -69,7 +75,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Fur Gloves",
             Icon = "<:fur_gloves:1484924776442237079>",
             Type = "Equipment",
-            Description = "Warm gloves lined with fur."
+            Description = "Warm gloves lined with fur.",
+            Tier = 1
         };
 
         public static readonly ItemDefinition FeatherBand = new()
@@ -78,7 +85,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Feather Band",
             Icon = "<:feather_band:1484925991540494588>",
             Type = "Equipment",
-            Description = "A ring decorated with feathers."
+            Description = "A ring decorated with feathers.",
+            Tier = 1
         };
 
         public static readonly ItemDefinition RavenCharm = new()
@@ -87,7 +95,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Raven Charm",
             Icon = "<:raven_charm:1484926593569914981>",
             Type = "Equipment",
-            Description = "A mystical charm blessed by ravens."
+            Description = "A mystical charm blessed by ravens.",
+            Tier = 1
         };
 
 
@@ -101,7 +110,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Fang Blade",
             Icon = "<:fang_blade:1484929833619296306>",
             Type = "Equipment",
-            Description = "A blade forged with beast fangs."
+            Description = "A blade forged with beast fangs.",
+             Tier = 2
         };
 
         public static readonly ItemDefinition HornShield = new()
@@ -110,7 +120,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Horn Shield",
             Icon = "<:horn_shield:1484930369609535558>",
             Type = "Equipment",
-            Description = "A durable shield reinforced with horns."
+            Description = "A durable shield reinforced with horns.",
+            Tier = 2
         };
 
         public static readonly ItemDefinition HideWarcoat = new()
@@ -119,7 +130,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Hide Warcoat",
             Icon = "<:hide_warcoat:1484930813802840276>",
             Type = "Equipment",
-            Description = "A heavy coat made from thick hides."
+            Description = "A heavy coat made from thick hides.",
+            Tier = 2
         };
 
         public static readonly ItemDefinition RaiderHelm = new()
@@ -128,7 +140,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Raider Helm",
             Icon = "<:raider_helm:1484931625753116763>",
             Type = "Equipment",
-            Description = "Helmet worn by hardened raiders."
+            Description = "Helmet worn by hardened raiders.",
+            Tier = 2
         };
 
         public static readonly ItemDefinition RaiderLegguards = new()
@@ -137,7 +150,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Raider Legguards",
             Icon = "<:raider_legguards:1484932074367357018>",
             Type = "Equipment",
-            Description = "Leg armor reinforced with hide."
+            Description = "Leg armor reinforced with hide.",
+            Tier = 2
         };
 
         public static readonly ItemDefinition RaiderBoots = new()
@@ -146,7 +160,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Raider Boots",
             Icon = "<:raider_boots:1484932927107366962>",
             Type = "Equipment",
-            Description = "Boots worn by raiders."
+            Description = "Boots worn by raiders.",
+            Tier = 2
         };
 
         public static readonly ItemDefinition TrackerGloves = new()
@@ -155,7 +170,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Tracker Gloves",
             Icon = "<:tracker_gloves:1484933377034289344>",
             Type = "Equipment",
-            Description = "Gloves designed for hunters and trackers."
+            Description = "Gloves designed for hunters and trackers.",
+            Tier = 2
         };
 
         public static readonly ItemDefinition RaiderBand = new()
@@ -164,7 +180,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Raider Band",
             Icon = "<:raider_band:1484934211960832070>",
             Type = "Equipment",
-            Description = "A ring worn by raider captains."
+            Description = "A ring worn by raider captains.",
+            Tier = 2
         };
 
         public static readonly ItemDefinition TalonCharm = new()
@@ -173,7 +190,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Talon Charm",
             Icon = "<:talon_charm:1484934913764626613>",
             Type = "Equipment",
-            Description = "A charm made from razor talons."
+            Description = "A charm made from razor talons.",
+            Tier = 2
         };
 
 
@@ -187,7 +205,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Saber Fang Blade",
             Icon = "<:saber_fang_blade:1484936509193716007>",
             Type = "Equipment",
-            Description = "A weapon forged from sabertooth fangs."
+            Description = "A weapon forged from sabertooth fangs.",
+            Tier = 3
         };
 
         public static readonly ItemDefinition AntlerShield = new()
@@ -196,7 +215,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Antler Shield",
             Icon = "<:antler_shield:1484937172141478060>",
             Type = "Equipment",
-            Description = "A shield reinforced with giant antlers."
+            Description = "A shield reinforced with giant antlers.",
+            Tier = 3
         };
 
         public static readonly ItemDefinition WarlordArmor = new()
@@ -205,7 +225,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Warlord Armor",
             Icon = "<:warlord_armor:1484939356698312794>",
             Type = "Equipment",
-            Description = "Armor worn by powerful warlords."
+            Description = "Armor worn by powerful warlords.",
+            Tier = 3
         };
 
         public static readonly ItemDefinition WarlordHelm = new()
@@ -214,7 +235,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Warlord Helm",
             Icon = "<:warlord_helm:1484940410328449194>",
             Type = "Equipment",
-            Description = "Helm worn by a warlord."
+            Description = "Helm worn by a warlord.",
+            Tier = 3
         };
 
         public static readonly ItemDefinition WarlordGreaves = new()
@@ -223,7 +245,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Warlord Greaves",
             Icon = "<:warlord_greaves:1484941023863111852>",
             Type = "Equipment",
-            Description = "Greaves crafted for battle."
+            Description = "Greaves crafted for battle.",
+            Tier = 3
         };
 
         public static readonly ItemDefinition SabertoothBoots = new()
@@ -232,7 +255,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Sabertooth Boots",
             Icon = "<:sabertooth_boots:1484942228601438369>",
             Type = "Equipment",
-            Description = "Boots made from sabertooth materials."
+            Description = "Boots made from sabertooth materials.",
+            Tier = 3
         };
 
         public static readonly ItemDefinition ClawGauntlets = new()
@@ -241,7 +265,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Claw Gauntlets",
             Icon = "<:claw_gauntlets:1484945068430459020>",
             Type = "Equipment",
-            Description = "Gauntlets lined with razor claws."
+            Description = "Gauntlets lined with razor claws.",
+            Tier = 3
         };
 
         public static readonly ItemDefinition GriffinBand = new()
@@ -250,7 +275,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Griffin Band",
             Icon = "<:griffin_band:1484945586888376340>",
             Type = "Equipment",
-            Description = "A ring blessed by griffins."
+            Description = "A ring blessed by griffins.",
+            Tier = 3
         };
 
         public static readonly ItemDefinition RavenEyePendant = new()
@@ -259,7 +285,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Raven Eye Pendant",
             Icon = "<:raven_eye_pendant:1484947421833203775>",
             Type = "Equipment",
-            Description = "A pendant containing the eye of a raven spirit."
+            Description = "A pendant containing the eye of a raven spirit.",
+            Tier = 3
         };
 
 
@@ -273,7 +300,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Titan Blade",
             Icon = "<:titan_blade:1484949683351847095>",
             Type = "Equipment",
-            Description = "A blade wielded by champions."
+            Description = "A blade wielded by champions.",
+            Tier = 4
         };
 
         public static readonly ItemDefinition TitanShield = new()
@@ -282,7 +310,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Titan Shield",
             Icon = "<:titan_shield:1484951494032756906>",
             Type = "Equipment",
-            Description = "A shield forged from titan remains."
+            Description = "A shield forged from titan remains.",
+            Tier = 4
         };
 
         public static readonly ItemDefinition ChampionPlate = new()
@@ -291,7 +320,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Champion Plate",
             Icon = "<:champion_plate:1484952447989321890>",
             Type = "Equipment",
-            Description = "Plate armor worn by champions."
+            Description = "Plate armor worn by champions.",
+            Tier = 4
         };
 
         public static readonly ItemDefinition ChampionHelm = new()
@@ -300,7 +330,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Champion Helm",
             Icon = "<:champion_helm:1484954270116876359>",
             Type = "Equipment",
-            Description = "Helmet of the champion."
+            Description = "Helmet of the champion.",
+            Tier = 4
         };
 
         public static readonly ItemDefinition ChampionGreaves = new()
@@ -309,7 +340,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Champion Greaves",
             Icon = "<:champion_greaves:1484955194352734331>",
             Type = "Equipment",
-            Description = "Greaves used by elite warriors."
+            Description = "Greaves used by elite warriors.",
+            Tier = 4
         };
 
         public static readonly ItemDefinition ShadowstepBoots = new()
@@ -318,7 +350,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Shadowstep Boots",
             Icon = "<:shadowstep_boots:1484956266173432049>",
             Type = "Equipment",
-            Description = "Boots that allow silent movement."
+            Description = "Boots that allow silent movement.",
+            Tier = 4
         };
 
         public static readonly ItemDefinition StormGauntlets = new()
@@ -327,7 +360,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Storm Gauntlets",
             Icon = "<:storm_gauntlets:1484957090371076176>",
             Type = "Equipment",
-            Description = "Gauntlets crackling with storm energy."
+            Description = "Gauntlets crackling with storm energy.",
+            Tier = 4
         };
 
         public static readonly ItemDefinition StormRing = new()
@@ -336,7 +370,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Storm Ring",
             Icon = "<:storm_ring:1484957528633905152>",
             Type = "Equipment",
-            Description = "A ring infused with storm power."
+            Description = "A ring infused with storm power.",
+            Tier = 4
         };
 
         public static readonly ItemDefinition VoidPendant = new()
@@ -345,7 +380,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Void Pendant",
             Icon = "<:void_pendant:1484958340651159702>",
             Type = "Equipment",
-            Description = "A pendant touched by the void."
+            Description = "A pendant touched by the void.",
+            Tier = 4
         };
 
 
@@ -359,7 +395,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Worldbreaker Blade",
             Icon = "<:worldbreaker_blade:1484959617116274788>",
             Type = "Equipment",
-            Description = "A blade capable of shattering worlds."
+            Description = "A blade capable of shattering worlds.",
+            Tier = 5
         };
 
         public static readonly ItemDefinition ColossusShield = new()
@@ -368,7 +405,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Colossus Shield",
             Icon = "<:colossus_shield:1484959987427049756>",
             Type = "Equipment",
-            Description = "A shield forged from colossus remains."
+            Description = "A shield forged from colossus remains.",
+            Tier = 5
         };
 
         public static readonly ItemDefinition BeastslayerPlate = new()
@@ -377,7 +415,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Beastslayer Plate",
             Icon = "<:beastslayer_plate:1484960404512833557>",
             Type = "Equipment",
-            Description = "Armor made to slay the greatest beasts."
+            Description = "Armor made to slay the greatest beasts.",
+            Tier = 5
         };
 
         public static readonly ItemDefinition MythicCrown = new()
@@ -386,7 +425,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Mythic Crown",
             Icon = "<:mythic_crown:1484961627005648958>",
             Type = "Equipment",
-            Description = "A crown worn by mythic kings."
+            Description = "A crown worn by mythic kings.",
+            Tier = 5
         };
 
         public static readonly ItemDefinition ColossusLegguards = new()
@@ -395,7 +435,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Colossus Legguards",
             Icon = "<:colossus_legguards:1484962794016210984>",
             Type = "Equipment",
-            Description = "Heavy leg armor forged from colossus hides."
+            Description = "Heavy leg armor forged from colossus hides.",
+            Tier = 5
         };
 
         public static readonly ItemDefinition SkystriderBoots = new()
@@ -404,7 +445,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Skystrider Boots",
             Icon = "<:skystrider_boots:1484963673595449614>",
             Type = "Equipment",
-            Description = "Boots that allow the wearer to stride the skies."
+            Description = "Boots that allow the wearer to stride the skies.",
+            Tier = 5
         };
 
         public static readonly ItemDefinition AbyssGauntlets = new()
@@ -413,7 +455,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Abyss Gauntlets",
             Icon = "<:abyss_gauntlets:1484964392301887650>",
             Type = "Equipment",
-            Description = "Gauntlets forged from abyssal claws."
+            Description = "Gauntlets forged from abyssal claws.",
+            Tier = 5
         };
 
         public static readonly ItemDefinition RavenKingBand = new()
@@ -422,7 +465,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Raven King Band",
             Icon = "<:raven_king_band:1484965033740861552>",
             Type = "Equipment",
-            Description = "Ring of the legendary Raven King."
+            Description = "Ring of the legendary Raven King.",
+            Tier = 5
         };
 
         public static readonly ItemDefinition PendantOfTheWild = new()
@@ -431,7 +475,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Name = "Pendant of the Wild",
             Icon = "<:pendant_of_the_wild:1484965682360877116>",
             Type = "Equipment",
-            Description = "A pendant symbolizing mastery of the wild."
+            Description = "A pendant symbolizing mastery of the wild.",
+            Tier = 5
         };
 
     }
