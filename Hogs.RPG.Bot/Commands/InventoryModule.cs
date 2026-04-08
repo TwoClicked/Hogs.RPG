@@ -41,7 +41,11 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
     [ComponentInteraction("inv_tab_*_*_*")]
     public async Task SwitchTab(string category, string sub, int page)
     {
-        string? subCategory = sub == "none" ? null : sub;
+        // Top-level Materials button uses "none" but should default to Craft
+        string? subCategory = (sub == "none" && category == "Material")
+            ? "Craft"
+            : sub == "none" ? null : sub;
+
         await ShowInventory(category, subCategory, 0);
     }
 
@@ -80,14 +84,12 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
             .Where(i => i.Item.Type == category)
             .ToList();
 
-        // Apply subcategory filter for Materials
         var filtered = allItems
             .Where(i => subCategory == null || i.Item.SubCategory == subCategory)
             .OrderBy(i => i.Item.Tier ?? 99)
             .ThenBy(i => i.Item.Name)
             .ToList();
 
-        // Build title
         string title = (category, subCategory) switch
         {
             ("Equipment", _) => "⚔️ Gear",
@@ -125,8 +127,6 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
             .Take(ItemsPerPage);
 
         var sb = new StringBuilder();
-
-        // For craft materials, show tier headers when tier changes
         int? lastTier = null;
 
         foreach (var entry in pageItems)
@@ -141,8 +141,15 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
             sb.AppendLine($"{entry.Item.Icon} **{entry.Item.Name}** x{entry.Amount}");
         }
 
+        var color = subCategory switch
+        {
+            "Rare" => Color.Gold,
+            "Alchemy" => Color.Purple,
+            _ => Color.DarkBlue
+        };
+
         var embed = new EmbedBuilder()
-            .WithColor(subCategory == "Rare" ? Color.Gold : subCategory == "Alchemy" ? Color.Purple : Color.DarkBlue)
+            .WithColor(color)
             .WithTitle(title)
             .WithDescription(sb.ToString().Trim())
             .WithFooter($"Page {page + 1}/{Math.Max(1, totalPages)}")
@@ -177,15 +184,15 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
     private MessageComponent BuildComponents(string category, string? subCategory, int page, int totalPages)
     {
         var builder = new ComponentBuilder();
-
         string sub = subCategory ?? "none";
 
         // Row 0 — Main category tabs
+        // Materials uses "none" here — distinct from the "Craft" sub-tab to avoid duplicate IDs
         builder.WithButton("⚔️ Gear", $"inv_tab_Equipment_none_0", ButtonStyle.Primary, disabled: category == "Equipment", row: 0);
         builder.WithButton("🧪 Potions", $"inv_tab_Potion_none_0", ButtonStyle.Primary, disabled: category == "Potion", row: 0);
-        builder.WithButton("🧱 Materials", $"inv_tab_Material_Craft_0", ButtonStyle.Primary, disabled: category == "Material", row: 0);
+        builder.WithButton("🧱 Materials", $"inv_tab_Material_none_0", ButtonStyle.Primary, disabled: category == "Material", row: 0);
 
-        // Row 1 — Material subcategory tabs (only shown when on Materials)
+        // Row 1 — Material subcategory tabs (only when on Materials)
         if (category == "Material")
         {
             builder.WithButton("🧱 Craft", $"inv_tab_Material_Craft_0", ButtonStyle.Secondary, disabled: subCategory == "Craft", row: 1);
