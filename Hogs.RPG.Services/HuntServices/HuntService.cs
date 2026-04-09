@@ -142,31 +142,27 @@ namespace Hogs.RPG.Services.HuntServices
             // =========================
             // 🧪 XP POTION (applied directly, no buff stacking)
             // =========================
-            if (player.AutoUseXpPotions)
+            bool xpBoostActive = player.XpBoostExpiry.HasValue && player.XpBoostExpiry.Value > DateTime.UtcNow;
+
+            if (player.AutoUseXpPotions && !xpBoostActive)
             {
                 int desiredPotions = stamina / 5;
-
                 var inventory = await _inventoryService.GetInventoryAsync(userId);
                 var potion = inventory.FirstOrDefault(i => i.ItemId == "xp_potion");
-
                 int available = potion?.Quantity ?? 0;
 
                 if (desiredPotions > 0 && available > 0)
                 {
                     int potionsToUse = Math.Min(desiredPotions, available);
-
                     await _inventoryService.TakeItemAsync(userId, "xp_potion", potionsToUse);
-
                     xpPotionsUsed = potionsToUse;
                     remainingXpPotions = available - potionsToUse;
-
                     // ✅ Apply boost directly to XP, no ActiveBuffs touched
                     totalXp = (int)(totalXp * 2.0);
                 }
                 else
                 {
                     remainingXpPotions = available;
-
                     if (available == 0)
                         player.AutoUseXpPotions = false;
                 }
@@ -176,11 +172,10 @@ namespace Hogs.RPG.Services.HuntServices
             // 📈 OTHER ACTIVE BUFFS (non-potion)
             // =========================
             double xpMultiplier = 1.0;
-
-            if (player.XpBoostExpiry.HasValue && player.XpBoostExpiry.Value > DateTime.UtcNow)
+            if (xpBoostActive)
                 xpMultiplier = 2.0;
             else
-                xpMultiplier = _buffService.ApplyXpBuff(player); // keep old buff system working
+                xpMultiplier = _buffService.ApplyXpBuff(player);
 
             if (xpMultiplier > 1)
                 totalXp = (int)(totalXp * xpMultiplier);
