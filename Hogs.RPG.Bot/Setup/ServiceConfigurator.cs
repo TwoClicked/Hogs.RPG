@@ -1,5 +1,4 @@
 ﻿using Hogs.RPG.Core.GameData.Recipes;
-using System;
 using Hogs.RPG.Data;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services;
@@ -11,9 +10,11 @@ using Hogs.RPG.Services.HuntServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
+using Hogs.RPG.Services.ShopServices;
 using Hogs.RPG.Services.TradeServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 
 namespace Hogs.RPG.Bot.Setup
 {
@@ -52,6 +53,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<PetRepository>();
             services.AddScoped<InventoryRepository>();
             services.AddScoped<BossStateRepository>();
+            services.AddScoped<ShopRepository>();
 
             // =========================
             // ⚙️ CORE GAME SERVICES (Scoped)
@@ -87,6 +89,7 @@ namespace Hogs.RPG.Bot.Setup
             // =========================
             services.AddSingleton<BossService>();
             services.AddSingleton<BossScheduler>();
+            services.AddSingleton<ShopService>();
             services.AddSingleton<TradeService>();
             services.AddSingleton<TradeCleanupService>();
 

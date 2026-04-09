@@ -15,6 +15,8 @@ namespace Hogs.RPG.Data
         public DbSet<InventoryItem> InventoryItems { get; set; }
         public DbSet<BossSpawnState> BossSpawnStates { get; set; }
         public DbSet<PlayerPet> PlayerPets { get; set; }
+        public DbSet<ShopPurchase> ShopPurchases { get; set; }
+        public DbSet<ActiveAuction> ActiveAuctions { get; set; }
 
         public GameDbContext(DbContextOptions<GameDbContext> options)
             : base(options)
