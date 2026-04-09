@@ -52,6 +52,10 @@ namespace Hogs.RPG.Core.Entities
         //LeaderBoard
         public int DungeonRunsCompleted { get; set; }
 
+        // Shop perks
+        public DateTime? XpBoostExpiry { get; set; }
+        public DateTime? StaminaBoostExpiry { get; set; }
+
         // =========================
         // 🔄 BUFF SERIALIZATION
         // =========================

@@ -5,13 +5,21 @@ namespace Hogs.RPG.Services.GameplayServices
 {
     public class HunterStaminaService
     {
-        private const int MaxStamina = 100;
+        private const int BaseMaxStamina = 100;
+        private const int BoostedMaxStamina = 150;
+
+        private static int GetMaxStamina(Player player)
+        {
+            if (player.StaminaBoostExpiry.HasValue &&
+                player.StaminaBoostExpiry.Value > DateTime.UtcNow)
+                return BoostedMaxStamina;
+
+            return BaseMaxStamina;
+        }
 
         public void Regenerate(Player player)
         {
-
-            if (player == null)
-                return;
+            if (player == null) return;
 
             if (string.IsNullOrEmpty(player.LastHunterStaminaUpdate))
             {
@@ -25,11 +33,11 @@ namespace Hogs.RPG.Services.GameplayServices
             var now = DateTimeOffset.UtcNow;
             var minutesPassed = (int)(now - last).TotalMinutes;
 
-            if (minutesPassed <= 0)
-                return;
+            if (minutesPassed <= 0) return;
 
-            player.HunterStamina = Math.Min(MaxStamina, player.HunterStamina + minutesPassed);
+            int max = GetMaxStamina(player);
 
+            player.HunterStamina = Math.Min(max, player.HunterStamina + minutesPassed);
 
             player.LastHunterStaminaUpdate = last
                 .AddMinutes(minutesPassed)

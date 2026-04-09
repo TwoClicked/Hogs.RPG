@@ -64,10 +64,19 @@ namespace Hogs.RPG.Services.ShopServices
                 GoldPaid = item.Price
             });
 
-            // Post to feed
-            await PostPurchaseFeedAsync(userId, item);
+            // Apply instantly for RPG perks
+            bool isInstant = item.Category == Hogs.RPG.Core.Enums.ShopCategory.RpgPerks;
+            if (isInstant)
+                await ApplyRpgPerkAsync(userId, itemId, playerRepo);
 
-            return (true, $"✅ You purchased **{item.Icon} {item.Name}** for **{item.Price:N0} gold**!\nAn admin will fulfil your order soon.");
+            // Post to feed
+            await PostPurchaseFeedAsync(userId, item, isInstant);
+
+            string confirmation = isInstant
+                ? $"✅ You purchased **{item.Icon} {item.Name}** for **{item.Price:N0} gold**!\nYour perk has been applied."
+                : $"✅ You purchased **{item.Icon} {item.Name}** for **{item.Price:N0} gold**!\nAn admin will fulfil your order soon.";
+
+            return (true, confirmation);
         }
 
         // =========================
@@ -82,7 +91,6 @@ namespace Hogs.RPG.Services.ShopServices
             if (item.Type != Hogs.RPG.Core.Enums.ShopItemType.Auction)
                 return (false, "This item is not an auction item.", null);
 
-            // Role check
             if (item.RequiredRoleId.HasValue)
             {
                 var member = guild.GetUser(userId);
@@ -94,7 +102,6 @@ namespace Hogs.RPG.Services.ShopServices
             var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
             var shopRepo = scope.ServiceProvider.GetRequiredService<ShopRepository>();
 
-            // Check no active auction for same item
             var existing = await shopRepo.GetActiveAuctionByItemAsync(itemId);
             if (existing != null)
                 return (false, $"❌ There is already an active auction for **{item.Name}**.", null);
@@ -107,11 +114,9 @@ namespace Hogs.RPG.Services.ShopServices
             if (player.Gold < item.StartingBid)
                 return (false, $"❌ You need **{item.StartingBid:N0} gold** to start this auction but only have **{player.Gold:N0}**.", null);
 
-            // Deduct starting bid (held in escrow)
             player.Gold -= item.StartingBid;
             await playerRepo.UpdatePlayerAsync(player);
 
-            // Create auction in DB
             var auction = new ActiveAuction
             {
                 ItemId = item.Id,
@@ -145,7 +150,6 @@ namespace Hogs.RPG.Services.ShopServices
             if (!ShopRegistry.All.TryGetValue(auction.ItemId, out var item))
                 return (false, "Item not found.");
 
-            // Role check
             if (item.RequiredRoleId.HasValue)
             {
                 var member = guild.GetUser(userId);
@@ -179,16 +183,13 @@ namespace Hogs.RPG.Services.ShopServices
                 }
             }
 
-            // Deduct new bid
             bidder.Gold -= bidAmount;
             await playerRepo.UpdatePlayerAsync(bidder);
 
-            // Update auction
             auction.CurrentBid = bidAmount;
             auction.CurrentBidderDiscordId = userId;
             await shopRepo.UpdateAuctionAsync(auction);
 
-            // Post to feed
             await PostBidFeedAsync(userId, auction, item, bidAmount);
 
             return (true, $"✅ You placed a bid of **{bidAmount:N0} gold** on **{item.Icon} {item.Name}**!");
@@ -200,7 +201,6 @@ namespace Hogs.RPG.Services.ShopServices
         public async Task<(bool success, string message)> EndAuctionAsync(
             ulong adminUserId, int auctionId, SocketGuild guild)
         {
-            // Verify admin role
             var admin = guild.GetUser(adminUserId);
             if (admin == null || !admin.Roles.Any(r => r.Id == _adminRoleId))
                 return (false, "❌ Only admins can end auctions.");
@@ -220,7 +220,6 @@ namespace Hogs.RPG.Services.ShopServices
             auction.EndedAt = DateTime.UtcNow;
             await shopRepo.UpdateAuctionAsync(auction);
 
-            // Log as a purchase for admin fulfillment tracking
             await shopRepo.AddPurchaseAsync(new ShopPurchase
             {
                 BuyerDiscordId = auction.CurrentBidderDiscordId!.Value,
@@ -229,7 +228,6 @@ namespace Hogs.RPG.Services.ShopServices
                 GoldPaid = auction.CurrentBid
             });
 
-            // Announce winner to feed
             await PostAuctionEndFeedAsync(auction, item);
 
             return (true, $"✅ Auction ended. **{item.Icon} {item.Name}** won by <@{auction.CurrentBidderDiscordId}> for **{auction.CurrentBid:N0} gold**.");
@@ -258,7 +256,8 @@ namespace Hogs.RPG.Services.ShopServices
         // =========================
         // FULFIL PURCHASE (ADMIN)
         // =========================
-        public async Task<(bool success, string message)> FulfilPurchaseAsync(ulong adminUserId, int purchaseId, SocketGuild guild)
+        public async Task<(bool success, string message)> FulfilPurchaseAsync(
+            ulong adminUserId, int purchaseId, SocketGuild guild)
         {
             var admin = guild.GetUser(adminUserId);
             if (admin == null || !admin.Roles.Any(r => r.Id == _adminRoleId))
@@ -275,18 +274,40 @@ namespace Hogs.RPG.Services.ShopServices
         }
 
         // =========================
+        // SET AUCTION MESSAGE ID
+        // =========================
+        public async Task SetAuctionMessageAsync(int auctionId, ulong messageId)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var shopRepo = scope.ServiceProvider.GetRequiredService<ShopRepository>();
+            await shopRepo.SetAuctionMessageIdAsync(auctionId, messageId);
+        }
+
+        // =========================
+        // GET AUCTION BY ID
+        // =========================
+        public async Task<ActiveAuction?> GetAuctionByIdAsync(int auctionId)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var shopRepo = scope.ServiceProvider.GetRequiredService<ShopRepository>();
+            return await shopRepo.GetAuctionByIdAsync(auctionId);
+        }
+
+        // =========================
         // FEED: PURCHASE
         // =========================
-        private async Task PostPurchaseFeedAsync(ulong userId, ShopItemDefinition item)
+        private async Task PostPurchaseFeedAsync(ulong userId, ShopItemDefinition item, bool isInstant)
         {
             var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
             if (channel == null) return;
+
+            var footer = isInstant ? "✅ Applied instantly" : "⏳ Pending admin fulfilment";
 
             var embed = new EmbedBuilder()
                 .WithTitle("🛒 Shop Purchase")
                 .WithDescription($"<@{userId}> purchased **{item.Icon} {item.Name}** for **{item.Price:N0} gold**.")
                 .WithColor(Color.Gold)
-                .WithFooter("⏳ Pending admin fulfilment")
+                .WithFooter(footer)
                 .Build();
 
             await channel.SendMessageAsync(embed: embed);
@@ -331,23 +352,82 @@ namespace Hogs.RPG.Services.ShopServices
         }
 
         // =========================
-        // FEED: AUCTION MESSAGE
+        // RPG PERK INSTANT DELIVERY
         // =========================
-        public async Task SetAuctionMessageAsync(int auctionId, ulong messageId)
+        private async Task ApplyRpgPerkAsync(ulong userId, string itemId, PlayerRepository playerRepo)
         {
-            using var scope = _scopeFactory.CreateScope();
-            var shopRepo = scope.ServiceProvider.GetRequiredService<ShopRepository>();
-            await shopRepo.SetAuctionMessageIdAsync(auctionId, messageId);
-        }
+            var player = await playerRepo.GetByDiscordIdAsync(userId);
+            if (player == null) return;
 
-        // =========================
-        // Get auction by ID
-        // =========================
-        public async Task<ActiveAuction?> GetAuctionByIdAsync(int auctionId)
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var shopRepo = scope.ServiceProvider.GetRequiredService<ShopRepository>();
-            return await shopRepo.GetAuctionByIdAsync(auctionId);
+            switch (itemId)
+            {
+                // =========================
+                // 🏹 STAMINA RESET
+                // =========================
+                case "rpg_stamina_reset":
+                    player.HunterStamina = 100;
+                    player.LastHunterStaminaUpdate = DateTimeOffset.UtcNow.ToString("o");
+                    await playerRepo.UpdatePlayerAsync(player);
+                    break;
+
+                // =========================
+                // ✨ DOUBLE XP — 24 hours
+                // =========================
+                case "rpg_double_xp":
+                    player.XpBoostExpiry = DateTime.UtcNow.AddHours(24);
+                    await playerRepo.UpdatePlayerAsync(player);
+                    break;
+
+                // =========================
+                // ⚡ STAMINA BOOST — 7 days, cap raised to 150
+                // =========================
+                case "rpg_stamina_boost":
+                    player.StaminaBoostExpiry = DateTime.UtcNow.AddDays(7);
+                    player.HunterStamina = Math.Min(150, player.HunterStamina + 50);
+                    await playerRepo.UpdatePlayerAsync(player);
+                    break;
+
+                // =========================
+                // 📦 LOOT CRATE — 20 random rare items
+                // =========================
+                case "rpg_loot_crate":
+                    var rareItems = new[]
+                    {
+                        "wolf_trophy",
+                        "boar_tusk",
+                        "stag_antler",
+                        "ancient_feather",
+                        "bear_heart",
+                        "alpha_fang",
+                        "storm_talon",
+                        "saber_relic",
+                        "griffin_core",
+                        "storm_relic",
+                        "ancient_core",
+                        "mythic_heart",
+                        "sky_relic"
+                    };
+
+                    using (var scope = _scopeFactory.CreateScope())
+                    {
+                        var inventoryService = scope.ServiceProvider
+                            .GetRequiredService<Hogs.RPG.Services.InventoryServices.InventoryService>();
+
+                        var random = new Random();
+                        var dropped = new Dictionary<string, int>();
+
+                        for (int i = 0; i < 20; i++)
+                        {
+                            var pick = rareItems[random.Next(rareItems.Length)];
+                            if (!dropped.ContainsKey(pick)) dropped[pick] = 0;
+                            dropped[pick]++;
+                        }
+
+                        foreach (var drop in dropped)
+                            await inventoryService.GiveItemAsync(userId, drop.Key, drop.Value);
+                    }
+                    break;
+            }
         }
     }
 }

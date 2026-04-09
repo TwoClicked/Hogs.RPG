@@ -175,7 +175,13 @@ namespace Hogs.RPG.Services.HuntServices
             // =========================
             // 📈 OTHER ACTIVE BUFFS (non-potion)
             // =========================
-            double xpMultiplier = _buffService.ApplyXpBuff(player);
+            double xpMultiplier = 1.0;
+
+            if (player.XpBoostExpiry.HasValue && player.XpBoostExpiry.Value > DateTime.UtcNow)
+                xpMultiplier = 2.0;
+            else
+                xpMultiplier = _buffService.ApplyXpBuff(player); // keep old buff system working
+
             if (xpMultiplier > 1)
                 totalXp = (int)(totalXp * xpMultiplier);
 
