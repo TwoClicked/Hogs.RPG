@@ -24,11 +24,7 @@ namespace Hogs.RPG.Bot.Commands
         [SlashCommand("petbag", "View all your pets")]
         public async Task PetBag()
         {
-            Console.WriteLine("🔥 ENTERED PetBag COMMAND");
-
             var pets = await _petService.GetPetsAsync(Context.User.Id);
-
-            Console.WriteLine("📦 AFTER DB CALL");
 
             if (pets.Count == 0)
             {
@@ -41,17 +37,14 @@ namespace Hogs.RPG.Bot.Commands
                 if (!PetRegistry.All.TryGetValue(p.PetId, out var def))
                     return p.PetId;
 
+                string displayName = p.CustomName ?? def.Name;
                 string equipped = p.IsEquipped ? " 🟢 Equipped" : "";
 
                 var passives = new List<string>();
+                if (p.Passive1 != null) passives.Add(PetPassiveFormatter.Format(p.Passive1));
+                if (p.Passive2 != null) passives.Add(PetPassiveFormatter.Format(p.Passive2));
 
-                if (p.Passive1 != null)
-                    passives.Add(PetPassiveFormatter.Format(p.Passive1));
-
-                if (p.Passive2 != null)
-                    passives.Add(PetPassiveFormatter.Format(p.Passive2));
-
-                return $"{def.Icon} {def.Name} (Lv. {p.Level}){equipped}\n" +
+                return $"{def.Icon} {displayName} (Lv. {p.Level}){equipped}\n" +
                        string.Join("\n", passives.Select(passive => $"   • {passive}"));
             });
 
@@ -80,7 +73,9 @@ namespace Hogs.RPG.Bot.Commands
 
             if (PetRegistry.All.TryGetValue(petId, out var def))
             {
-                await FollowupAsync($"🐾 Equipped **{def.Name}**!", ephemeral: true);
+                var pet = pets.First(p => p.PetId == petId);
+                string dispName = pet.CustomName ?? def.Name;
+                await FollowupAsync($"🐾 Equipped **{dispName}**!", ephemeral: true);
             }
             else
             {
@@ -95,9 +90,7 @@ namespace Hogs.RPG.Bot.Commands
         public async Task UnequipPet()
         {
             await DeferAsync(ephemeral: true);
-
             await _petService.UnequipPetAsync(Context.User.Id);
-
             await FollowupAsync("🐾 Pet unequipped.", ephemeral: true);
         }
 
@@ -123,29 +116,26 @@ namespace Hogs.RPG.Bot.Commands
                 return;
             }
 
+            string displayName = pet.CustomName ?? def.Name;
+
             var (atk, defStat, hp) = _petService.CalculateStats(pet);
 
             int xpRequired = 20 + (pet.Level * pet.Level * 15);
             double progress = (double)pet.XP / xpRequired;
-
             int filled = (int)(progress * 10);
             string bar = new string('█', filled) + new string('░', 10 - filled);
 
             var embed = new EmbedBuilder()
-                .WithTitle($"🐾 {def.Name}")
+                .WithTitle($"🐾 {displayName}")
                 .WithColor(Color.Green)
-
                 .AddField("Level", pet.Level, true)
                 .AddField("XP", $"{pet.XP} / {xpRequired}", true)
                 .AddField("Progress", bar, false)
-
                 .AddField("Attack", $"🗡 {atk}", true)
                 .AddField("Defense", $"🛡 {defStat}", true)
                 .AddField("Health", $"❤️ {hp}", true)
-
                 .AddField("Passive 1", PetPassiveFormatter.Format(pet.Passive1), true)
                 .AddField("Passive 2", PetPassiveFormatter.Format(pet.Passive2), true)
-
                 .WithFooter("HOGS RPG")
                 .WithTimestamp(DateTime.UtcNow);
 

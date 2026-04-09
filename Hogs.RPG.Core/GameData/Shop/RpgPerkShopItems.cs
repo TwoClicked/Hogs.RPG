@@ -55,7 +55,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Name = "Pet Rename",
             Description = "Rename your currently equipped pet to anything you like.",
             Icon = "🐾",
-            Category = ShopCategory.DiscordRewards,
+            Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
             Price = 5_000
         };

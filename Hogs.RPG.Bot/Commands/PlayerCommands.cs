@@ -182,16 +182,16 @@ namespace Hogs.RPG.Bot.Commands
 
                 int xpRequiredPet = 20 + (pet.Level * pet.Level * 15);
                 double petProgress = (double)pet.XP / xpRequiredPet;
-
                 int filled = (int)(petProgress * 10);
                 string petBar = new string('█', filled) + new string('░', 10 - filled);
 
+                string displayName = pet.CustomName ?? def.Name;  // ← uses custom name if set
+
                 embed
-                    .AddField("🐾 Pet", $"{def.Icon} {def.Name}", false)
+                    .AddField("🐾 Pet", $"{def.Icon} {displayName}", false)
                     .AddField("Level", $"Lv. {pet.Level}", true)
                     .AddField("XP", $"{pet.XP} / {xpRequiredPet}", true)
                     .AddField("Progress", petBar, false)
-
                     .AddField("Attack", $"🗡 {atk}", true)
                     .AddField("Defense", $"🛡 {defStat}", true)
                     .AddField("Health", $"❤️ {hp}", true)
