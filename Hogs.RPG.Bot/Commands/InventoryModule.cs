@@ -41,10 +41,10 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
     [ComponentInteraction("inv_tab_*_*_*")]
     public async Task SwitchTab(string category, string sub, int page)
     {
-        // Top-level Materials button uses "none" but should default to Craft
-        string? subCategory = (sub == "none" && category == "Material")
-            ? "Craft"
-            : sub == "none" ? null : sub;
+        // Convert dash back to underscore for subCategory lookup
+        string? subCategory = sub == "none"
+            ? (category == "Material" ? "Craft" : null)
+            : sub.Replace("-", "_");
 
         await ShowInventory(category, subCategory, 0);
     }
@@ -55,14 +55,14 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
     [ComponentInteraction("inv_prev_*_*_*")]
     public async Task PrevPage(string category, string sub, int page)
     {
-        string? subCategory = sub == "none" ? null : sub;
+        string? subCategory = sub == "none" ? null : sub.Replace("-", "_");
         await ShowInventory(category, subCategory, page - 1);
     }
 
     [ComponentInteraction("inv_next_*_*_*")]
     public async Task NextPage(string category, string sub, int page)
     {
-        string? subCategory = sub == "none" ? null : sub;
+        string? subCategory = sub == "none" ? null : sub.Replace("-", "_");
         await ShowInventory(category, subCategory, page + 1);
     }
 
@@ -134,7 +134,9 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
             if (subCategory == "Craft" && entry.Item.Tier.HasValue && entry.Item.Tier != lastTier)
             {
                 lastTier = entry.Item.Tier;
-                var tierLabel = _tierNames.TryGetValue(entry.Item.Tier.Value, out var tn) ? tn : $"Tier {entry.Item.Tier}";
+                var tierLabel = _tierNames.TryGetValue(entry.Item.Tier.Value, out var tn)
+                    ? tn
+                    : $"Tier {entry.Item.Tier}";
                 sb.AppendLine($"\n**{tierLabel}**");
             }
 
@@ -184,20 +186,22 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
     private MessageComponent BuildComponents(string category, string? subCategory, int page, int totalPages)
     {
         var builder = new ComponentBuilder();
-        string sub = subCategory ?? "none";
+
+        // Use dash instead of underscore for subCategory in button IDs
+        // to avoid Discord.NET wildcard splitting on underscores
+        string sub = subCategory == null ? "none" : subCategory.Replace("_", "-");
 
         // Row 0 — Main category tabs
-        // Materials uses "none" here — distinct from the "Craft" sub-tab to avoid duplicate IDs
-        builder.WithButton("⚔️ Gear", $"inv_tab_Equipment_none_0", ButtonStyle.Primary, disabled: category == "Equipment", row: 0);
-        builder.WithButton("🧪 Potions", $"inv_tab_Potion_none_0", ButtonStyle.Primary, disabled: category == "Potion", row: 0);
-        builder.WithButton("🧱 Materials", $"inv_tab_Material_none_0", ButtonStyle.Primary, disabled: category == "Material", row: 0);
+        builder.WithButton("⚔️ Gear", "inv_tab_Equipment_none_0", ButtonStyle.Primary, disabled: category == "Equipment", row: 0);
+        builder.WithButton("🧪 Potions", "inv_tab_Potion_none_0", ButtonStyle.Primary, disabled: category == "Potion", row: 0);
+        builder.WithButton("🧱 Materials", "inv_tab_Material_none_0", ButtonStyle.Primary, disabled: category == "Material", row: 0);
 
-        // Row 1 — Material subcategory tabs (only when on Materials)
+        // Row 1 — Material subcategory tabs
         if (category == "Material")
         {
-            builder.WithButton("🧱 Craft", $"inv_tab_Material_Craft_0", ButtonStyle.Secondary, disabled: subCategory == "Craft", row: 1);
-            builder.WithButton("★ Rare", $"inv_tab_Material_Rare_0", ButtonStyle.Secondary, disabled: subCategory == "Rare", row: 1);
-            builder.WithButton("⚗️ Alchemy", $"inv_tab_Material_Alchemy_0", ButtonStyle.Secondary, disabled: subCategory == "Alchemy", row: 1);
+            builder.WithButton("🧱 Craft", "inv_tab_Material_Craft-0", ButtonStyle.Secondary, disabled: subCategory == "Craft", row: 1);
+            builder.WithButton("★ Rare", "inv_tab_Material_Rare-0", ButtonStyle.Secondary, disabled: subCategory == "Rare", row: 1);
+            builder.WithButton("⚗️ Alchemy", "inv_tab_Material_Alchemy-0", ButtonStyle.Secondary, disabled: subCategory == "Alchemy", row: 1);
         }
 
         // Row 2 — Pagination

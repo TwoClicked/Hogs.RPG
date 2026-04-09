@@ -10,6 +10,18 @@ using System.Text;
 
 namespace Hogs.RPG.Bot.Commands
 {
+    // =========================
+    // PET RENAME MODAL
+    // =========================
+    public class PetRenameModal : IModal
+    {
+        public string Title => "🐾 Rename Your Pet";
+
+        [InputLabel("New Pet Name")]
+        [ModalTextInput("pet_name", placeholder: "Enter a name...", minLength: 1, maxLength: 32)]
+        public string PetName { get; set; }
+    }
+
     public class ShopModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly ShopService _shopService;
@@ -99,12 +111,11 @@ namespace Hogs.RPG.Bot.Commands
         // PET RENAME MODAL SUBMIT
         // =========================
         [ModalInteraction("shop_petrename_modal")]
-        public async Task PetRenameModalSubmit()
+        public async Task PetRenameModalSubmit(PetRenameModal modal)
         {
             await DeferAsync(ephemeral: true);
 
-            var data = (Context.Interaction as SocketModal)!.Data;
-            var newName = data.Components.FirstOrDefault(c => c.CustomId == "pet_name")?.Value?.Trim();
+            var newName = modal.PetName?.Trim();
 
             if (string.IsNullOrWhiteSpace(newName))
             {
