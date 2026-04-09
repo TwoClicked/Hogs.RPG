@@ -31,7 +31,7 @@ namespace Hogs.RPG.Core.GameData.Shop
         {
             Id = "rpg_loot_crate",
             Name = "Loot Crate",
-            Description = "Open a crate for a random rare material drop.",
+            Description = "Open a crate for 20 rare material drops",
             Icon = "📦",
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
@@ -47,6 +47,17 @@ namespace Hogs.RPG.Core.GameData.Shop
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
             Price = 3_000
+        };
+
+        public static readonly ShopItemDefinition PetRename = new()
+        {
+            Id = "discord_pet_rename",
+            Name = "Pet Rename",
+            Description = "Rename your currently equipped pet to anything you like.",
+            Icon = "🐾",
+            Category = ShopCategory.DiscordRewards,
+            Type = ShopItemType.FixedPrice,
+            Price = 5_000
         };
     }
 }

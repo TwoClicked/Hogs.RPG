@@ -48,6 +48,23 @@ namespace Hogs.RPG.Bot.Commands
         [ComponentInteraction("shop_confirm_*")]
         public async Task ConfirmPurchase(string itemId)
         {
+            // Pet rename gets a modal instead of a confirm screen
+            if (itemId == "discord_pet_rename")
+            {
+                var modal = new ModalBuilder()
+                    .WithTitle("🐾 Rename Your Pet")
+                    .WithCustomId("shop_petrename_modal")
+                    .AddTextInput("New Pet Name", "pet_name",
+                        placeholder: "Enter a name...",
+                        minLength: 1,
+                        maxLength: 32,
+                        required: true)
+                    .Build();
+
+                await Context.Interaction.RespondWithModalAsync(modal);
+                return;
+            }
+
             await DeferAsync();
 
             if (!ShopRegistry.All.TryGetValue(itemId, out var item))
@@ -76,6 +93,36 @@ namespace Hogs.RPG.Bot.Commands
                 m.Embed = embed;
                 m.Components = components;
             });
+        }
+
+        // =========================
+        // PET RENAME MODAL SUBMIT
+        // =========================
+        [ModalInteraction("shop_petrename_modal")]
+        public async Task PetRenameModalSubmit()
+        {
+            await DeferAsync(ephemeral: true);
+
+            var data = (Context.Interaction as SocketModal)!.Data;
+            var newName = data.Components.FirstOrDefault(c => c.CustomId == "pet_name")?.Value?.Trim();
+
+            if (string.IsNullOrWhiteSpace(newName))
+            {
+                await FollowupAsync("❌ Name cannot be empty.", ephemeral: true);
+                return;
+            }
+
+            var guild = (Context.Channel as SocketGuildChannel)?.Guild;
+            if (guild == null)
+            {
+                await FollowupAsync("❌ This command must be used in a server.", ephemeral: true);
+                return;
+            }
+
+            var (success, message) = await _shopService.BuyAndRenamePetAsync(
+                Context.User.Id, "discord_pet_rename", guild, newName);
+
+            await FollowupAsync(message, ephemeral: true);
         }
 
         // =========================
@@ -196,18 +243,14 @@ namespace Hogs.RPG.Bot.Commands
             if (!ShopRegistry.All.TryGetValue(itemId, out var item))
                 return;
 
-            // Post public auction embed to #auction-house
             var auctionChannel = guild.GetTextChannel(AuctionChannelId);
             if (auctionChannel != null)
             {
                 var publicEmbed = BuildAuctionEmbed(auction, item);
                 var publicMsg = await auctionChannel.SendMessageAsync(embed: publicEmbed);
-
-                // Store message ID so we can edit it on each bid
                 await _shopService.SetAuctionMessageAsync(auction.Id, publicMsg.Id);
             }
 
-            // Confirm to the buyer (ephemeral)
             await ModifyOriginalResponseAsync(m =>
             {
                 m.Embed = new EmbedBuilder()
@@ -243,7 +286,6 @@ namespace Hogs.RPG.Bot.Commands
             var (success, message) = await _shopService.PlaceBidAsync(
                 Context.User.Id, auctionId, amount, guild);
 
-            // If successful, update the public auction embed in #auction-house
             if (success)
             {
                 var auction = await _shopService.GetAuctionByIdAsync(auctionId);
@@ -277,13 +319,11 @@ namespace Hogs.RPG.Bot.Commands
                 return;
             }
 
-            // Grab auction before ending so we can update the embed
             var auction = await _shopService.GetAuctionByIdAsync(auctionId);
 
             var (success, message) = await _shopService.EndAuctionAsync(
                 Context.User.Id, auctionId, guild);
 
-            // Update the public auction embed to show it has ended
             if (success && auction != null && ShopRegistry.All.TryGetValue(auction.ItemId, out var item))
             {
                 var auctionChannel = guild.GetTextChannel(AuctionChannelId);
@@ -304,7 +344,7 @@ namespace Hogs.RPG.Bot.Commands
                         await msg.ModifyAsync(m =>
                         {
                             m.Embed = endedEmbed;
-                            m.Components = new ComponentBuilder().Build(); // remove buttons if any
+                            m.Components = new ComponentBuilder().Build();
                         });
                     }
                 }
@@ -439,7 +479,6 @@ namespace Hogs.RPG.Bot.Commands
                 .WithFooter("🔒 = Requires Viking Rise guild role")
                 .Build();
 
-            // Row 0 — category tabs
             var builder = new ComponentBuilder()
                 .WithButton("⚔️ VR Resources", "shop_tab_VikingRiseResources",
                     category == ShopCategory.VikingRiseResources ? ButtonStyle.Primary : ButtonStyle.Secondary, row: 0)
@@ -450,7 +489,6 @@ namespace Hogs.RPG.Bot.Commands
                 .WithButton("🎮 RPG Perks", "shop_tab_RpgPerks",
                     category == ShopCategory.RpgPerks ? ButtonStyle.Primary : ButtonStyle.Secondary, row: 0);
 
-            // Rows 1-3 — item buttons
             int row = 1;
             int count = 0;
 
@@ -503,7 +541,7 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         // AUCTION EMBED HELPER
         // =========================
-        private Embed BuildAuctionEmbed(Hogs.RPG.Core.Entities.ActiveAuction auction, ShopItemDefinition item)
+        private Embed BuildAuctionEmbed(ActiveAuction auction, ShopItemDefinition item)
         {
             return new EmbedBuilder()
                 .WithTitle($"🔨 {item.Icon} {item.Name} — Live Auction")

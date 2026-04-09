@@ -10,7 +10,7 @@ namespace Hogs.RPG.Data
         {
             var optionsBuilder = new DbContextOptionsBuilder<GameDbContext>();
             optionsBuilder.UseNpgsql(
-                "Host=localhost;Database=HogsRPG;Username=postgres;Password=postgres;");
+                "Host=YOUR_HOST;Port=5432;Database=YOUR_DB;Username=YOUR_USER;Password=YOUR_PASSWORD;SSL Mode=Require;Trust Server Certificate=true");
             return new GameDbContext(optionsBuilder.Options);
         }
     }

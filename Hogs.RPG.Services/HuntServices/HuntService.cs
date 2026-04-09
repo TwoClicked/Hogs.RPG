@@ -253,7 +253,11 @@ namespace Hogs.RPG.Services.HuntServices
             if (rareCount > 0)
                 sb.AppendLine($"✨ {rareCount} Rare drops!");
 
-            sb.AppendLine($"\n🏹 Stamina: {player.HunterStamina}/100");
+            int displayMax = player.StaminaBoostExpiry.HasValue && player.StaminaBoostExpiry.Value > DateTime.UtcNow
+                ? 150
+                : 100;
+
+            sb.AppendLine($"\n🏹 Stamina: {player.HunterStamina}/{displayMax}");
             sb.AppendLine(levelMessage);
             sb.AppendLine(petLevelMessage);
 

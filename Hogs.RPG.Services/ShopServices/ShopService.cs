@@ -31,7 +31,6 @@ namespace Hogs.RPG.Services.ShopServices
             if (!ShopRegistry.All.TryGetValue(itemId, out var item))
                 return (false, "Item not found.");
 
-            // Role check
             if (item.RequiredRoleId.HasValue)
             {
                 var member = guild.GetUser(userId);
@@ -51,11 +50,9 @@ namespace Hogs.RPG.Services.ShopServices
             if (player.Gold < item.Price)
                 return (false, $"❌ You need **{item.Price:N0} gold** but only have **{player.Gold:N0}**.");
 
-            // Deduct gold
             player.Gold -= item.Price;
             await playerRepo.UpdatePlayerAsync(player);
 
-            // Log purchase
             await shopRepo.AddPurchaseAsync(new ShopPurchase
             {
                 BuyerDiscordId = userId,
@@ -64,12 +61,10 @@ namespace Hogs.RPG.Services.ShopServices
                 GoldPaid = item.Price
             });
 
-            // Apply instantly for RPG perks
             bool isInstant = item.Category == Hogs.RPG.Core.Enums.ShopCategory.RpgPerks;
             if (isInstant)
                 await ApplyRpgPerkAsync(userId, itemId, playerRepo);
 
-            // Post to feed
             await PostPurchaseFeedAsync(userId, item, isInstant);
 
             string confirmation = isInstant
@@ -77,6 +72,54 @@ namespace Hogs.RPG.Services.ShopServices
                 : $"✅ You purchased **{item.Icon} {item.Name}** for **{item.Price:N0} gold**!\nAn admin will fulfil your order soon.";
 
             return (true, confirmation);
+        }
+
+        // =========================
+        // BUY AND RENAME PET
+        // =========================
+        public async Task<(bool success, string message)> BuyAndRenamePetAsync(
+            ulong userId, string itemId, SocketGuild guild, string newName)
+        {
+            if (!ShopRegistry.All.TryGetValue(itemId, out var item))
+                return (false, "Item not found.");
+
+            using var scope = _scopeFactory.CreateScope();
+            var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+            var shopRepo = scope.ServiceProvider.GetRequiredService<ShopRepository>();
+            var petRepo = scope.ServiceProvider.GetRequiredService<PetRepository>();
+
+            var player = await playerRepo.GetByDiscordIdAsync(userId);
+
+            if (player == null)
+                return (false, "You need to start your adventure first.");
+
+            if (player.Gold < item.Price)
+                return (false, $"❌ You need **{item.Price:N0} gold** but only have **{player.Gold:N0}**.");
+
+            var pet = await petRepo.GetEquippedPetAsync(userId);
+
+            if (pet == null)
+                return (false, "❌ You don't have a pet equipped. Equip a pet first then try again.");
+
+            player.Gold -= item.Price;
+            await playerRepo.UpdatePlayerAsync(player);
+
+            pet.CustomName = newName;
+            await petRepo.SaveAsync();
+
+            await shopRepo.AddPurchaseAsync(new ShopPurchase
+            {
+                BuyerDiscordId = userId,
+                ItemId = item.Id,
+                ItemName = item.Name,
+                GoldPaid = item.Price,
+                IsFulfilled = true,
+                FulfilledAt = DateTime.UtcNow
+            });
+
+            await PostPurchaseFeedAsync(userId, item, true);
+
+            return (true, $"✅ Your pet has been renamed to **{newName}** for **{item.Price:N0} gold**!");
         }
 
         // =========================
@@ -171,7 +214,6 @@ namespace Hogs.RPG.Services.ShopServices
             if (bidder.Gold < bidAmount)
                 return (false, $"❌ You need **{bidAmount:N0} gold** but only have **{bidder.Gold:N0}**.");
 
-            // Refund previous bidder instantly
             if (auction.CurrentBidderDiscordId.HasValue &&
                 auction.CurrentBidderDiscordId.Value != auction.StartedByDiscordId)
             {
@@ -365,7 +407,9 @@ namespace Hogs.RPG.Services.ShopServices
                 // 🏹 STAMINA RESET
                 // =========================
                 case "rpg_stamina_reset":
-                    player.HunterStamina = 100;
+                    int resetMax = player.StaminaBoostExpiry.HasValue &&
+                                   player.StaminaBoostExpiry.Value > DateTime.UtcNow ? 150 : 100;
+                    player.HunterStamina = resetMax;
                     player.LastHunterStaminaUpdate = DateTimeOffset.UtcNow.ToString("o");
                     await playerRepo.UpdatePlayerAsync(player);
                     break;
@@ -394,10 +438,6 @@ namespace Hogs.RPG.Services.ShopServices
                     var rareItems = new[]
                     {
                         "wolf_trophy",
-                        "boar_tusk",
-                        "stag_antler",
-                        "ancient_feather",
-                        "bear_heart",
                         "alpha_fang",
                         "storm_talon",
                         "saber_relic",

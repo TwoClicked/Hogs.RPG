@@ -75,7 +75,7 @@ namespace Hogs.RPG.Core.GameData.Shop
         {
             Id = "vr_clear_fines",
             Name = "Clear Fines",
-            Description = "Clear all your active fines.",
+            Description = "Clear all your active fines.(DOES NOT APPLY TO VIKING REIGN FINES)",
             Icon = "📜",
             Category = ShopCategory.VikingRiseResources,
             Type = ShopItemType.FixedPrice,

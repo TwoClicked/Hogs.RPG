@@ -56,16 +56,5 @@ namespace Hogs.RPG.Core.GameData.Shop
             Type = ShopItemType.FixedPrice,
             Price = 8_000
         };
-
-        public static readonly ShopItemDefinition PetRename = new()
-        {
-            Id = "discord_pet_rename",
-            Name = "Pet Rename",
-            Description = "Rename your currently equipped pet to anything you like.",
-            Icon = "🐾",
-            Category = ShopCategory.DiscordRewards,
-            Type = ShopItemType.FixedPrice,
-            Price = 5_000
-        };
     }
 }

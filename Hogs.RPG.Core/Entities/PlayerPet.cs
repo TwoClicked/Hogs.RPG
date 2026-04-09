@@ -15,6 +15,7 @@ namespace Hogs.RPG.Core.Entities
         public Player Player { get; set; }
         public string PetId { get; set; }
 
+        public string? CustomName { get; set; }
         public int Level { get; set; } = 1;
         public int XP { get; set; } = 0;
 

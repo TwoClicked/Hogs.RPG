@@ -29,13 +29,14 @@ namespace Hogs.RPG.Core.Registries
             { DiscordShopItems.NameColor.Id,   DiscordShopItems.NameColor   },
             { DiscordShopItems.VipLounge.Id,   DiscordShopItems.VipLounge   },
             { DiscordShopItems.Shoutout.Id,    DiscordShopItems.Shoutout    },
-            { DiscordShopItems.PetRename.Id,   DiscordShopItems.PetRename   },
+
 
             // ===== RPG Perks =====
             { RpgPerkShopItems.DoubleXp.Id,      RpgPerkShopItems.DoubleXp      },
             { RpgPerkShopItems.StaminaBoost.Id,  RpgPerkShopItems.StaminaBoost  },
             { RpgPerkShopItems.LootCrate.Id,     RpgPerkShopItems.LootCrate     },
             { RpgPerkShopItems.StaminaReset.Id,  RpgPerkShopItems.StaminaReset  },
+            { RpgPerkShopItems.PetRename.Id,     RpgPerkShopItems.PetRename   },
         };
 
         // Helper to get all items in a given category
