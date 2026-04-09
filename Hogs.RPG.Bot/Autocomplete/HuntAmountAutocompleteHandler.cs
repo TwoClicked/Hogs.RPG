@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+
 public class HuntAmountAutocompleteHandler : AutocompleteHandler
 {
     public override async Task<AutocompletionResult> GenerateSuggestionsAsync(
@@ -28,19 +29,30 @@ public class HuntAmountAutocompleteHandler : AutocompleteHandler
             return AutocompletionResult.FromSuccess();
 
         var input = autocompleteInteraction.Data.Current.Value?.ToString()?.ToLower() ?? "";
+
+        // Check if stamina boost is active
+        bool staminaBoostActive = player.StaminaBoostExpiry.HasValue &&
+                                  player.StaminaBoostExpiry.Value > DateTime.UtcNow;
+
+        int maxCap = staminaBoostActive ? 150 : 100;
         int max = player.HunterStamina;
-        int maxCap = 100;
+
         var results = new List<AutocompleteResult>();
 
-        results.Add(new AutocompleteResult($"🔥 Max ({max}/{maxCap})", "max"));
+        string boostTag = staminaBoostActive ? " ⚡ Boosted" : "";
+        results.Add(new AutocompleteResult($"🔥 Max ({max}/{maxCap}){boostTag}", "max"));
 
-        var presets = new[] { 1, 5, 10, 25, 50 };
+        var presets = new[] { 1, 5, 10, 25, 50, 100 };
         foreach (var val in presets)
         {
             if (val > max) continue;
             int percent = (int)Math.Round((double)val / maxCap * 100);
             results.Add(new AutocompleteResult($"{val} ({percent}%)", val.ToString()));
         }
+
+        // Add 150 preset only if boost is active
+        if (staminaBoostActive && max >= 150)
+            results.Add(new AutocompleteResult($"150 (100%) ⚡", "150"));
 
         results = results
             .Where(r => string.IsNullOrEmpty(input) || r.Name.ToLower().Contains(input))

@@ -22,7 +22,7 @@ namespace Hogs.RPG.Bot.Commands
         private readonly EquipService _equipService;
         private readonly StatService _statService;
         private readonly EquipmentService _equipmentService;
-        private readonly EnergyService _energyService; 
+        private readonly EnergyService _energyService;
         private readonly HunterStaminaService _hunterStaminaService;
         private readonly DiscordSocketClient _client;
         private readonly PetService _petService;
@@ -49,6 +49,9 @@ namespace Hogs.RPG.Bot.Commands
             _petService = petService;
         }
 
+        // =========================
+        // START ADVENTURE
+        // =========================
         [SlashCommand("startadventure", "Begin your adventure")]
         public async Task StartAdventure()
         {
@@ -91,27 +94,25 @@ namespace Hogs.RPG.Bot.Commands
             await _petService.GivePetAsync(Context.User.Id, "verdant_wisp");
             await _petService.EquipPetAsync(Context.User.Id, "verdant_wisp");
 
-            // =========================
-            // 🎭 ASSIGN RPG ROLE
-            // =========================
+            // 🎭 Assign RPG role
             var guild = _client.GetGuild(Context.Guild.Id);
             var user = guild.GetUser(Context.User.Id);
             var role = guild.GetRole(1485387222822948934);
 
             if (user != null && role != null)
-            {
                 await user.AddRoleAsync(role);
-            }
 
             await FollowupAsync(
                 "⚔ Your adventure begins!\n\nWelcome to **HOGS RPG**.\nUse `/hunt` to begin gathering resources.",
                 ephemeral: true);
         }
 
+        // =========================
+        // PROFILE
+        // =========================
         [SlashCommand("profile", "View your character")]
         public async Task Profile()
         {
-
             if (Context.Channel.Id != 1486017679016857752UL)
             {
                 await RespondAsync("❌ This command can only be used in <#1486017679016857752>.", ephemeral: true);
@@ -135,6 +136,25 @@ namespace Hogs.RPG.Bot.Commands
             _energyService.RegenerateEnergy(player);
             _hunterStaminaService.Regenerate(player);
 
+            // =========================
+            // ACTIVE BOOSTS
+            // =========================
+            bool profileXpBoost = player.XpBoostExpiry.HasValue && player.XpBoostExpiry.Value > DateTime.UtcNow;
+            bool profileStaminaBoost = player.StaminaBoostExpiry.HasValue && player.StaminaBoostExpiry.Value > DateTime.UtcNow;
+
+            string xpBoostText = profileXpBoost
+                ? $"✨ Active until {player.XpBoostExpiry!.Value:dd MMM HH:mm} UTC"
+                : "❌ Inactive";
+
+            string staminaBoostText = profileStaminaBoost
+                ? $"⚡ Active until {player.StaminaBoostExpiry!.Value:dd MMM HH:mm} UTC"
+                : "❌ Inactive";
+
+            int staminaMax = profileStaminaBoost ? 150 : 100;
+
+            // =========================
+            // XP BAR
+            // =========================
             int xpRequired = player.Level * player.Level * 100;
             double progress = (double)player.XP / xpRequired;
             int filledBars = (int)(progress * 10);
@@ -161,7 +181,10 @@ namespace Hogs.RPG.Bot.Commands
                 .AddField("Health", $"❤️ {player.Health}/{stats.health} (+{bonusHealth})", true)
 
                 .AddField("Energy", $"⚡ {player.Energy}", true)
-                .AddField("Hunter Stamina", $"⚡ {player.HunterStamina}", true)
+                .AddField("Hunter Stamina", $"🏹 {player.HunterStamina}/{staminaMax}", true)
+
+                .AddField("✨ Double XP", xpBoostText, true)
+                .AddField("⚡ Stamina Boost", staminaBoostText, true)
 
                 .AddField(
                     "⚒ Equipment",
@@ -185,7 +208,7 @@ namespace Hogs.RPG.Bot.Commands
                 int filled = (int)(petProgress * 10);
                 string petBar = new string('█', filled) + new string('░', 10 - filled);
 
-                string displayName = pet.CustomName ?? def.Name;  // ← uses custom name if set
+                string displayName = pet.CustomName ?? def.Name;
 
                 embed
                     .AddField("🐾 Pet", $"{def.Icon} {displayName}", false)
@@ -206,6 +229,9 @@ namespace Hogs.RPG.Bot.Commands
             await FollowupAsync(embed: embed.Build());
         }
 
+        // =========================
+        // FORMAT ITEM HELPER
+        // =========================
         private string FormatItem(string id)
         {
             if (string.IsNullOrEmpty(id))
@@ -215,23 +241,14 @@ namespace Hogs.RPG.Bot.Commands
             if (equip == null)
                 return id;
 
-            // 🔥 Get ItemDefinition (for icon + name)
             InventoryItemDefinitions.All.TryGetValue(id, out var itemDef);
 
             var stats = new List<string>();
+            if (equip.Attack > 0) stats.Add($"+{equip.Attack} ATK");
+            if (equip.Defense > 0) stats.Add($"+{equip.Defense} DEF");
+            if (equip.Health > 0) stats.Add($"+{equip.Health} HP");
 
-            if (equip.Attack > 0)
-                stats.Add($"+{equip.Attack} ATK");
-
-            if (equip.Defense > 0)
-                stats.Add($"+{equip.Defense} DEF");
-
-            if (equip.Health > 0)
-                stats.Add($"+{equip.Health} HP");
-
-            var statText = stats.Count > 0
-                ? $" ({string.Join(", ", stats)})"
-                : "";
+            var statText = stats.Count > 0 ? $" ({string.Join(", ", stats)})" : "";
 
             var icon = itemDef != null && !string.IsNullOrWhiteSpace(itemDef.Icon)
                 ? $"{itemDef.Icon} "
@@ -242,12 +259,14 @@ namespace Hogs.RPG.Bot.Commands
             return $"{icon}{name}{statText}";
         }
 
+        // =========================
+        // EQUIP
+        // =========================
         [SlashCommand("equip", "Equip an item")]
         public async Task Equip(
             [Autocomplete(typeof(EquipSlotAutocompleteHandler))] string slot,
             [Autocomplete(typeof(EquipBySlotAutocompleteHandler))] string itemId)
         {
-
             var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
 
             if (player == null)
@@ -271,6 +290,9 @@ namespace Hogs.RPG.Bot.Commands
             await RespondAsync(preview, components: components.Build(), ephemeral: true);
         }
 
+        // =========================
+        // UNEQUIP
+        // =========================
         [SlashCommand("unequip", "Unequip a piece of gear")]
         public async Task Unequip(
             [Autocomplete(typeof(UnequipAutocompleteHandler))] string slot)
@@ -286,26 +308,25 @@ namespace Hogs.RPG.Bot.Commands
             }
 
             var result = await _equipService.UnequipAsync(Context.User.Id, slot);
-
             await FollowupAsync(result, ephemeral: true);
         }
 
+        // =========================
+        // EQUIP CONFIRM / CANCEL
+        // =========================
         [ComponentInteraction("equip_confirm:*")]
         public async Task ConfirmEquip(string itemId)
         {
             if (Context.Interaction is SocketMessageComponent component)
             {
-                // 🔥 Immediately ACK + remove buttons
                 await component.UpdateAsync(msg =>
                 {
                     msg.Content = "⏳ Equipping item...";
-                    msg.Components = new ComponentBuilder().Build(); // removes buttons
+                    msg.Components = new ComponentBuilder().Build();
                 });
 
-                // Now do the actual work
                 var result = await _equipService.EquipAsync(Context.User.Id, itemId);
 
-                // Update message again
                 await component.ModifyOriginalResponseAsync(msg =>
                 {
                     msg.Content = result;
