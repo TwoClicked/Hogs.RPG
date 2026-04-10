@@ -26,9 +26,6 @@ namespace Hogs.RPG.Services.ShopServices
             _dungeonService = dungeonService;
         }
 
-        // =========================
-        // BUY (FIXED PRICE)
-        // =========================
         public async Task<(bool success, string message)> BuyAsync(ulong userId, string itemId, SocketGuild guild)
         {
             if (!ShopRegistry.All.TryGetValue(itemId, out var item))
@@ -56,15 +53,20 @@ namespace Hogs.RPG.Services.ShopServices
             player.Gold -= item.Price;
             await playerRepo.UpdatePlayerAsync(player);
 
+            // Declare before use
+            bool isInstant = item.Category == Hogs.RPG.Core.Enums.ShopCategory.RpgPerks;
+
+            // Log purchase — mark as fulfilled immediately for instant perks
             await shopRepo.AddPurchaseAsync(new ShopPurchase
             {
                 BuyerDiscordId = userId,
                 ItemId = item.Id,
                 ItemName = item.Name,
-                GoldPaid = item.Price
+                GoldPaid = item.Price,
+                IsFulfilled = isInstant,
+                FulfilledAt = isInstant ? DateTime.UtcNow : null
             });
 
-            bool isInstant = item.Category == Hogs.RPG.Core.Enums.ShopCategory.RpgPerks;
             if (isInstant)
                 await ApplyRpgPerkAsync(userId, itemId, playerRepo);
 
