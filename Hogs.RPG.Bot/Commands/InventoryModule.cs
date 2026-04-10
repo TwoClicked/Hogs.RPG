@@ -41,10 +41,10 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
     [ComponentInteraction("inv_tab_*_*_*")]
     public async Task SwitchTab(string category, string sub, int page)
     {
-        // Convert dash back to underscore for subCategory lookup
+        // Sub comes in as the raw value e.g. "Craft", "Rare", "Alchemy", "none"
         string? subCategory = sub == "none"
             ? (category == "Material" ? "Craft" : null)
-            : sub.Replace("-", "_");
+            : sub;
 
         await ShowInventory(category, subCategory, 0);
     }
@@ -55,14 +55,15 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
     [ComponentInteraction("inv_prev_*_*_*")]
     public async Task PrevPage(string category, string sub, int page)
     {
-        string? subCategory = sub == "none" ? null : sub.Replace("-", "_");
+        // Sub comes in lowercase from pagination buttons e.g. "craft", "rare", "alchemy", "none"
+        string? subCategory = sub == "none" ? null : char.ToUpper(sub[0]) + sub.Substring(1);
         await ShowInventory(category, subCategory, page - 1);
     }
 
     [ComponentInteraction("inv_next_*_*_*")]
     public async Task NextPage(string category, string sub, int page)
     {
-        string? subCategory = sub == "none" ? null : sub.Replace("-", "_");
+        string? subCategory = sub == "none" ? null : char.ToUpper(sub[0]) + sub.Substring(1);
         await ShowInventory(category, subCategory, page + 1);
     }
 
@@ -187,9 +188,10 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
     {
         var builder = new ComponentBuilder();
 
-        // Use dash instead of underscore for subCategory in button IDs
-        // to avoid Discord.NET wildcard splitting on underscores
-        string sub = subCategory == null ? "none" : subCategory.Replace("_", "-");
+        // Pagination uses lowercase sub to keep it a single word with no underscores
+        // e.g. "craft", "rare", "alchemy", "none"
+        // Tab buttons use the original cased value e.g. "Craft", "Rare", "Alchemy"
+        string paginationSub = subCategory == null ? "none" : subCategory.ToLower();
 
         // Row 0 — Main category tabs
         builder.WithButton("⚔️ Gear", "inv_tab_Equipment_none_0", ButtonStyle.Primary, disabled: category == "Equipment", row: 0);
@@ -197,17 +199,18 @@ public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
         builder.WithButton("🧱 Materials", "inv_tab_Material_none_0", ButtonStyle.Primary, disabled: category == "Material", row: 0);
 
         // Row 1 — Material subcategory tabs
+        // These use the original _ format and map directly to handler wildcards
         if (category == "Material")
         {
-            builder.WithButton("🧱 Craft", "inv_tab_Material_Craft-0", ButtonStyle.Secondary, disabled: subCategory == "Craft", row: 1);
-            builder.WithButton("★ Rare", "inv_tab_Material_Rare-0", ButtonStyle.Secondary, disabled: subCategory == "Rare", row: 1);
-            builder.WithButton("⚗️ Alchemy", "inv_tab_Material_Alchemy-0", ButtonStyle.Secondary, disabled: subCategory == "Alchemy", row: 1);
+            builder.WithButton("🧱 Craft", "inv_tab_Material_Craft_0", ButtonStyle.Secondary, disabled: subCategory == "Craft", row: 1);
+            builder.WithButton("★ Rare", "inv_tab_Material_Rare_0", ButtonStyle.Secondary, disabled: subCategory == "Rare", row: 1);
+            builder.WithButton("⚗️ Alchemy", "inv_tab_Material_Alchemy_0", ButtonStyle.Secondary, disabled: subCategory == "Alchemy", row: 1);
         }
 
         // Row 2 — Pagination
-        builder.WithButton("⬅️", $"inv_prev_{category}_{sub}_{page}", ButtonStyle.Secondary, disabled: page == 0, row: 2);
+        builder.WithButton("⬅️", $"inv_prev_{category}_{paginationSub}_{page}", ButtonStyle.Secondary, disabled: page == 0, row: 2);
         builder.WithButton($"Page {page + 1}/{Math.Max(1, totalPages)}", "inv_page", ButtonStyle.Secondary, disabled: true, row: 2);
-        builder.WithButton("➡️", $"inv_next_{category}_{sub}_{page}", ButtonStyle.Secondary, disabled: page >= totalPages - 1, row: 2);
+        builder.WithButton("➡️", $"inv_next_{category}_{paginationSub}_{page}", ButtonStyle.Secondary, disabled: page >= totalPages - 1, row: 2);
 
         return builder.Build();
     }
