@@ -183,7 +183,7 @@ namespace Hogs.RPG.Bot.Commands
                 .AddField("Energy", $"⚡ {player.Energy}", true)
                 .AddField("Hunter Stamina", $"🏹 {player.HunterStamina}/{staminaMax}", true)
 
-                .AddField("✨ Double XP", xpBoostText, true)
+                .AddField("✨ Double XP", xpBoostText, false)
                 .AddField("⚡ Stamina Boost", staminaBoostText, true)
 
                 .AddField(
