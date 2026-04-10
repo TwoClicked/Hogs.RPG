@@ -143,11 +143,11 @@ namespace Hogs.RPG.Bot.Commands
             bool profileStaminaBoost = player.StaminaBoostExpiry.HasValue && player.StaminaBoostExpiry.Value > DateTime.UtcNow;
 
             string xpBoostText = profileXpBoost
-                ? $"✨ Active until {player.XpBoostExpiry!.Value:dd MMM HH:mm} UTC"
+                ? $" Active until {player.XpBoostExpiry!.Value:dd MMM HH:mm} UTC"
                 : "❌ Inactive";
 
             string staminaBoostText = profileStaminaBoost
-                ? $"⚡ Active until {player.StaminaBoostExpiry!.Value:dd MMM HH:mm} UTC"
+                ? $" Active until {player.StaminaBoostExpiry!.Value:dd MMM HH:mm} UTC"
                 : "❌ Inactive";
 
             int staminaMax = profileStaminaBoost ? 150 : 100;
