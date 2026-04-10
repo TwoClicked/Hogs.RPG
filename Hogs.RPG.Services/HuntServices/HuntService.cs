@@ -158,7 +158,7 @@ namespace Hogs.RPG.Services.HuntServices
                     xpPotionsUsed = potionsToUse;
                     remainingXpPotions = available - potionsToUse;
                     // ✅ Apply boost directly to XP, no ActiveBuffs touched
-                    totalXp = (int)(totalXp * 2.0);
+                    totalXp = (int)(totalXp * 1.5);
                 }
                 else
                 {
@@ -237,7 +237,7 @@ namespace Hogs.RPG.Services.HuntServices
             if (xpPotionsUsed > 0)
                 sb.AppendLine($"✨ Used {xpPotionsUsed} XP Potion(s) ({remainingXpPotions} left)");
             else if (player.AutoUseXpPotions)
-                sb.AppendLine($"🧪 XP Potions available: {remainingXpPotions}");
+                sb.AppendLine($"🧪 Double XP active, No XP Potions used");
 
             if (xpMultiplier > 1)
                 sb.AppendLine($"✨ XP Multiplier Active ({xpMultiplier}x)");

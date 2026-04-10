@@ -410,19 +410,30 @@ namespace Hogs.RPG.Bot.Commands
                 return;
             }
 
-            var sb = new StringBuilder();
-            sb.AppendLine("📋 **Pending Purchases**\n");
+            // Split into pages of 10 to stay under embed limits
+            const int pageSize = 10;
+            var pages = purchases.Chunk(pageSize).ToList();
 
-            foreach (var p in purchases)
+            foreach (var page in pages)
             {
-                sb.AppendLine(
-                    $"**#{p.Id}** — <@{p.BuyerDiscordId}>\n" +
-                    $"  {p.ItemName} — **{p.GoldPaid:N0} gold**\n" +
-                    $"  Purchased: {p.PurchasedAt:dd MMM yyyy HH:mm} UTC\n" +
-                    $"  Use `/shopfulfil {p.Id}` to mark complete\n");
-            }
+                var sb = new StringBuilder();
 
-            await FollowupAsync(sb.ToString(), ephemeral: true);
+                foreach (var p in page)
+                {
+                    sb.AppendLine(
+                        $"**#{p.Id}** — <@{p.BuyerDiscordId}>\n" +
+                        $"  {p.ItemName} — **{p.GoldPaid:N0} gold**\n" +
+                        $"  {p.PurchasedAt:dd MMM yyyy HH:mm} UTC — `/shopfulfil {p.Id}`\n");
+                }
+
+                var embed = new EmbedBuilder()
+                    .WithTitle($"📋 Pending Purchases ({purchases.Count} total)")
+                    .WithDescription(sb.ToString().Trim())
+                    .WithColor(Color.Orange)
+                    .Build();
+
+                await FollowupAsync(embed: embed, ephemeral: true);
+            }
         }
 
         // =========================

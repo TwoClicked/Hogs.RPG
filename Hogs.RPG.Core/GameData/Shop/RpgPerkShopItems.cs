@@ -13,7 +13,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "✨",
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
-            Price = 8_000
+            Price = 7_000
         };
 
         public static readonly ShopItemDefinition StaminaBoost = new()
@@ -35,7 +35,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "📦",
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
-            Price = 6_000
+            Price = 8_000
         };
 
         public static readonly ShopItemDefinition StaminaReset = new()
@@ -46,7 +46,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "🏹",
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
-            Price = 3_000
+            Price = 1_500
         };
 
         public static readonly ShopItemDefinition PetRename = new()
@@ -68,7 +68,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "⚗️",
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
-            Price = 2_000
+            Price = 1_000
         };
 
         public static readonly ShopItemDefinition PetSnackSmall = new()
@@ -101,7 +101,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "🍖",
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
-            Price = 1_000
+            Price = 1_500
         };
 
         public static readonly ShopItemDefinition DungeonReset = new()

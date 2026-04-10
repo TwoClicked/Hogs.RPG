@@ -47,7 +47,7 @@ namespace Hogs.RPG.Services.Game
                 return Simple("You are already in a dungeon.");
 
             // Dungeon cooldown check
-            const int COOLDOWN_HOURS = 1;
+            const int COOLDOWN_HOURS = 2;
 
             if (_lastDungeonRun.TryGetValue(userId, out var lastRun))
             {
