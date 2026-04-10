@@ -4,6 +4,7 @@ using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.Shop;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,14 +14,16 @@ namespace Hogs.RPG.Services.ShopServices
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly DiscordSocketClient _client;
+        private readonly DungeonService _dungeonService;
 
         private readonly ulong _feedChannelId = 1485357755433750549;
         private readonly ulong _adminRoleId = 1483528182106685691;
 
-        public ShopService(IServiceScopeFactory scopeFactory, DiscordSocketClient client)
+        public ShopService(IServiceScopeFactory scopeFactory, DiscordSocketClient client, DungeonService dungeonService)
         {
             _scopeFactory = scopeFactory;
             _client = client;
+            _dungeonService = dungeonService;
         }
 
         // =========================
@@ -467,6 +470,65 @@ namespace Hogs.RPG.Services.ShopServices
                             await inventoryService.GiveItemAsync(userId, drop.Key, drop.Value);
                     }
                     break;
+
+                // =========================
+                // ⚗️ ENERGY REFILL
+                // =========================
+                case "rpg_energy_refill":
+                    player.Energy = 100;
+                    player.LastEnergyUpdate = DateTimeOffset.UtcNow.ToString("o");
+                    await playerRepo.UpdatePlayerAsync(player);
+                    break;
+
+                // =========================
+                // 🍖 PET SNACK SMALL — +50 XP
+                // =========================
+                case "rpg_pet_snack_small":
+                    await ApplyPetSnackAsync(userId, 50);
+                    break;
+
+                // =========================
+                // 🍗 PET SNACK MEDIUM — +150 XP
+                // =========================
+                case "rpg_pet_snack_medium":
+                    await ApplyPetSnackAsync(userId, 150);
+                    break;
+
+                // =========================
+                // 🍖 PET SNACK LARGE — +300 XP
+                // =========================
+                case "rpg_pet_snack_large":
+                    await ApplyPetSnackAsync(userId, 300);
+                    break;
+
+                // =========================
+                // 🏰 DUNGEON COOLDOWN RESET
+                // =========================
+                case "rpg_dungeon_reset":
+                    _dungeonService.ResetDungeonCooldown(userId);
+                    break;
+            }
+        }
+
+        // =========================
+        // PET SNACK HELPER
+        // =========================
+        private async Task ApplyPetSnackAsync(ulong userId, int xpAmount)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var petService = scope.ServiceProvider
+                .GetRequiredService<Hogs.RPG.Services.PetServices.PetService>();
+
+            var (leveledUp, newLevel) = await petService.AddXPAsync(userId, xpAmount);
+
+            if (leveledUp)
+            {
+                var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
+                if (channel != null)
+                {
+                    await channel.SendMessageAsync(
+                        $"🐾 <@{userId}>'s pet reached **Level {newLevel}** from a snack! 🎉");
+                }
             }
         }
     }

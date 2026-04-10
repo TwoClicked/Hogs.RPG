@@ -32,11 +32,16 @@ namespace Hogs.RPG.Core.Registries
 
 
             // ===== RPG Perks =====
-            { RpgPerkShopItems.DoubleXp.Id,      RpgPerkShopItems.DoubleXp      },
-            { RpgPerkShopItems.StaminaBoost.Id,  RpgPerkShopItems.StaminaBoost  },
-            { RpgPerkShopItems.LootCrate.Id,     RpgPerkShopItems.LootCrate     },
-            { RpgPerkShopItems.StaminaReset.Id,  RpgPerkShopItems.StaminaReset  },
-            { RpgPerkShopItems.PetRename.Id,     RpgPerkShopItems.PetRename   },
+            { RpgPerkShopItems.DoubleXp.Id,         RpgPerkShopItems.DoubleXp      },
+            { RpgPerkShopItems.StaminaBoost.Id,     RpgPerkShopItems.StaminaBoost  },
+            { RpgPerkShopItems.LootCrate.Id,        RpgPerkShopItems.LootCrate     },
+            { RpgPerkShopItems.StaminaReset.Id,     RpgPerkShopItems.StaminaReset  },
+            { RpgPerkShopItems.PetRename.Id,        RpgPerkShopItems.PetRename   },
+            { RpgPerkShopItems.EnergyRefill.Id,     RpgPerkShopItems.EnergyRefill    },
+            { RpgPerkShopItems.PetSnackSmall.Id,    RpgPerkShopItems.PetSnackSmall   },
+            { RpgPerkShopItems.PetSnackMedium.Id,   RpgPerkShopItems.PetSnackMedium  },
+            { RpgPerkShopItems.PetSnackLarge.Id,    RpgPerkShopItems.PetSnackLarge   },
+            { RpgPerkShopItems.DungeonReset.Id,     RpgPerkShopItems.DungeonReset    },
         };
 
         // Helper to get all items in a given category

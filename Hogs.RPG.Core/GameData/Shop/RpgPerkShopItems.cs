@@ -31,7 +31,7 @@ namespace Hogs.RPG.Core.GameData.Shop
         {
             Id = "rpg_loot_crate",
             Name = "Loot Crate",
-            Description = "Open a crate for 20 rare material drops",
+            Description = "Open a crate for a random rare material drop.",
             Icon = "📦",
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
@@ -58,6 +58,61 @@ namespace Hogs.RPG.Core.GameData.Shop
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
             Price = 5_000
+        };
+
+        public static readonly ShopItemDefinition EnergyRefill = new()
+        {
+            Id = "rpg_energy_refill",
+            Name = "Energy Refill",
+            Description = "Instantly restore your gathering energy to full.",
+            Icon = "⚗️",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 2_000
+        };
+
+        public static readonly ShopItemDefinition PetSnackSmall = new()
+        {
+            Id = "rpg_pet_snack_small",
+            Name = "Pet Snack — Small",
+            Description = "Give your equipped pet a small snack for +50 XP.",
+            Icon = "🍖",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 500
+        };
+
+        public static readonly ShopItemDefinition PetSnackMedium = new()
+        {
+            Id = "rpg_pet_snack_medium",
+            Name = "Pet Snack — Medium",
+            Description = "Give your equipped pet a hearty snack for +150 XP.",
+            Icon = "🍗",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 1_000
+        };
+
+        public static readonly ShopItemDefinition PetSnackLarge = new()
+        {
+            Id = "rpg_pet_snack_large",
+            Name = "Pet Snack — Large",
+            Description = "Give your equipped pet a feast for +300 XP.",
+            Icon = "🍖",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 1_000
+        };
+
+        public static readonly ShopItemDefinition DungeonReset = new()
+        {
+            Id = "rpg_dungeon_reset",
+            Name = "Dungeon Reset",
+            Description = "Clear your dungeon cooldown and enter again immediately.",
+            Icon = "🏰",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 3_000
         };
     }
 }

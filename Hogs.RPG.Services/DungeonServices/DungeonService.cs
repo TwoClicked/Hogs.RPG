@@ -467,6 +467,14 @@ namespace Hogs.RPG.Services.Game
         }
 
         // =========================
+        // RESET DUNGEON COOLDOWN
+        // =========================
+        public void ResetDungeonCooldown(ulong userId)
+        {
+            _lastDungeonRun.Remove(userId);
+        }
+
+        // =========================
         // UPDATE MESSAGE
         // =========================
         public async Task UpdateDungeonMessageAsync(ulong userId, DungeonResult result)

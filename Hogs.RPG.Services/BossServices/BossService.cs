@@ -7,6 +7,7 @@ using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
+using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -222,6 +223,7 @@ namespace Hogs.RPG.Services.Game
             var statService = scope.ServiceProvider.GetRequiredService<StatService>();
             var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
             var levelService = scope.ServiceProvider.GetRequiredService<LevelService>();
+            var petService = scope.ServiceProvider.GetRequiredService<PetService>();
 
             foreach (var userId in boss.Participants)
             {
@@ -238,6 +240,17 @@ namespace Hogs.RPG.Services.Game
                 }
 
                 var (levelMessage, levelsGained) = levelService.CheckLevelUp(player);
+
+                //  PET XP — 50 per boss kill
+
+                var (petLeveled, petLevel) = await petService.AddXPAsync(userId, 50);
+                if (petLeveled)
+                {
+                    var feedChannel = _client.GetChannel(_feedChannelId) as IMessageChannel;
+                    if (feedChannel != null)
+                        await feedChannel.SendMessageAsync(
+                            $"🐾 <@{userId}>'s pet reached **Level {petLevel}**! 🎉");
+                }
 
                 var playerDrops = new List<string>();
 
