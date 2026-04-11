@@ -185,6 +185,179 @@ namespace Hogs.RPG.Services.Game
             return boss;
         }
 
+        //public async Task<string> HandleBossDeathAsync(ActiveBoss boss)
+        //{
+        //    var sb = new StringBuilder();
+        //    sb.AppendLine($"👑 **{boss.Definition.Name} defeated!**\n");
+        //
+        //    sb.AppendLine("🏆 **Top DPS:**");
+        //    var leaderboard = boss.DamageDealt
+        //        .OrderByDescending(x => x.Value)
+        //        .Take(5)
+        //        .ToList();
+        //
+        //    foreach (var (userId, dmg) in leaderboard)
+        //        sb.AppendLine($"• <@{userId}> — **{dmg} dmg**");
+        //
+        //    sb.AppendLine();
+        //
+        //    int reward = boss.Definition.RewardGold;
+        //    sb.AppendLine($"💰 **Everyone receives {reward} gold AND 2500 XP and 50 Pet Xp**\n");
+        //
+        //    if (!BossDropRegistry.Drops.TryGetValue(boss.Definition.Id, out var lootTable))
+        //        lootTable = new List<BossLoot>();
+        //
+        //    var dropResults = new Dictionary<ulong, List<string>>();
+        //
+        //    var top3 = boss.DamageDealt
+        //        .OrderByDescending(x => x.Value)
+        //        .Take(3)
+        //        .Select(x => x.Key)
+        //        .ToHashSet();
+        //
+        //    var top3Mentions = new List<string>();
+        //
+        //    using var scope = _scopeFactory.CreateScope();
+        //    var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+        //    var playerService = scope.ServiceProvider.GetRequiredService<PlayerService>();
+        //    var statService = scope.ServiceProvider.GetRequiredService<StatService>();
+        //    var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
+        //    var levelService = scope.ServiceProvider.GetRequiredService<LevelService>();
+        //    var petService = scope.ServiceProvider.GetRequiredService<PetService>();
+        //
+        //    foreach (var userId in boss.Participants)
+        //    {
+        //        var player = await playerService.GetOrCreatePlayerAsync(userId, "Unknown");
+        //
+        //        player.Gold += reward;
+        //        player.XP += 2500;
+        //
+        //        if (top3.Contains(userId))
+        //        {
+        //            player.Gold += 250;
+        //            player.XP += 2500;
+        //            top3Mentions.Add($"<@{userId}>");
+        //        }
+        //
+        //        var (levelMessage, levelsGained) = levelService.CheckLevelUp(player);
+        //
+        //        //  PET XP — 50 per boss kill
+        //
+        //        var (petLeveled, petLevel) = await petService.AddXPAsync(userId, 50);
+        //        if (petLeveled)
+        //        {
+        //            var feedChannel = _client.GetChannel(_feedChannelId) as IMessageChannel;
+        //            if (feedChannel != null)
+        //                await feedChannel.SendMessageAsync(
+        //                    $"🐾 <@{userId}>'s pet reached **Level {petLevel}**! 🎉");
+        //        }
+        //
+        //        var playerDrops = new List<string>();
+        //
+        //        if (boss.DamageDealt.TryGetValue(userId, out var totalDamage) && totalDamage >= 10000)
+        //        {
+        //            foreach (var loot in lootTable)
+        //            {
+        //                int roll = _rand.Next(1, 101);
+        //
+        //                if (roll <= loot.DropChance)
+        //                {
+        //                    int amount = _rand.Next(loot.MinAmount, loot.MaxAmount + 1);
+        //
+        //                    await inventoryService.GiveItemAsync(userId, loot.ItemId, amount);
+        //
+        //                    if (InventoryItemDefinitions.All.TryGetValue(loot.ItemId, out var item))
+        //                    {
+        //                        string line = $"{item.Icon} **{item.Name}**";
+        //                        if (amount > 1) line += $" x{amount}";
+        //                        playerDrops.Add(line);
+        //                    }
+        //                    else
+        //                    {
+        //                        playerDrops.Add($"**{loot.ItemId}** x{amount}");
+        //                    }
+        //                }
+        //            }
+        //        }
+        //
+        //        if (playerDrops.Count > 0)
+        //            dropResults[userId] = playerDrops;
+        //
+        //        var (_, _, maxHp) = await statService.CalculateStatsAsync(player);
+        //
+        //        if (player.Health <= 0)
+        //            player.Health = maxHp;
+        //
+        //        player.Health = Math.Min(player.Health, maxHp);
+        //
+        //        await playerRepo.UpdatePlayerAsync(player);
+        //
+        //        if (levelsGained > 0)
+        //        {
+        //            var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
+        //            if (channel != null)
+        //                await channel.SendMessageAsync($"🎉 <@{player.DiscordId}> reached **Level {player.Level}**!");
+        //        }
+        //
+        //        await Task.Delay(75);
+        //    }
+        //
+        //    if (top3Mentions.Count > 0)
+        //        sb.AppendLine($"🌟 **Top 3 Bonus:** {string.Join(", ", top3Mentions)} received an extra **250 gold** and **2500 XP** for their outstanding damage!\n");
+        //
+        //    if (boss.Participants.Count > 0)
+        //    {
+        //        sb.AppendLine("\n🎁 **Drops:**\n");
+        //
+        //        var winners = new List<string>();
+        //        var unlucky = new List<string>();
+        //        var notEligible = new List<string>();
+        //
+        //        foreach (var userId in boss.Participants)
+        //        {
+        //            var mention = $"<@{userId}>";
+        //            bool hasDrops = dropResults.ContainsKey(userId);
+        //            boss.DamageDealt.TryGetValue(userId, out var dmg);
+        //
+        //            if (hasDrops)
+        //            {
+        //                var drops = string.Join("\n  • ", dropResults[userId]);
+        //                winners.Add($"{mention}\n  • {drops}");
+        //            }
+        //            else if (dmg >= 10000)
+        //                unlucky.Add(mention);
+        //            else
+        //                notEligible.Add(mention);
+        //        }
+        //
+        //        if (winners.Count > 0)
+        //        {
+        //            sb.AppendLine("🏆 **Loot Winners**");
+        //            foreach (var w in winners)
+        //                sb.AppendLine(w + "\n");
+        //        }
+        //
+        //        if (unlucky.Count > 0)
+        //        {
+        //            sb.AppendLine("😢 **No Drops (Eligible)**");
+        //            sb.AppendLine(string.Join(", ", unlucky) + "\n");
+        //        }
+        //
+        //        if (notEligible.Count > 0)
+        //        {
+        //            sb.AppendLine("❌ **Not Enough Damage (10,000 required)**");
+        //            sb.AppendLine(string.Join(", ", notEligible) + "\n");
+        //        }
+        //    }
+        //    else
+        //    {
+        //        sb.AppendLine("\n🎁 *No participants...*");
+        //    }
+        //
+        //    return sb.ToString();
+        //}
+
+        //TEMP WITH ALOT OF LOGS FOR TESTING PURPOSES - FINAL VERSION SHOULD BE CLEANER WITHOUT ROLL LOGS
         public async Task<string> HandleBossDeathAsync(ActiveBoss boss)
         {
             var sb = new StringBuilder();
@@ -208,6 +381,9 @@ namespace Hogs.RPG.Services.Game
                 lootTable = new List<BossLoot>();
 
             var dropResults = new Dictionary<ulong, List<string>>();
+
+            // NEW: track roll logs per user
+            var rollLogs = new Dictionary<ulong, List<string>>();
 
             var top3 = boss.DamageDealt
                 .OrderByDescending(x => x.Value)
@@ -241,8 +417,6 @@ namespace Hogs.RPG.Services.Game
 
                 var (levelMessage, levelsGained) = levelService.CheckLevelUp(player);
 
-                //  PET XP — 50 per boss kill
-
                 var (petLeveled, petLevel) = await petService.AddXPAsync(userId, 50);
                 if (petLeveled)
                 {
@@ -253,32 +427,46 @@ namespace Hogs.RPG.Services.Game
                 }
 
                 var playerDrops = new List<string>();
+                var playerRolls = new List<string>();
 
-                if (boss.DamageDealt.TryGetValue(userId, out var totalDamage) && totalDamage >= 10000)
+                boss.DamageDealt.TryGetValue(userId, out var totalDamage);
+
+                if (totalDamage >= 10000)
                 {
                     foreach (var loot in lootTable)
                     {
                         int roll = _rand.Next(1, 101);
+                        bool dropped = roll <= loot.DropChance;
 
-                        if (roll <= loot.DropChance)
+                        // Get item name for the log
+                        string itemLabel = InventoryItemDefinitions.All.TryGetValue(loot.ItemId, out var itemDef)
+                            ? $"{itemDef.Icon} {itemDef.Name}"
+                            : loot.ItemId;
+
+                        // Log the roll result
+                        string rollLine = dropped
+                            ? $"✅ **{itemLabel}** — rolled **{roll}** (needed ≤{loot.DropChance}) → **DROP!**"
+                            : $"❌ **{itemLabel}** — rolled **{roll}** (needed ≤{loot.DropChance}) → miss";
+
+                        playerRolls.Add(rollLine);
+
+                        if (dropped)
                         {
                             int amount = _rand.Next(loot.MinAmount, loot.MaxAmount + 1);
-
                             await inventoryService.GiveItemAsync(userId, loot.ItemId, amount);
 
-                            if (InventoryItemDefinitions.All.TryGetValue(loot.ItemId, out var item))
-                            {
-                                string line = $"{item.Icon} **{item.Name}**";
-                                if (amount > 1) line += $" x{amount}";
-                                playerDrops.Add(line);
-                            }
-                            else
-                            {
-                                playerDrops.Add($"**{loot.ItemId}** x{amount}");
-                            }
+                            string line = $"{itemDef?.Icon ?? ""} **{itemDef?.Name ?? loot.ItemId}**";
+                            if (amount > 1) line += $" x{amount}";
+                            playerDrops.Add(line);
                         }
                     }
                 }
+                else
+                {
+                    playerRolls.Add($"⚠️ Not eligible — only dealt **{totalDamage} dmg** (10,000 required), no rolls.");
+                }
+
+                rollLogs[userId] = playerRolls;
 
                 if (playerDrops.Count > 0)
                     dropResults[userId] = playerDrops;
@@ -352,6 +540,33 @@ namespace Hogs.RPG.Services.Game
             else
             {
                 sb.AppendLine("\n🎁 *No participants...*");
+            }
+
+            // NEW: Send roll transparency log to feed channel
+            var feedChan = _client.GetChannel(_feedChannelId) as IMessageChannel;
+            if (feedChan != null && rollLogs.Count > 0)
+            {
+                var logSb = new StringBuilder();
+                logSb.AppendLine($"🎲 **Drop Roll Log — {boss.Definition.Name}**\n");
+
+                foreach (var (userId, rolls) in rollLogs)
+                {
+                    boss.DamageDealt.TryGetValue(userId, out var dmg);
+                    logSb.AppendLine($"**<@{userId}>** *(dealt {dmg} dmg)*");
+                    foreach (var roll in rolls)
+                        logSb.AppendLine($"  {roll}");
+                    logSb.AppendLine();
+
+                    // Discord has a 2000 char limit — flush if getting close
+                    if (logSb.Length > 1700)
+                    {
+                        await feedChan.SendMessageAsync(logSb.ToString());
+                        logSb.Clear();
+                    }
+                }
+
+                if (logSb.Length > 0)
+                    await feedChan.SendMessageAsync(logSb.ToString());
             }
 
             return sb.ToString();
