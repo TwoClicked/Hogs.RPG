@@ -465,13 +465,17 @@ namespace Hogs.RPG.Services.DungeonServices
             int eFilled = (int)((double)s.EnemyHealth / s.EnemyMaxHealth * 10);
             string enemyBar = new string('█', eFilled) + new string('░', 10 - eFilled);
 
-            return new EmbedBuilder()
+            var embed = new EmbedBuilder()
                 .WithTitle($"🐾 {dungeon?.Name ?? "Pet Dungeon"} — Floor {s.Floor}")
                 .WithDescription(text)
                 .AddField("❤️ Player HP", $"{playerBar}\n{s.PlayerHealth}/{s.MaxHealth}", true)
                 .AddField("👹 Enemy HP", $"{enemyBar}\n{s.EnemyHealth}/{s.EnemyMaxHealth}", true)
-                .WithColor(s.IsBoss ? Color.Purple : Color.Green)
-                .Build();
+                .WithColor(s.IsBoss ? Color.Purple : Color.Green);
+
+            if (!string.IsNullOrEmpty(s.CurrentImageUrl))
+                embed.WithImageUrl(s.CurrentImageUrl);
+
+            return embed.Build();
         }
     }
 }
