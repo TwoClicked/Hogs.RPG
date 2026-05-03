@@ -16,7 +16,7 @@ namespace Hogs.RPG.Core.GameData.Registries
             { Tier2Pets.IceWolf.Id , Tier2Pets.IceWolf  },  // ❤️ Health pet
 
             // ===== Tier 3 — Evolved =====
-            { Tier3Pet.PrimalChimera.Id, Tier3Pet.PrimalChimera },
+            { Tier3Pet.MythicalArmoredIceTurtle.Id, Tier3Pet.MythicalArmoredIceTurtle },
         };
 
         public static PetDefinition Get(string id)

@@ -57,7 +57,8 @@ namespace Hogs.RPG.Bot.Commands
         // 🐾 EQUIP PET
         // =========================
         [SlashCommand("pet-equip", "Equip a pet")]
-        public async Task EquipPet(string petId)
+        public async Task EquipPet(
+        [Autocomplete(typeof(PetBagAutocompleteHandler))] string petId)
         {
             await DeferAsync(ephemeral: true);
 
