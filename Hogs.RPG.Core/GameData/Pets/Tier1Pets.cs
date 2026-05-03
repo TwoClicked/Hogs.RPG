@@ -14,7 +14,7 @@ namespace Hogs.RPG.Core.GameData.Pets
         {
             Id = "verdant_cat",
             Name = "Verdant Cat",
-            Icon = "a:Cat_stare:1383492923999649924",
+            Icon = "<a:Cat_stare:1383492923999649924>",
             BaseAttack = 0,
             BaseDefense = 1,
             BaseHealth = 5,

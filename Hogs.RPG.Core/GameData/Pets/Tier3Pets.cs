@@ -11,7 +11,7 @@ namespace Hogs.RPG.Core.GameData.Pets
         public static readonly PetDefinition PrimalChimera = new()
         {
             Id = "primal_chimera",
-            Name = "Primal Chimera",
+            Name = "Mythical Armored Ice Turtle",
             Icon = "<:T3TURTO:1500620463125041202>",
             BaseAttack = 15,
             BaseDefense = 15,
