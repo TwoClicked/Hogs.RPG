@@ -8,11 +8,11 @@ namespace Hogs.RPG.Core.GameData.Pets
         // 🐉 PRIMAL CHIMERA
         // Evolved from: BlazefangRaptor + IronshellBoar + TidecallSerpent
         // =========================
-        public static readonly PetDefinition MythicalArmoredIceTurtle = new ()
+        public static readonly PetDefinition Capytara = new ()
         {
-            Id = "mythical_armored_ice_turtle",
-            Name = "Mythical Armored Ice Turtle",
-            Icon = "<:T3TURTO:1500620463125041202>",
+            Id = "capytara",
+            Name = "Capytara",
+            Icon = "<:CapyTara:1500638781110354113>",
             BaseAttack = 15,
             BaseDefense = 15,
             BaseHealth = 35,

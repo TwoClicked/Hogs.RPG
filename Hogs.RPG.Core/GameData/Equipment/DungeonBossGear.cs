@@ -104,9 +104,9 @@ namespace Hogs.RPG.Core.GameData.Equipment
             Id = "shadowsaphire_signet",
             Name = "Shadowsaphire Signet",
             Slot = EquipmentSlot.Ring,
-            Defense = 20,
-            Attack = 42,
-            Health = 145
+            Defense = 40,
+            Attack = 15,
+            Health = 250
         };
 
         // =========================

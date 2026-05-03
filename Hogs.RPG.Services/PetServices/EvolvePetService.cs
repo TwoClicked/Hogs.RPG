@@ -46,7 +46,7 @@ namespace Hogs.RPG.Services.PetServices
 
             var existing = await _repo.GetPetAsync(userId, Tier3PetId);
             if (existing != null)
-                return (false, "❌ You already own the **Primal Chimera**!");
+                return (false, "❌ You already own the **Capytara**!");
 
             _repo.RemovePet(attackPet);
             _repo.RemovePet(defensePet);
@@ -60,8 +60,8 @@ namespace Hogs.RPG.Services.PetServices
             return (true,
                 $"✨ **Evolution Complete!**\n\n" +
                 $"The Armored Capybara, El Tata de Frog, and Ice Wolf merged into one!\n\n" +
-                $"🐉 **Primal Chimera** has been added to your pet bag!\n" +
-                $"Use `/pet-equip primal_chimera` to equip it.");
+                $"🐉 **Capytara** has been added to your pet bag!\n" +
+                $"Use `/pet-equip Capytara` to equip it.");
         }
 
         // =========================
@@ -77,11 +77,11 @@ namespace Hogs.RPG.Services.PetServices
             bool hasChimera = pets.Any(p => p.PetId == Tier3PetId);
 
             if (hasChimera)
-                return "🐉 You already own the **Primal Chimera**!";
+                return "🐉 You already own the **Capytara**!";
 
             string Check(bool has) => has ? "✅" : "❌";
 
-            return $"**🧬 Evolution Progress — Primal Chimera**\n\n" +
+            return $"**🧬 Evolution Progress — Capytara**\n\n" +
                    $"{Check(hasAttack)}  ⚔️ Armored Capybara  *(Blazewing's Gorge — Lv 15)*\n" +
                    $"{Check(hasDefense)} 🛡️ El Tata de Frog   *(Stonehall Depths — Lv 20)*\n" +
                    $"{Check(hasHealth)}  ❤️ Ice Wolf          *(Drowned Archives — Lv 25)*\n\n" +

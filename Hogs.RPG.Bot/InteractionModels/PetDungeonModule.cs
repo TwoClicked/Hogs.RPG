@@ -104,7 +104,7 @@ namespace Hogs.RPG.Bot.InteractionModels
         // =========================
         // /pet-evolve — CHECK STATUS
         // =========================
-        [SlashCommand("pet-evolve", "Check evolution progress or evolve your Tier 2 pets into a Primal Chimera")]
+        [SlashCommand("pet-evolve", "Check evolution progress or evolve your Tier 2 pets into a Capytara")]
         public async Task EvolveCheck()
         {
             await DeferAsync(ephemeral: true);
