@@ -25,7 +25,7 @@ namespace Hogs.RPG.Core.GameData.Dungeons
 
             IsPetDungeon = true,
 
-            Boss = PetDungeonBosses.Blazewing
+            Boss = PetDungeonBosses.ArmoredCapybara
         };
 
         // =========================
@@ -48,7 +48,7 @@ namespace Hogs.RPG.Core.GameData.Dungeons
 
             IsPetDungeon = true,
 
-            Boss = PetDungeonBosses.Stonelord
+            Boss = PetDungeonBosses.ElTataDeFrog
         };
 
         // =========================
@@ -71,7 +71,7 @@ namespace Hogs.RPG.Core.GameData.Dungeons
 
             IsPetDungeon = true,
 
-            Boss = PetDungeonBosses.Tidewarden
+            Boss = PetDungeonBosses.IceWolf
         };
     }
 }

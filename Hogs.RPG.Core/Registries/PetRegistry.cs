@@ -11,9 +11,9 @@ namespace Hogs.RPG.Core.GameData.Registries
             { Tier1Pets.VerdantWisp.Id, Tier1Pets.VerdantWisp },
 
             // ===== Tier 2 — Pet Dungeon Drops =====
-            { Tier2Pets.BlazefangRaptor.Id,  Tier2Pets.BlazefangRaptor  },  // ⚔️ Attack pet
-            { Tier2Pets.IronshellBoar.Id,    Tier2Pets.IronshellBoar    },  // 🛡️ Defense pet
-            { Tier2Pets.TidecallSerpent.Id,  Tier2Pets.TidecallSerpent  },  // ❤️ Health pet
+            { Tier2Pets.ArmoredCapybara.Id,  Tier2Pets.ArmoredCapybara  },  // ⚔️ Attack pet
+            { Tier2Pets.ElTataDeFrog.Id,    Tier2Pets.ElTataDeFrog    },  // 🛡️ Defense pet
+            { Tier2Pets.IceWolf.Id , Tier2Pets.IceWolf  },  // ❤️ Health pet
 
             // ===== Tier 3 — Evolved =====
             { Tier3Pet.PrimalChimera.Id, Tier3Pet.PrimalChimera },

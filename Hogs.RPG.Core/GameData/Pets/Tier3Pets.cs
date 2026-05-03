@@ -12,7 +12,7 @@ namespace Hogs.RPG.Core.GameData.Pets
         {
             Id = "primal_chimera",
             Name = "Primal Chimera",
-            Icon = "🐉",
+            Icon = ":T3TURTO:1500620463125041202",
             BaseAttack = 15,
             BaseDefense = 15,
             BaseHealth = 35,

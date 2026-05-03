@@ -22,7 +22,7 @@ namespace Hogs.RPG.Services.DungeonServices
         private readonly Dictionary<ulong, DateTime> _lastAction = new();
         private readonly Dictionary<ulong, (ulong messageId, ulong channelId)> _messages = new();
 
-        private const int CooldownMinutes = 30;
+        private const int CooldownMinutes = 60;
 
         public PetDungeonService(IServiceScopeFactory scopeFactory, DiscordSocketClient client)
         {

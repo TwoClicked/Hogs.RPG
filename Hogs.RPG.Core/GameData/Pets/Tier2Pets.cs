@@ -8,11 +8,11 @@ namespace Hogs.RPG.Core.GameData.Pets
         // ⚔️ ATTACK PET
         // Drops from: Blazewing's Gorge (Pet Dungeon)
         // =========================
-        public static readonly PetDefinition BlazefangRaptor = new()
+        public static readonly PetDefinition ArmoredCapybara = new ()
         {
-            Id = "blazefang_raptor",
-            Name = "Blazefang Raptor",
-            Icon = "🦅",
+            Id = "armored_capybara",
+            Name = "Armored capybara",
+            Icon = ":Capy:1500620423614955571",
             BaseAttack = 10,
             BaseDefense = 2,
             BaseHealth = 6,
@@ -23,11 +23,11 @@ namespace Hogs.RPG.Core.GameData.Pets
         // 🛡️ DEFENSE PET
         // Drops from: Stonehall Depths (Pet Dungeon)
         // =========================
-        public static readonly PetDefinition IronshellBoar = new()
+        public static readonly PetDefinition ElTataDeFrog = new()
         {
-            Id = "ironshell_boar",
-            Name = "Ironshell Boar",
-            Icon = "🦏",
+            Id = "el_tata_de_frog",
+            Name = "El Tata de Frog",
+            Icon = ":ElTataDeFrog:1500620538484232416",
             BaseAttack = 2,
             BaseDefense = 10,
             BaseHealth = 12,
@@ -38,11 +38,11 @@ namespace Hogs.RPG.Core.GameData.Pets
         // ❤️ HEALTH PET
         // Drops from: Drowned Archives (Pet Dungeon)
         // =========================
-        public static readonly PetDefinition TidecallSerpent = new()
+        public static readonly PetDefinition IceWolf = new()
         {
-            Id = "tidecall_serpent",
-            Name = "Tidecall Serpent",
-            Icon = "🐍",
+            Id = "ice_wolf",
+            Name = "Ice Wolf",
+            Icon = ":IceWolf:1500620499217023026",
             BaseAttack = 3,
             BaseDefense = 4,
             BaseHealth = 22,

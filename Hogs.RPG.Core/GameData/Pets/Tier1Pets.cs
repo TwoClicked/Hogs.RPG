@@ -12,9 +12,9 @@ namespace Hogs.RPG.Core.GameData.Pets
     {
         public static readonly PetDefinition VerdantWisp = new()
         {
-            Id = "verdant_wisp",
-            Name = "Verdant Wisp",
-            Icon = "🟢",
+            Id = "verdant_cat",
+            Name = "Verdant Cat",
+            Icon = "a:Cat_stare:1383492923999649924",
             BaseAttack = 0,
             BaseDefense = 1,
             BaseHealth = 5,
