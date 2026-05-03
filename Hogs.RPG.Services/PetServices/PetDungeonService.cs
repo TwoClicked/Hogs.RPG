@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -12,10 +13,10 @@ namespace Hogs.RPG.Services.DungeonServices
     public class PetDungeonService
     {
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly DiscordSocketClient _client;
+        private readonly IMessageChannel _announcementChannel;
         private readonly Random _random = new();
 
-        // Reuse the same session tracking as regular dungeons won't conflict
-        // because pet dungeon IDs are distinct (IsPetDungeon = true)
         private readonly Dictionary<ulong, ActiveDungeon> _active = new();
         private readonly Dictionary<ulong, DateTime> _lastDungeonRun = new();
         private readonly Dictionary<ulong, DateTime> _lastAction = new();
@@ -23,9 +24,11 @@ namespace Hogs.RPG.Services.DungeonServices
 
         private const int CooldownMinutes = 30;
 
-        public PetDungeonService(IServiceScopeFactory scopeFactory)
+        public PetDungeonService(IServiceScopeFactory scopeFactory, DiscordSocketClient client)
         {
             _scopeFactory = scopeFactory;
+            _client = client;
+            _announcementChannel = client.GetChannel(1485357755433750549) as IMessageChannel;
         }
 
         // =========================
@@ -79,6 +82,9 @@ namespace Hogs.RPG.Services.DungeonServices
 
             _active[userId] = session;
             _lastDungeonRun[userId] = DateTime.UtcNow;
+
+            if (_announcementChannel != null)
+                await _announcementChannel.SendMessageAsync($"🐾 <@{userId}> entered **{dungeon.Name}**");
 
             return Wrap(BuildEmbed(session, dungeon, "🐾 You enter the pet dungeon..."));
         }
@@ -179,13 +185,18 @@ namespace Hogs.RPG.Services.DungeonServices
         // =========================
         // FLEE
         // =========================
-        public DungeonResult Flee(ulong userId)
+        public async Task<DungeonResult> FleeAsync(ulong userId)
         {
             if (!_active.TryGetValue(userId, out var session))
                 return Simple("You are not in a pet dungeon.");
 
             _active.Remove(userId);
             _lastDungeonRun[userId] = DateTime.UtcNow;
+
+            var dungeon = GetDungeonById(session.DungeonId);
+
+            if (_announcementChannel != null)
+                await _announcementChannel.SendMessageAsync($"🏃 <@{userId}> fled **{dungeon?.Name ?? "a pet dungeon"}**");
 
             return new DungeonResult
             {
@@ -225,7 +236,7 @@ namespace Hogs.RPG.Services.DungeonServices
         }
 
         // =========================
-        // COMPLETE — pet drop logic
+        // COMPLETE
         // =========================
         private async Task<DungeonResult> Complete(ulong userId, ActiveDungeon session)
         {
@@ -255,9 +266,9 @@ namespace Hogs.RPG.Services.DungeonServices
 
             var (levelMessage, _) = levelService.CheckLevelUp(player);
 
-            // ✅ Pet drop check
+            // Pet drop check
             string petDropText = "";
-            var petDrops = dungeon.Boss?.PetDrops;
+            var petDrops = dungeon?.Boss?.PetDrops;
 
             if (petDrops != null)
             {
@@ -277,6 +288,12 @@ namespace Hogs.RPG.Services.DungeonServices
             }
 
             await playerRepo.UpdatePlayerAsync(player);
+
+            if (_announcementChannel != null)
+                await _announcementChannel.SendMessageAsync(
+                    $"🐾 <@{userId}> cleared **{dungeon?.Name ?? "a pet dungeon"}**!\n" +
+                    $"+250 Gold\n+1000 XP{petDropText}{petLevelMessage}{levelMessage}"
+                );
 
             return new DungeonResult
             {
@@ -303,6 +320,8 @@ namespace Hogs.RPG.Services.DungeonServices
 
             var player = await playerRepo.GetByDiscordIdAsync(userId);
 
+            var dungeon = GetDungeonById(player != null ? _active.ContainsKey(0) ? "" : "" : "");
+
             player.Gold = Math.Max(0, player.Gold - 250);
             player.XP = Math.Max(0, (int)(player.XP * 0.8f));
 
@@ -310,6 +329,9 @@ namespace Hogs.RPG.Services.DungeonServices
             player.Health = maxHealth;
 
             await playerRepo.UpdatePlayerAsync(player);
+
+            if (_announcementChannel != null)
+                await _announcementChannel.SendMessageAsync($"💀 <@{userId}> died in a **pet dungeon**");
 
             return new DungeonResult
             {
@@ -333,15 +355,12 @@ namespace Hogs.RPG.Services.DungeonServices
             if (!_messages.TryGetValue(userId, out var info)) return;
             var (messageId, channelId) = info;
 
-            using var scope = _scopeFactory.CreateScope();
-            var client = scope.ServiceProvider.GetRequiredService<Discord.WebSocket.DiscordSocketClient>();
-
             // DM channels aren't cached — fall back to creating the DM channel
-            var channel = client.GetChannel(channelId) as IMessageChannel;
+            var channel = _client.GetChannel(channelId) as IMessageChannel;
 
             if (channel == null)
             {
-                var user = client.GetUser(userId);
+                var user = _client.GetUser(userId);
                 if (user != null)
                     channel = await user.CreateDMChannelAsync();
             }
@@ -365,7 +384,7 @@ namespace Hogs.RPG.Services.DungeonServices
         }
 
         // =========================
-        // BOSS BEHAVIORS (shared logic)
+        // BOSS BEHAVIORS
         // =========================
         private string HandleBossBehavior(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
         {

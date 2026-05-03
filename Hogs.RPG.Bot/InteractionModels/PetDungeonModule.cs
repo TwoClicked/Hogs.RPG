@@ -97,7 +97,7 @@ namespace Hogs.RPG.Bot.InteractionModels
             var component = (SocketMessageComponent)Context.Interaction;
             await component.DeferAsync();
 
-            var result = _petDungeonService.Flee(Context.User.Id);
+            var result = await _petDungeonService.FleeAsync(Context.User.Id);
             await _petDungeonService.UpdateDungeonMessageAsync(Context.User.Id, result);
         }
 
