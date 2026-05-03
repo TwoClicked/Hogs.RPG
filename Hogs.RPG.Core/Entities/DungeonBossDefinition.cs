@@ -14,11 +14,14 @@
 
         public string AbilitiesText { get; set; }
 
-        // Drop system
+        // Gear drop system
         public List<BossLoot> LootTable { get; set; } = new();
         public List<DungeonDrop> Drops { get; set; } = new();
 
-        //Abilities
+        // ✅ Pet drop system (for pet dungeons)
+        public List<PetDrop> PetDrops { get; set; } = new();
+
+        // Abilities
         public string BehaviorId { get; set; }
     }
 }

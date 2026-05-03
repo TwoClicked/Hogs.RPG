@@ -140,6 +140,19 @@ namespace Hogs.RPG.Services.Game
             // =========================
             // ⚔ PLAYER ATTACK
             // =========================
+            // =========================
+            // ⛓️ CHAIN SNARE — pre-attack intercept
+            // =========================
+            bool playerSnared = false;
+            if (session.IsBoss && dungeon.Boss?.BehaviorId == "chain_snare" && _random.Next(0, 100) < 20)
+            {
+                playerSnared = true;
+                session.ChainSnaredThisTurn = true;
+            }
+
+            // =========================
+            // ⚔ PLAYER ATTACK
+            // =========================
             int enemyDefense = GetEnemyDefense(session);
 
             if (session.CloudActive)
@@ -159,21 +172,29 @@ namespace Hogs.RPG.Services.Game
                 session.EnemyMaxHealth
             );
 
-            session.EnemyHealth = Math.Max(0, session.EnemyHealth - playerDamage);
+            string text;
 
-            var text = $"⚔ You deal {playerDamage} damage!\n";
-
-            int heal = petPassiveService.ApplyOnHitEffects(playerDamage, null, pet);
-            if (heal > 0)
+            if (playerSnared)
             {
-                session.PlayerHealth = Math.Min(session.MaxHealth, session.PlayerHealth + heal);
-                text += $"🩸 Lifesteal heals you for {heal}!\n";
+                text = $"⛓️ **{dungeon.Boss.Name} chains you in place! Your attack was nullified!**\n";
             }
-
-            if (session.EnemyHealth <= 0)
+            else
             {
-                _lastAction[userId] = DateTime.UtcNow;
-                return await NextFloor(userId, session, text);
+                session.EnemyHealth = Math.Max(0, session.EnemyHealth - playerDamage);
+                text = $"⚔ You deal {playerDamage} damage!\n";
+
+                int heal = petPassiveService.ApplyOnHitEffects(playerDamage, null, pet);
+                if (heal > 0)
+                {
+                    session.PlayerHealth = Math.Min(session.MaxHealth, session.PlayerHealth + heal);
+                    text += $"🩸 Lifesteal heals you for {heal}!\n";
+                }
+
+                if (session.EnemyHealth <= 0)
+                {
+                    _lastAction[userId] = DateTime.UtcNow;
+                    return await NextFloor(userId, session, text);
+                }
             }
 
             // =========================
@@ -610,6 +631,90 @@ namespace Hogs.RPG.Services.Game
             return null;
         }
 
+        private string HandleIntoxicate(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            if (!session.IntoxicateTriggered && session.EnemyHealth <= boss.MaxHealth * 0.5)
+            {
+                session.IntoxicateTriggered = true;
+                session.PoisonTurnsRemaining = 3;
+                return $"🌿 **{boss.Name} releases a cloud of toxic spores! You are poisoned for 3 turns!**";
+            }
+
+            if (session.PoisonTurnsRemaining > 0)
+            {
+                int poisonDamage = 35;
+                enemyDamage += poisonDamage;
+                session.PoisonTurnsRemaining--;
+
+                string suffix = session.PoisonTurnsRemaining > 0
+                    ? $" ({session.PoisonTurnsRemaining} turns remaining)"
+                    : " (poison fades...)";
+
+                return $"☠️ **Malchor's spores burn for {poisonDamage} extra damage!{suffix}**";
+            }
+
+            return null;
+        }
+
+        private string HandleChainSnare(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            if (session.ChainSnaredThisTurn)
+            {
+                session.ChainSnaredThisTurn = false;
+                enemyDamage = (int)(enemyDamage * 1.5);
+                return $"⛓️ **{boss.Name} strikes you while you are bound! Bonus damage!**";
+            }
+
+            return null;
+        }
+
+        private string HandleTongueOfTheAbyss(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            if (_random.Next(0, 100) < 25)
+            {
+                enemyDamage = (int)(enemyDamage * 1.7);
+                return $"👅 **{boss.Name} lashes her tongue and yanks you in!**";
+            }
+
+            return null;
+        }
+
+        private string HandleManiacalEncore(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            if (_random.Next(0, 100) < 20)
+            {
+                int panicDefense = session.Defense / 3;
+                enemyDamage = (int)(boss.Attack * (100.0 / (100 + panicDefense)));
+                enemyDamage = (int)(enemyDamage * 1.4);
+                return $"🤡 **{boss.Name} performs a MANIACAL ENCORE! Your defenses crumble in panic!**";
+            }
+
+            return null;
+        }
+
+        private string HandleGoldShine(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            if (_random.Next(0, 100) < 25)
+            {
+                int dazzledDefense = session.Defense / 4;
+                enemyDamage = (int)(boss.Attack * (100.0 / (100 + dazzledDefense)));
+                return $"✨ **{boss.Name} blinds you with a dazzling display of wealth! Your defenses crumble!**";
+            }
+
+            return null;
+        }
+
+        private string HandleStarIronMadness(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            if (!session.StarIronMadnessTriggered && session.EnemyHealth <= boss.MaxHealth * 0.5)
+            {
+                session.StarIronMadnessTriggered = true;
+                return $"⭐ **{boss.Name} enters Star-Iron Madness! His hide hardens — defense DOUBLED!**";
+            }
+
+            return null;
+        }
+
         // =========================
         // HELPERS
         // =========================
@@ -648,6 +753,24 @@ namespace Hogs.RPG.Services.Game
 
                 case "crushing_blow":
                     return HandleCrushingBlow(session, boss, ref enemyDamage);
+
+                case "Intoxicate":
+                    return HandleIntoxicate(session, boss, ref enemyDamage);
+
+                case "chain_snare":
+                    return HandleChainSnare(session, boss, ref enemyDamage);
+
+                case "tongue_of_the_abyss":
+                    return HandleTongueOfTheAbyss(session, boss, ref enemyDamage);
+
+                case "maniacal_encore":
+                    return HandleManiacalEncore(session, boss, ref enemyDamage);
+
+                case "gold_shine":
+                    return HandleGoldShine(session, boss, ref enemyDamage);
+
+                case "star_iron_madness":
+                    return HandleStarIronMadness(session, boss, ref enemyDamage);
 
                 default:
                     return null;
@@ -703,7 +826,14 @@ namespace Hogs.RPG.Services.Game
         private int GetEnemyDefense(ActiveDungeon session)
         {
             if (session.IsBoss)
-                return DungeonRegistry.All[session.DungeonId].Boss.Defense;
+            {
+                int baseDefense = DungeonRegistry.All[session.DungeonId].Boss.Defense;
+
+                if (session.StarIronMadnessTriggered)
+                    baseDefense *= 2;
+
+                return baseDefense;
+            }
 
             return 10 + (session.Floor * 2);
         }

@@ -73,6 +73,22 @@ namespace Hogs.RPG.Data.Repositories
         }
 
         // =========================
+        // 🗑️ REMOVE PET (used for evolution)
+        // =========================
+        public void RemovePet(PlayerPet pet)
+        {
+            _context.PlayerPets.Remove(pet);
+            // Note: caller is responsible for calling SaveAsync()
+        }
+
+        public async Task RemovePetAndSaveAsync(PlayerPet pet)
+        {
+            _context.PlayerPets.Remove(pet);
+            await _context.SaveChangesAsync();
+        }
+
+
+        // =========================
         // 🐾 PET GEAR SCORE WITH PLAYER
         // =========================
         public async Task<List<PlayerPet>> GetTopForPetGearScoreWithPlayerAsync(int count)

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Hogs.RPG.Core.GameData.Pets
 {
-    public static class StarterPets
+    public static class Tier1Pets
     {
         public static readonly PetDefinition VerdantWisp = new()
         {

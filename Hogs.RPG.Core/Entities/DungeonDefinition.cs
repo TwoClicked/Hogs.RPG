@@ -19,5 +19,8 @@
         public int BaseEnemyAttack { get; set; }
 
         public int EnemyAttackScaling { get; set; }
+
+        // ✅ Separates pet dungeons from gear dungeons in autocomplete
+        public bool IsPetDungeon { get; set; } = false;
     }
 }

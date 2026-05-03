@@ -128,11 +128,18 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             { HuntRareDrops.MythicHeart.Id, HuntRareDrops.MythicHeart },
             { HuntRareDrops.SkyRelic.Id, HuntRareDrops.SkyRelic },
 
-            // dungeon drops
-            { DungeonBossDrops.FanculoHelmItem.Id, DungeonBossDrops.FanculoHelmItem },
-            { DungeonBossDrops.HrothgarRingItem.Id, DungeonBossDrops.HrothgarRingItem },
-            { DungeonBossDrops.LuminaraAmuletItem.Id, DungeonBossDrops.LuminaraAmuletItem },
-            { DungeonBossDrops.ThorkellBootsItem.Id, DungeonBossDrops.ThorkellBootsItem },
+
+            // ===== Dungeon Boss Drops =====
+            { DungeonBossDrops.MalchorGripsItem.Id,          DungeonBossDrops.MalchorGripsItem          },  // Lv  5
+            { DungeonBossDrops.FanculoHelmItem.Id,           DungeonBossDrops.FanculoHelmItem           },  // Lv 10
+            { DungeonBossDrops.HrothgarRingItem.Id,          DungeonBossDrops.HrothgarRingItem          },  // Lv 15
+            { DungeonBossDrops.OathcrushLegguardsItem.Id,    DungeonBossDrops.OathcrushLegguardsItem    },  // Lv 17
+            { DungeonBossDrops.TaterousBattleaxeItem.Id,     DungeonBossDrops.TaterousBattleaxeItem     },  // Lv 18
+            { DungeonBossDrops.LuminaraAmuletItem.Id,        DungeonBossDrops.LuminaraAmuletItem        },  // Lv 20
+            { DungeonBossDrops.SkarrSawbladeshieldItem.Id,   DungeonBossDrops.SkarrSawbladeshieldItem   },  // Lv 22
+            { DungeonBossDrops.ShadowsaphireSignetItem.Id,   DungeonBossDrops.ShadowsaphireSignetItem   },  // Lv 23
+            { DungeonBossDrops.ThorkellBootsItem.Id,         DungeonBossDrops.ThorkellBootsItem         },  // Lv 25
+            { DungeonBossDrops.GritchWarplateItem.Id,        DungeonBossDrops.GritchWarplateItem        },  // Lv 27
 
             // ===== Boss Equipment Drops =====
             

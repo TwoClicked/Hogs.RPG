@@ -3,6 +3,7 @@ using Hogs.RPG.Data;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services;
 using Hogs.RPG.Services.AlchemyServices;
+using Hogs.RPG.Services.DungeonServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.GatheringServices;
@@ -74,7 +75,8 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<EnergyService>();
             services.AddScoped<GatherService>();
             services.AddScoped<AlchemyService>();
-            
+            services.AddScoped<EvolvePetService>();
+
             services.AddScoped<PetService>();
             services.AddScoped<PetPassiveService>();
 
@@ -87,6 +89,7 @@ namespace Hogs.RPG.Bot.Setup
             // =========================
             // 🔒 SINGLETONS (Schedulers / Systems)
             // =========================
+            services.AddSingleton<PetDungeonService>();
             services.AddSingleton<BossService>();
             services.AddSingleton<BossScheduler>();
             services.AddSingleton<ShopService>();

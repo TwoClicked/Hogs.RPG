@@ -1,17 +1,25 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hogs.RPG.Core.GameData.Equipment
 {
-    public class DungeonBossGear // Rename this to DungeonGear on restart
+    public class DungeonBossGear
     {
         // =========================
-        // LEVEL 10 FANCULO
+        // LEVEL 5 - ROT FATHER MALCHOR (NEW)
+        // =========================
+        public static readonly EquipmentDefinition MalchorGrips = new()
+        {
+            Id = "malchor_grips",
+            Name = "Malchor's Blightweave Grips",
+            Slot = EquipmentSlot.Gloves,
+            Defense = 12,
+            Attack = 12,
+            Health = 50
+        };
+
+        // =========================
+        // LEVEL 10 - FANCULO
         // =========================
         public static readonly EquipmentDefinition FanculoHelm = new()
         {
@@ -37,6 +45,32 @@ namespace Hogs.RPG.Core.GameData.Equipment
         };
 
         // =========================
+        // LEVEL 17 - AURELION THE OATHBREAKER
+        // =========================
+        public static readonly EquipmentDefinition OathcrushLegguards = new()
+        {
+            Id = "oathcrush_legguards",
+            Name = "Oathcrush Legguards",
+            Slot = EquipmentSlot.Legs,
+            Defense = 28,
+            Attack = 30,
+            Health = 110
+        };
+
+        // =========================
+        // LEVEL 18 - AMPHIVOS TATEROUS
+        // =========================
+        public static readonly EquipmentDefinition TaterousBattleaxe = new()
+        {
+            Id = "taterous_battleaxe",
+            Name = "Taterous Battleaxe",
+            Slot = EquipmentSlot.MainHand,
+            Defense = 8,
+            Attack = 34,
+            Health = 115
+        };
+
+        // =========================
         // LEVEL 20 - LUMINARA
         // =========================
         public static readonly EquipmentDefinition LuminaraAmulet = new()
@@ -50,6 +84,32 @@ namespace Hogs.RPG.Core.GameData.Equipment
         };
 
         // =========================
+        // LEVEL 22 - SKARR THE CLOWN OF CARNAGE
+        // =========================
+        public static readonly EquipmentDefinition SkarrSawbladeshield = new()
+        {
+            Id = "skarr_sawbladeshield",
+            Name = "Skarr's Sawblade Shield",
+            Slot = EquipmentSlot.OffHand,
+            Defense = 32,
+            Attack = 38,
+            Health = 132
+        };
+
+        // =========================
+        // LEVEL 23 - GRIMBLEX THE GILDED TYRANT
+        // =========================
+        public static readonly EquipmentDefinition ShadowsaphireSignet = new()
+        {
+            Id = "shadowsaphire_signet",
+            Name = "Shadowsaphire Signet",
+            Slot = EquipmentSlot.Ring,
+            Defense = 20,
+            Attack = 42,
+            Health = 145
+        };
+
+        // =========================
         // LEVEL 25 - THORKELL
         // =========================
         public static readonly EquipmentDefinition ThorkellBoots = new()
@@ -60,6 +120,19 @@ namespace Hogs.RPG.Core.GameData.Equipment
             Defense = 25,
             Attack = 40,
             Health = 150
+        };
+
+        // =========================
+        // LEVEL 27 - GRITCH THE GILDED PROWLER
+        // =========================
+        public static readonly EquipmentDefinition GritchWarplate = new()
+        {
+            Id = "gritch_warplate",
+            Name = "Gritch's Star-Iron Warplate",
+            Slot = EquipmentSlot.Body,
+            Defense = 42,
+            Attack = 52,
+            Health = 190
         };
     }
 }

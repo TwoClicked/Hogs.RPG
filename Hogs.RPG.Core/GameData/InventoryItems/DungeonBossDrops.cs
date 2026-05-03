@@ -1,14 +1,21 @@
 ﻿using Hogs.RPG.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hogs.RPG.Core.GameData.InventoryItems
 {
     public class DungeonBossDrops
     {
+        // =========================
+        // LEVEL 5 - ROT FATHER MALCHOR (NEW)
+        // =========================
+        public static readonly ItemDefinition MalchorGripsItem = new()
+        {
+            Id = "malchor_grips",
+            Name = "Malchor's Blightweave Grips",
+            Icon = "🧤",
+            Type = "Equipment",
+            Description = "Gloves woven from the rotten bark of cursed trees. Still warm."
+        };
+
         // =========================
         // LEVEL 10 - FANCULO
         // =========================
@@ -34,6 +41,30 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         };
 
         // =========================
+        // LEVEL 17 - AURELION THE OATHBREAKER PALADIN
+        // =========================
+        public static readonly ItemDefinition OathcrushLegguardsItem = new()
+        {
+            Id = "oathcrush_legguards",
+            Name = "Oathcrush Legguards",
+            Icon = "🦵",
+            Type = "Equipment",
+            Description = "Leg armor torn from a fallen paladin. The divine sigils are shattered — but still warm."
+        };
+
+        // =========================
+        // LEVEL 18 - AMPHIVOS TATEROUS
+        // =========================
+        public static readonly ItemDefinition TaterousBattleaxeItem = new()
+        {
+            Id = "taterous_battleaxe",
+            Name = "Taterous Battleaxe",
+            Icon = "🪓",
+            Type = "Equipment",
+            Description = "Forged from enchanted root and starchy earth. Somehow both devastating and ridiculous."
+        };
+
+        // =========================
         // LEVEL 20 - LUMINARA
         // =========================
         public static readonly ItemDefinition LuminaraAmuletItem = new()
@@ -41,7 +72,32 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Id = "luminara_amulet",
             Name = "Luminara's Moonlit Amulet",
             Icon = "<:luminaras_amulet:1486423884688396289>",
+            Type = "Equipment",
             Description = "A glowing charm radiating deceptive beauty, masking a sinister, protective aura."
+        };
+
+        // =========================
+        // LEVEL 22 - SKARR THE CLOWN OF CARNAGE
+        // =========================
+        public static readonly ItemDefinition SkarrSawbladeshieldItem = new()
+        {
+            Id = "skarr_sawbladeshield",
+            Name = "Skarr's Sawblade Shield",
+            Icon = "🛡️",
+            Type = "Equipment",
+            Description = "A spinning shield of serrated blades. The laughter painted on it is not comforting."
+        };
+
+        // =========================
+        // LEVEL 23 - GRIMBLEX THE GILDED TYRANT
+        // =========================
+        public static readonly ItemDefinition ShadowsaphireSignetItem = new()
+        {
+            Id = "shadowsaphire_signet",
+            Name = "Shadowsaphire Signet",
+            Icon = "💍",
+            Type = "Equipment",
+            Description = "A ring set with a gem that absorbs light. Grimblex hoarded dozens — this one is yours now."
         };
 
         // =========================
@@ -51,9 +107,21 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "thorkell_boots",
             Name = "Boots of the Warborn",
-            Icon = "<:thorkell_boots:1486426976297418852>", 
+            Icon = "<:thorkell_boots:1486426976297418852>",
             Type = "Equipment",
             Description = "Heavy war boots infused with divine fury, allowing the wearer to crush through all resistance."
+        };
+
+        // =========================
+        // LEVEL 27 - GRITCH THE GILDED PROWLER
+        // =========================
+        public static readonly ItemDefinition GritchWarplateItem = new()
+        {
+            Id = "gritch_warplate",
+            Name = "Gritch's Star-Iron Warplate",
+            Icon = "🪖",
+            Type = "Equipment",
+            Description = "Armor hammered from Star-Iron ore. It hums faintly. You don't want to know why."
         };
     }
 }

@@ -1,7 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.Pets;
-using System;
-using System.Collections.Generic;
 
 namespace Hogs.RPG.Core.GameData.Registries
 {
@@ -9,19 +7,18 @@ namespace Hogs.RPG.Core.GameData.Registries
     {
         public static readonly Dictionary<string, PetDefinition> All = new()
         {
-            // Start pet
-            { StarterPets.VerdantWisp.Id, StarterPets.VerdantWisp },
+            // ===== Tier 1 =====
+            { Tier1Pets.VerdantWisp.Id, Tier1Pets.VerdantWisp },
 
-            // Dungeon pets
-            { DungeonPets.IronhideBoar.Id, DungeonPets.IronhideBoar },
-            { DungeonPets.EmberfangLynx.Id, DungeonPets.EmberfangLynx },
-            { DungeonPets.StoneheartTortoise.Id, DungeonPets.StoneheartTortoise },
+            // ===== Tier 2 — Pet Dungeon Drops =====
+            { Tier2Pets.BlazefangRaptor.Id,  Tier2Pets.BlazefangRaptor  },  // ⚔️ Attack pet
+            { Tier2Pets.IronshellBoar.Id,    Tier2Pets.IronshellBoar    },  // 🛡️ Defense pet
+            { Tier2Pets.TidecallSerpent.Id,  Tier2Pets.TidecallSerpent  },  // ❤️ Health pet
 
-            // Raid pets
-            { RaidPets.AetherionDrake.Id, RaidPets.AetherionDrake }
+            // ===== Tier 3 — Evolved =====
+            { Tier3Pet.PrimalChimera.Id, Tier3Pet.PrimalChimera },
         };
 
-        // ✅ ADD THIS
         public static PetDefinition Get(string id)
         {
             if (!All.TryGetValue(id, out var pet))
