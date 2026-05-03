@@ -12,7 +12,7 @@ namespace Hogs.RPG.Core.GameData.Pets
         {
             Id = "armored_capybara",
             Name = "Armored capybara",
-            Icon = ":Capy:1500620423614955571",
+            Icon = "<:Capy:1500620423614955571>",
             BaseAttack = 10,
             BaseDefense = 2,
             BaseHealth = 6,
@@ -27,7 +27,7 @@ namespace Hogs.RPG.Core.GameData.Pets
         {
             Id = "el_tata_de_frog",
             Name = "El Tata de Frog",
-            Icon = ":ElTataDeFrog:1500620538484232416",
+            Icon = "<:ElTataDeFrog:1500620538484232416>",
             BaseAttack = 2,
             BaseDefense = 10,
             BaseHealth = 12,
@@ -42,7 +42,7 @@ namespace Hogs.RPG.Core.GameData.Pets
         {
             Id = "ice_wolf",
             Name = "Ice Wolf",
-            Icon = ":IceWolf:1500620499217023026",
+            Icon = "<:IceWolf:1500620499217023026>",
             BaseAttack = 3,
             BaseDefense = 4,
             BaseHealth = 22,
