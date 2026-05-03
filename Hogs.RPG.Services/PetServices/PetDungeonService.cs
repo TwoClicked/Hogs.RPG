@@ -336,7 +336,16 @@ namespace Hogs.RPG.Services.DungeonServices
             using var scope = _scopeFactory.CreateScope();
             var client = scope.ServiceProvider.GetRequiredService<Discord.WebSocket.DiscordSocketClient>();
 
+            // DM channels aren't cached — fall back to creating the DM channel
             var channel = client.GetChannel(channelId) as IMessageChannel;
+
+            if (channel == null)
+            {
+                var user = client.GetUser(userId);
+                if (user != null)
+                    channel = await user.CreateDMChannelAsync();
+            }
+
             if (channel == null) return;
 
             var msg = await channel.GetMessageAsync(messageId) as IUserMessage;
