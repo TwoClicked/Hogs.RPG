@@ -2,10 +2,12 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.InventoryServices;
+using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
 using System;
 using System.Linq;
@@ -23,17 +25,20 @@ namespace Hogs.RPG.Bot.Commands
         private readonly BossService _bossService;
         private readonly PlayerRepository _playerRepository;
         private readonly InventoryService _inventoryService;
+        private readonly PetService _petService;
 
         public TestCommands(
             BossService bossService,
             PlayerService playerService,
             PlayerRepository playerRepository,
-            InventoryService inventoryService)
+            InventoryService inventoryService,
+            PetService petService)
         {
             _bossService = bossService;
             _playerService = playerService;
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
+            _petService = petService;
         }
 
         // =========================
@@ -54,7 +59,6 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         // TEST LOAD
         // =========================
-
         [SlashCommand("testbosses", "Test loading bosses (Admin Only)")]
         public async Task TestBosses()
         {
@@ -73,18 +77,14 @@ namespace Hogs.RPG.Bot.Commands
             var builder = new StringBuilder();
 
             foreach (var boss in bosses)
-            {
                 builder.AppendLine($"{boss.Name} | HP: {boss.MaxHealth} | Type: {boss.Type}");
-            }
 
             await FollowupAsync(builder.ToString(), ephemeral: true);
         }
 
-
         // =========================
         // FORCE DAILY
         // =========================
-
         [SlashCommand("forcedaily", "Force spawn a daily boss (Admin Only)")]
         public async Task ForceDailyBoss(string bossId)
         {
@@ -115,7 +115,6 @@ namespace Hogs.RPG.Bot.Commands
                     components: components
                 );
 
-                // 🔥 IMPORTANT
                 boss.ChannelId = Context.Channel.Id;
                 boss.MessageId = msg.Id;
             }
@@ -126,27 +125,45 @@ namespace Hogs.RPG.Bot.Commands
             }
         }
 
-
         // =========================
         // GIVE ITEM
         // =========================
-
         [SlashCommand("giveitem", "Give yourself an item (Admin Only)")]
         public async Task GiveItem(string itemId, int amount)
         {
             if (!await EnsureAdminAsync()) return;
 
-            var userId = Context.User.Id;
+            await _inventoryService.GiveItemAsync(Context.User.Id, itemId, amount);
 
-            await _inventoryService.GiveItemAsync(userId, itemId, amount);
+            await RespondAsync($"✅ You received {amount}x `{itemId}`", ephemeral: true);
+        }
 
-            await RespondAsync($"You received {amount}x {itemId}", ephemeral: true);
+        // =========================
+        // GIVE PET
+        // =========================
+        [SlashCommand("givepet", "Give yourself a pet by ID (Admin Only)")]
+        public async Task GivePet(string petId)
+        {
+            if (!await EnsureAdminAsync()) return;
+
+            await DeferAsync(ephemeral: true);
+
+            if (!PetRegistry.All.TryGetValue(petId, out var petDef))
+            {
+                await FollowupAsync(
+                    $"❌ Pet `{petId}` not found.\n\n**Valid pet IDs:**\n{string.Join("\n", PetRegistry.All.Keys.Select(k => $"`{k}`"))}",
+                    ephemeral: true);
+                return;
+            }
+
+            await _petService.GivePetAsync(Context.User.Id, petId);
+
+            await FollowupAsync($"✅ {petDef.Icon} **{petDef.Name}** added to your pet bag!", ephemeral: true);
         }
 
         // =========================
         // EMBED
         // =========================
-
         private Embed BuildBossEmbed(ActiveBoss boss)
         {
             var def = boss.Definition;
@@ -158,19 +175,13 @@ namespace Hogs.RPG.Bot.Commands
             return new EmbedBuilder()
                 .WithTitle($"🔥 {def.Name} has appeared!")
                 .WithDescription($"{typeLabel}\n\n{def.Description}")
-
                 .AddField("❤️ Health",
                     $"{GetHealthBar(boss.CurrentHealth, def.MaxHealth)}\n{boss.CurrentHealth}/{def.MaxHealth}",
                     true)
-
                 .AddField("🛡 Defense", def.Defense, true)
                 .AddField("💰 Reward", $"{def.RewardGold} Gold", true)
-
                 .AddField("⚔ Abilities",
-                    string.IsNullOrWhiteSpace(def.AbilitiesText)
-                        ? "Unknown..."
-                        : def.AbilitiesText)
-
+                    string.IsNullOrWhiteSpace(def.AbilitiesText) ? "Unknown..." : def.AbilitiesText)
                 .WithImageUrl(def.ImageUrl)
                 .WithColor(def.Type.ToString() == "Weekly" ? Color.Gold : Color.DarkRed)
                 .WithFooter("⏳ Defeat the boss before it escapes!")
@@ -183,7 +194,6 @@ namespace Hogs.RPG.Bot.Commands
             int bars = 10;
             double percent = (double)current / max;
             int filled = (int)(percent * bars);
-
             return new string('█', filled) + new string('░', bars - filled);
         }
     }
