@@ -251,11 +251,11 @@ namespace Hogs.RPG.Services.DungeonServices
             var dungeon = GetDungeonById(session.DungeonId);
 
             player.Gold += 250;
-            player.XP += 1000;
+            player.XP += 500;
             player.DungeonRunsCompleted++;
 
             // Pet XP for equipped pet
-            var (petLeveledUp, petNewLevel) = await petService.AddXPAsync(userId, 50);
+            var (petLeveledUp, petNewLevel) = await petService.AddXPAsync(userId, 250);
             string petLevelMessage = "";
             if (petLeveledUp)
             {
@@ -292,14 +292,14 @@ namespace Hogs.RPG.Services.DungeonServices
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync(
                     $"🐾 <@{userId}> cleared **{dungeon?.Name ?? "a pet dungeon"}**!\n" +
-                    $"+250 Gold\n+1000 XP{petDropText}{petLevelMessage}{levelMessage}"
+                    $"+250 Gold\n+500 XP\n+250 Pet XP{petDropText}{petLevelMessage}{levelMessage}"
                 );
 
             return new DungeonResult
             {
                 Embed = new EmbedBuilder()
                     .WithTitle("🐾 Pet Dungeon Complete!")
-                    .WithDescription($"+250 Gold\n+1000 XP\n+50 Pet XP{petDropText}{petLevelMessage}{levelMessage}")
+                    .WithDescription($"+250 Gold\n+500 XP\n+250 Pet XP{petDropText}{petLevelMessage}{levelMessage}")
                     .WithColor(Color.Green)
                     .Build(),
                 IsFinished = true
@@ -433,6 +433,15 @@ namespace Hogs.RPG.Services.DungeonServices
             }
 
             return null;
+        }
+
+        // =========================
+        // RESET PET DUNGEON COOLDOWN
+        // =========================
+
+        public void ResetPetDungeonCooldown(ulong userId)
+        {
+            _lastDungeonRun.Remove(userId);
         }
 
         // =========================

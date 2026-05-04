@@ -11,7 +11,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "malchor_grips",
             Name = "Malchor's Blightweave Grips",
-            Icon = "🧤",
+            Icon = " <:MalchorsGrips:1500819542014689320>",
             Type = "Equipment",
             Description = "Gloves woven from the rotten bark of cursed trees. Still warm."
         };
@@ -47,7 +47,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "oathcrush_legguards",
             Name = "Oathcrush Legguards",
-            Icon = "🦵",
+            Icon = "<:OathcrushLegguards:1500820622328991897> ",
             Type = "Equipment",
             Description = "Leg armor torn from a fallen paladin. The divine sigils are shattered — but still warm."
         };
@@ -59,7 +59,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "taterous_battleaxe",
             Name = "Taterous Battleaxe",
-            Icon = "🪓",
+            Icon = "<:Taterous_Battleaxe:1500817893410213938>",
             Type = "Equipment",
             Description = "Forged from enchanted root and starchy earth. Somehow both devastating and ridiculous."
         };
@@ -83,7 +83,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "skarr_sawbladeshield",
             Name = "Skarr's Sawblade Shield",
-            Icon = "🛡️",
+            Icon = "<:SkarrsSawbladeShield:1500820862394433627>",
             Type = "Equipment",
             Description = "A spinning shield of serrated blades. The laughter painted on it is not comforting."
         };
@@ -95,7 +95,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "shadowsaphire_signet",
             Name = "Shadowsaphire Signet",
-            Icon = "💍",
+            Icon = "<:ShadowsaphireSignet:1500821445968920699>",
             Type = "Equipment",
             Description = "A ring set with a gem that absorbs light. Grimblex hoarded dozens — this one is yours now."
         };
@@ -119,7 +119,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "gritch_warplate",
             Name = "Gritch's Star-Iron Warplate",
-            Icon = "🪖",
+            Icon = "<:Gritchs_StarIron_Warplate:1500821752815685772> ",
             Type = "Equipment",
             Description = "Armor hammered from Star-Iron ore. It hums faintly. You don't want to know why."
         };

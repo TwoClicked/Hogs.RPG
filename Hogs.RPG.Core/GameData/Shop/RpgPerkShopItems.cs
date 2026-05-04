@@ -114,5 +114,16 @@ namespace Hogs.RPG.Core.GameData.Shop
             Type = ShopItemType.FixedPrice,
             Price = 3_000
         };
+
+        public static readonly ShopItemDefinition PetDungeonReset = new()
+        {
+            Id = "rpg_pet_dungeon_reset",
+            Name = "Pet Dungeon Reset",
+            Description = "Clear your pet dungeon cooldown and enter again immediately.",
+            Icon = "🐾",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 3_000
+        };
     }
 }

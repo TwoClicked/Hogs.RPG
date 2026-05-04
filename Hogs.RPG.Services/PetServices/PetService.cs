@@ -115,8 +115,8 @@ namespace Hogs.RPG.Services.PetServices
                     pet.Passive1 = GetRandomPassiveExcluding();
                 }
 
-                // 🎯 LEVEL 30 → SECOND PASSIVE
-                if (pet.Level == 30 && pet.Passive2 == null)
+                // 🎯 LEVEL 20 → SECOND PASSIVE
+                if (pet.Level == 20 && pet.Passive2 == null)
                 {
                     pet.Passive2 = GetRandomPassiveExcluding(pet.Passive1);
                 }

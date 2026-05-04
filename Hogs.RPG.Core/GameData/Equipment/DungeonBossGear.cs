@@ -39,9 +39,7 @@ namespace Hogs.RPG.Core.GameData.Equipment
             Id = "hrothgar_ring",
             Name = "Hrothgar's Frostbound Ring",
             Slot = EquipmentSlot.Ring,
-            Defense = 15,
-            Attack = 25,
-            Health = 100
+            Attack = 45,
         };
 
         // =========================
@@ -105,7 +103,6 @@ namespace Hogs.RPG.Core.GameData.Equipment
             Name = "Shadowsaphire Signet",
             Slot = EquipmentSlot.Ring,
             Defense = 40,
-            Attack = 15,
             Health = 250
         };
 

@@ -4,6 +4,7 @@ using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.Shop;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.DungeonServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,15 +16,17 @@ namespace Hogs.RPG.Services.ShopServices
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly DiscordSocketClient _client;
         private readonly DungeonService _dungeonService;
+        private readonly PetDungeonService _petService;
 
         private readonly ulong _feedChannelId = 1485357755433750549;
         private readonly ulong _adminRoleId = 1483528182106685691;
 
-        public ShopService(IServiceScopeFactory scopeFactory, DiscordSocketClient client, DungeonService dungeonService)
+        public ShopService(IServiceScopeFactory scopeFactory, DiscordSocketClient client, DungeonService dungeonService, PetDungeonService petService)
         {
             _scopeFactory = scopeFactory;
             _client = client;
             _dungeonService = dungeonService;
+            _petService = petService;
         }
 
         public async Task<(bool success, string message)> BuyAsync(ulong userId, string itemId, SocketGuild guild)
@@ -508,6 +511,13 @@ namespace Hogs.RPG.Services.ShopServices
                 // =========================
                 case "rpg_dungeon_reset":
                     _dungeonService.ResetDungeonCooldown(userId);
+                    break;
+
+                // =========================
+                // 🏰 PET DUNGEON COOLDOWN RESET
+                // =========================
+                case "rpg_pet_dungeon_reset":
+                    _petService.ResetPetDungeonCooldown(userId);
                     break;
             }
         }
