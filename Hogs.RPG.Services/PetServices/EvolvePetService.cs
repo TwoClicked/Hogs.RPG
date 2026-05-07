@@ -12,7 +12,7 @@ namespace Hogs.RPG.Services.PetServices
         private const string AttackPetId = "armored_capybara";
         private const string DefensePetId = "el_tata_de_frog";
         private const string HealthPetId = "ice_wolf";
-        private const string Tier3PetId = "primal_chimera";
+        private const string Tier3PetId = "capytara";
 
         public EvolvePetService(PetRepository repo, PetService petService)
         {
@@ -54,7 +54,7 @@ namespace Hogs.RPG.Services.PetServices
 
             await _petService.GivePetAsync(userId, Tier3PetId);
 
-            if (!PetRegistry.All.TryGetValue(Tier3PetId, out var chimera))
+            if (!PetRegistry.All.TryGetValue(Tier3PetId, out var capytara))
                 return (false, "❌ Evolution failed — Tier 3 pet not found in registry.");
 
             return (true,
