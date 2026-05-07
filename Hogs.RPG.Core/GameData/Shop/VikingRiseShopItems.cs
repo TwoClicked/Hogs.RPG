@@ -19,7 +19,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "🌾",
             Category = ShopCategory.VikingRiseResources,
             Type = ShopItemType.FixedPrice,
-            Price = 15_000,
+            Price = 25_000,
             RequiredRoleId = VikingRiseRole
         };
 
@@ -31,7 +31,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "🪵",
             Category = ShopCategory.VikingRiseResources,
             Type = ShopItemType.FixedPrice,
-            Price = 15_000,
+            Price = 25_000,
             RequiredRoleId = VikingRiseRole
         };
 
@@ -43,7 +43,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "🪨",
             Category = ShopCategory.VikingRiseResources,
             Type = ShopItemType.FixedPrice,
-            Price = 20_000,
+            Price = 30_000,
             RequiredRoleId = VikingRiseRole
         };
 
@@ -55,7 +55,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "💰",
             Category = ShopCategory.VikingRiseResources,
             Type = ShopItemType.FixedPrice,
-            Price = 30_000,
+            Price = 40_000,
             RequiredRoleId = VikingRiseRole
         };
 
@@ -67,7 +67,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "🏦",
             Category = ShopCategory.VikingRiseResources,
             Type = ShopItemType.FixedPrice,
-            Price = 15_000,
+            Price = 25_000,
             RequiredRoleId = VikingRiseRole
         };
 
@@ -79,7 +79,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "📜",
             Category = ShopCategory.VikingRiseResources,
             Type = ShopItemType.FixedPrice,
-            Price = 40_000,
+            Price = 50_000,
             RequiredRoleId = VikingRiseRole
         };
 
@@ -91,7 +91,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "📿",
             Category = ShopCategory.VikingRiseResources,
             Type = ShopItemType.FixedPrice,
-            Price = 30_000,
+            Price = 50_000,
             RequiredRoleId = VikingRiseRole
         };
 
@@ -107,7 +107,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "🥉",
             Category = ShopCategory.VikingRiseRanks,
             Type = ShopItemType.Auction,
-            StartingBid = 75_000,
+            StartingBid = 100_000,
             RequiredRoleId = VikingRiseRole
         };
 
@@ -119,7 +119,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "🥈",
             Category = ShopCategory.VikingRiseRanks,
             Type = ShopItemType.Auction,
-            StartingBid = 100_000,
+            StartingBid = 150_000,
             RequiredRoleId = VikingRiseRole
         };
 
@@ -131,7 +131,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Icon = "🥇",
             Category = ShopCategory.VikingRiseRanks,
             Type = ShopItemType.Auction,
-            StartingBid = 150_000,
+            StartingBid = 200_000,
             RequiredRoleId = VikingRiseRole
         };
     }

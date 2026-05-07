@@ -1,6 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
-
 public static class GlobalBossGear
 {
     // ⚔️ PURE DAMAGE
@@ -13,7 +12,6 @@ public static class GlobalBossGear
         Defense = 5,
         Health = 20
     };
-
     // 🛡️ DEFENSE FOCUSED (Tank chest)
     public static readonly EquipmentDefinition XerathulArmor = new()
     {
@@ -22,20 +20,18 @@ public static class GlobalBossGear
         Slot = EquipmentSlot.Body,
         Attack = 5,
         Defense = 65,
-        Health = 110
+        Health = 210
     };
-
     // 🪨 DEFENSE + BRUISER OFFHAND
     public static readonly EquipmentDefinition GravelmawShield = new()
     {
         Id = "gravelmaw_shield",
         Name = "Gravelmaw Bulwark",
         Slot = EquipmentSlot.OffHand,
-        Attack = 20,
+        Attack = 28,
         Defense = 60,
-        Health = 70
+        Health = 140
     };
-
     // 🐍 HP / SUSTAIN
     public static readonly EquipmentDefinition SerpentGloves = new()
     {
@@ -46,7 +42,6 @@ public static class GlobalBossGear
         Defense = 12,
         Health = 90
     };
-
     // 👑 HYBRID LEADER ITEM
     public static readonly EquipmentDefinition TyrHelm = new()
     {
@@ -57,18 +52,16 @@ public static class GlobalBossGear
         Defense = 35,
         Health = 100
     };
-
     // 🩸 BRUISER LEGS (balanced offense/defense)
     public static readonly EquipmentDefinition ThrolakLeggings = new()
     {
         Id = "thorlak_leggings",
         Name = "Bloodbreaker WarLeggings",
         Slot = EquipmentSlot.Legs,
-        Attack = 18,
+        Attack = 32,
         Defense = 28,
-        Health = 85
+        Health = 125
     };
-
     // 💍 HP HEAVY + SUPPORT
     public static readonly EquipmentDefinition PunisherRing = new()
     {
@@ -77,9 +70,8 @@ public static class GlobalBossGear
         Slot = EquipmentSlot.Ring,
         Attack = 20,
         Defense = 20,
-        Health = 160
+        Health = 225
     };
-
     // 🔮 DAMAGE AMULET
     public static readonly EquipmentDefinition GullveigAmulet = new()
     {
