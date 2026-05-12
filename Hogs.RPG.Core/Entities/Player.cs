@@ -48,6 +48,8 @@ namespace Hogs.RPG.Core.Entities
 
         // Bosses
         public string? LastBossAttack { get; set; }
+        // Raids
+        public string? LastRaidAt { get; set; }
 
         //LeaderBoard
         public int DungeonRunsCompleted { get; set; }

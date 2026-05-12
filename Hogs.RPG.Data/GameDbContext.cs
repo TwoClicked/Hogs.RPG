@@ -18,6 +18,11 @@ namespace Hogs.RPG.Data
         public DbSet<ShopPurchase> ShopPurchases { get; set; }
         public DbSet<ActiveAuction> ActiveAuctions { get; set; }
 
+        public DbSet<PlayerRelic> PlayerRelics { get; set; }
+        public DbSet<PlayerRelicShard> PlayerRelicShards { get; set; }
+        public DbSet<RaidSession> RaidSessions { get; set; }
+        public DbSet<RaidParticipant> RaidParticipants { get; set; }
+
         public GameDbContext(DbContextOptions<GameDbContext> options)
             : base(options)
         {
@@ -27,19 +32,38 @@ namespace Hogs.RPG.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // 🔥 Prevent duplicate inventory entries
+            // Prevent duplicate inventory entries
             modelBuilder.Entity<InventoryItem>()
                 .HasIndex(x => new { x.DiscordId, x.ItemId })
                 .IsUnique();
 
-            // We save as a string for now, Will move to 1 - many later when more active buffs come
+            // Serialized as string, not a table
             modelBuilder.Ignore<ActiveBuff>();
+            modelBuilder.Ignore<ActiveRaidEffect>();
 
             modelBuilder.Entity<PlayerPet>()
                 .HasOne(p => p.Player)
                 .WithMany()
                 .HasForeignKey(p => p.DiscordId)
                 .HasPrincipalKey(p => p.DiscordId);
+
+
+            modelBuilder.Entity<PlayerRelic>()
+                .HasOne(r => r.Player)
+                .WithMany()
+                .HasForeignKey(r => r.DiscordId)
+                .HasPrincipalKey(p => p.DiscordId);
+
+            modelBuilder.Entity<PlayerRelicShard>()
+                .HasOne(s => s.Player)
+                .WithMany()
+                .HasForeignKey(s => s.DiscordId)
+                .HasPrincipalKey(p => p.DiscordId);
+
+            modelBuilder.Entity<RaidParticipant>()
+                .HasOne(p => p.RaidSession)
+                .WithMany(s => s.Participants)
+                .HasForeignKey(p => p.RaidSessionId);
         }
     }
 }
