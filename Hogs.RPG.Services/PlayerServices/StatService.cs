@@ -2,8 +2,8 @@
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;
-using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.PetServices;
+using Hogs.RPG.Services.RelicServices;
 
 namespace Hogs.RPG.Services.GameplayServices
 {
@@ -11,21 +11,18 @@ namespace Hogs.RPG.Services.GameplayServices
     {
         private readonly EquipmentService _equipmentService;
         private readonly PetService _petService;
+        private readonly RelicService _relicService;
 
-        public StatService(EquipmentService equipmentService, PetService petService)
+        public StatService(
+            EquipmentService equipmentService,
+            PetService petService,
+            RelicService relicService)
         {
             _equipmentService = equipmentService;
             _petService = petService;
+            _relicService = relicService;
         }
 
-        /// <summary>
-        /// ✅ MAIN METHOD (ASYNC)
-        /// Calculates FINAL stats including:
-        /// - Base player stats
-        /// - Equipment
-        /// - Pet stats
-        /// - Pet passives
-        /// </summary>
         public async Task<(int attack, int defense, int health)> CalculateStatsAsync(Player player)
         {
             // =========================
@@ -66,28 +63,30 @@ namespace Hogs.RPG.Services.GameplayServices
             }
 
             // =========================
-            // 🐾 PET STATS + PASSIVES
+            // 🐾 PET STATS
             // =========================
             var pet = await _petService.GetEquippedPetAsync(player.DiscordId);
 
             if (pet != null && PetRegistry.All.TryGetValue(pet.PetId, out var petDef))
             {
-                // 🔢 Base pet stats (scaling)
                 var (petAtk, petDefStat, petHp) = _petService.CalculateStats(pet);
-
                 attack += petAtk;
                 defense += petDefStat;
                 health += petHp;
-
             }
+
+            // =========================
+            // 💎 RELIC BONUSES
+            // =========================
+            var relicBonuses = await _relicService.GetRelicBonusesAsync(player.DiscordId);
+
+            attack = (int)(attack * (1f + relicBonuses.AttackPercent));
+            defense = (int)(defense * (1f + relicBonuses.DefensePercent));
+            health = (int)(health * (1f + relicBonuses.MaxHpPercent));
 
             return (attack, defense, health);
         }
 
-        /// <summary>
-        /// ⚠️ SYNC WRAPPER (DO NOT REMOVE YET)
-        /// Keeps old code working without refactoring everything
-        /// </summary>
         public (int attack, int defense, int health) CalculateStats(Player player)
         {
             return CalculateStatsAsync(player).GetAwaiter().GetResult();

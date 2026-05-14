@@ -11,6 +11,8 @@ using Hogs.RPG.Services.HuntServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
+using Hogs.RPG.Services.RaidServices;
+using Hogs.RPG.Services.RelicServices;
 using Hogs.RPG.Services.ShopServices;
 using Hogs.RPG.Services.TradeServices;
 using Microsoft.EntityFrameworkCore;
@@ -55,6 +57,8 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<InventoryRepository>();
             services.AddScoped<BossStateRepository>();
             services.AddScoped<ShopRepository>();
+            services.AddScoped<RelicRepository>();
+            services.AddScoped<RaidRepository>();
 
             // =========================
             // ⚙️ CORE GAME SERVICES (Scoped)
@@ -76,9 +80,10 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<GatherService>();
             services.AddScoped<AlchemyService>();
             services.AddScoped<EvolvePetService>();
-
             services.AddScoped<PetService>();
             services.AddScoped<PetPassiveService>();
+            services.AddScoped<RelicService>();
+            services.AddScoped<RaidService>();
 
             // =========================
             // 🏆 LEADERBOARDS

@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.GameData.Raids;
 
 namespace Hogs.RPG.Core.GameData.Recipes;
 
@@ -66,6 +67,13 @@ public static class RecipeRegistry
         //ALCHEMY RECIPES
         { AlchemyRecipes.XpPotion.Id, AlchemyRecipes.XpPotion },
         { AlchemyRecipes.HealthPotion.Id, AlchemyRecipes.HealthPotion },
+
+        // ===== RAID KEY RECIPES =====
+        { RaidKeyRecipes.LairKey.Id, RaidKeyRecipes.LairKey },
+        { RaidKeyRecipes.StrongholdKey.Id, RaidKeyRecipes.StrongholdKey },
+        { RaidKeyRecipes.FortressKey.Id, RaidKeyRecipes.FortressKey },
+        { RaidKeyRecipes.CitadelKey.Id, RaidKeyRecipes.CitadelKey },
+        { RaidKeyRecipes.WorldBossKey.Id, RaidKeyRecipes.WorldBossKey },
 
     };
 }

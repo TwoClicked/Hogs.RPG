@@ -8,11 +8,11 @@ namespace Hogs.RPG.Core.GameData.Raids
         public static readonly RaidDefinition Lair = new()
         {
             Id = "raid_t1",
-            Name = "The Lair",
-            Description = "A fearsome beast lurks in the darkness. Three warriors must stand together.",
+            Name = "Wafflera, Queen of the Scorched Lair ",
+            Description = "A fearsome Wafflera lurks in the darkness.",
             Tier = 1,
             RequiredLevel = 10,
-            ImageUrl = "https://placeholder.com/raid_t1.png",
+            ImageUrl = "https://cdn.discordapp.com/attachments/1499080557995360267/1504493466045124700/gemini-2.5-flash-image_Looks_male_make_abit_more_female-0.png?ex=6a07303a&is=6a05deba&hm=f4be570b42e28d32f9f876df6e445de9caa8e70cdac368ad43bf2b901e204c9d",
 
             HpMultiplier = 14f,
             AttackMultiplier = 0.6f,

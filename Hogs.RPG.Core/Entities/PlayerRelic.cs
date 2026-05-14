@@ -17,6 +17,6 @@ namespace Hogs.RPG.Core.Entities
         public RelicBonusType BonusType { get; set; }
 
         public bool IsEquipped { get; set; } = false;
-        public int slotindex { get; set; } = 0; 
+        public int SlotIndex { get; set; } = 0; 
     }
 }
