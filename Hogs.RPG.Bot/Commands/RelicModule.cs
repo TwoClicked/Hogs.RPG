@@ -10,11 +10,13 @@ namespace Hogs.RPG.Bot.Commands
     {
         private readonly RelicService _relicService;
         private readonly PlayerRepository _playerRepository;
+        private readonly RelicRepository _repo;
 
-        public RelicModule(RelicService relicService, PlayerRepository playerRepository)
+        public RelicModule(RelicService relicService, PlayerRepository playerRepository, RelicRepository repo)
         {
             _relicService = relicService;
             _playerRepository = playerRepository;
+            _repo = repo;
         }
 
         private async Task<bool> EnsurePlayerAsync()
@@ -101,6 +103,54 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
+        // /relic-unlock — Spend a T1 shard to unlock a new relic
+        // =========================
+        [SlashCommand("relic-unlock", "Spend a Tier 1 shard to unlock a new relic")]
+        public async Task UnlockRelic()
+        {
+            await DeferAsync(ephemeral: true);
+            if (!await EnsurePlayerAsync()) return;
+
+            // Check they have a T1 shard
+            var shards = await _relicService.GetShardsAsync(Context.User.Id);
+            var t1Shard = shards.FirstOrDefault(s => s.Tier == 1 && s.Quantity > 0);
+
+            if (t1Shard == null)
+            {
+                await FollowupAsync("❌ You need a **Tier 1 Relic Shard** to unlock a new relic. Run dungeons, global bosses or raids for a 3% chance to drop one.", ephemeral: true);
+                return;
+            }
+
+            // Check they don't already have 2 unequipped relics sitting unused (optional soft cap)
+            var allRelics = await _relicService.GetRelicsAsync(Context.User.Id);
+
+            // Consume the T1 shard
+            var removed = await _relicService.ConsumeShardAsync(Context.User.Id, 1);
+            if (!removed)
+            {
+                await FollowupAsync("❌ Failed to consume shard. Try again.", ephemeral: true);
+                return;
+            }
+
+            // Create the relic
+            var relic = await _relicService.GiveRelicAsync(Context.User.Id, 1);
+            var def = RelicRegistry.Get(relic.RelicId);
+
+            var embed = new EmbedBuilder()
+                .WithTitle("💎 Relic Unlocked!")
+                .WithColor(new Color(0x7B68EE))
+                .WithDescription($"Your shard has awakened into a relic.")
+                .AddField("Name", def.Name, inline: true)
+                .AddField("Affinity", def.Affinity.ToString(), inline: true)
+                .AddField("Rank", "1", inline: true)
+                .AddField("Bonus", _relicService.FormatBonus(relic.BonusType), inline: false)
+                .WithFooter("Use /relic-equip to equip it. Use /relic-reroll with a shard to change the bonus.")
+                .Build();
+
+            await FollowupAsync(embed: embed, ephemeral: true);
+        }
+
+        // =========================
         // /relic-reroll — Reroll a relic's bonus
         // =========================
         [SlashCommand("relic-reroll", "Reroll a relic's passive bonus using a shard")]
@@ -145,6 +195,11 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         // HELPER — Shard display
         // =========================
+
+        public async Task<bool> ConsumeShardAsync(ulong discordId, int tier)
+        {
+            return await _repo.RemoveShardAsync(discordId, tier, 1);
+        }
         private async Task<string> GetShardsDisplayAsync()
         {
             var shards = await _relicService.GetShardsAsync(Context.User.Id);

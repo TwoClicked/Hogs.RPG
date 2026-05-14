@@ -1,4 +1,5 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Discord.Interactions;
+using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -30,6 +31,8 @@ namespace Hogs.RPG.Services.RelicServices
         {
             return await _repo.GetEquippedRelicsAsync(discordId);
         }
+
+
 
         // =========================
         // 💎 EQUIP RELIC
@@ -162,6 +165,11 @@ namespace Hogs.RPG.Services.RelicServices
             await _repo.AddShardAsync(discordId, tier, 1);
         }
 
+        public async Task<bool> ConsumeShardAsync(ulong discordId, int tier)
+        {
+            return await _repo.RemoveShardAsync(discordId, tier, 1);
+        }
+
         // =========================
         // 📊 CALCULATE RELIC BONUSES
         // Called by StatService and RaidService
@@ -254,6 +262,7 @@ namespace Hogs.RPG.Services.RelicServices
                 _ => new List<RelicBonusType>()
             };
         }
+
 
 
         // =========================

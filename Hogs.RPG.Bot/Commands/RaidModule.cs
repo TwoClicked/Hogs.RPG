@@ -13,17 +13,20 @@ namespace Hogs.RPG.Bot.Commands
         private readonly RaidService _raidService;
         private readonly PlayerRepository _playerRepository;
         private readonly DiscordSocketClient _client;
+        private readonly InventoryRepository _inventoryRepo;
 
         private const ulong RAID_CHANNEL_ID = 1504160665231691796;
 
         public RaidModule(
             RaidService raidService,
             PlayerRepository playerRepository,
-            DiscordSocketClient client)
+            DiscordSocketClient client,
+            InventoryRepository inventoryRepo)
         {
             _raidService = raidService;
             _playerRepository = playerRepository;
             _client = client;
+            _inventoryRepo = inventoryRepo;
         }
 
         // =========================
@@ -50,6 +53,48 @@ namespace Hogs.RPG.Bot.Commands
                 return false;
             }
             return true;
+        }
+
+        // =========================
+        // /raidkeys — View your raid keys
+        // =========================
+        [SlashCommand("raidkeys", "View your current raid keys")]
+        public async Task RaidKeys()
+        {
+            await DeferAsync(ephemeral: true);
+
+            var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
+            if (player == null)
+            {
+                await FollowupAsync("⚠️ You need to start your adventure first with `/startadventure`.", ephemeral: true);
+                return;
+            }
+
+            var keyIds = new[]
+            {
+                 ("raid_key_t1", "T1 — Lair Key"),
+                 ("raid_key_t2", "T2 — Stronghold Key"),
+                 ("raid_key_t3", "T3 — Fortress Key"),
+                 ("raid_key_t4", "T4 — Citadel Key"),
+                 ("raid_key_t5", "T5 — World Boss Key")
+            };
+
+            var embed = new EmbedBuilder()
+                .WithTitle("🗝️ Your Raid Keys")
+                .WithColor(new Color(0xE67E22));
+
+            foreach (var (itemId, label) in keyIds)
+            {
+                var item = (await _inventoryRepo.GetInventoryAsync(Context.User.Id))
+                    .FirstOrDefault(i => i.ItemId == itemId);
+
+                int qty = item?.Quantity ?? 0;
+                embed.AddField(label, $"`{qty}x`", inline: true);
+            }
+
+            embed.WithFooter("Craft keys with /craft using hunt materials.");
+
+            await FollowupAsync(embed: embed.Build(), ephemeral: true);
         }
 
         // =========================
@@ -170,6 +215,8 @@ namespace Hogs.RPG.Bot.Commands
 
             await FollowupAsync(message, ephemeral: true);
         }
+
+
 
         // =========================
         // START RAID BUTTON
@@ -401,6 +448,7 @@ namespace Hogs.RPG.Bot.Commands
 
             return builder.Build();
         }
+
 
         // =========================
         // HELPERS — Lobby refresh
