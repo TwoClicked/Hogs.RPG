@@ -162,6 +162,30 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
+        // GIVE RAID KEYS TO ALL PLAYERS
+        // =========================
+        [SlashCommand("giveallraidkeys", "Give 10 of each raid key to all players (Admin Only)")]
+        public async Task GiveAllRaidKeys()
+        {
+            if (!await EnsureAdminAsync()) return;
+            await DeferAsync(ephemeral: true);
+
+            var players = await _playerRepository.GetAllPlayersAsync();
+            int count = 0;
+
+            foreach (var player in players)
+            {
+                for (int tier = 1; tier <= 5; tier++)
+                {
+                    await _inventoryService.GiveItemAsync(player.DiscordId, $"raid_key_t{tier}", 10);
+                }
+                count++;
+            }
+
+            await FollowupAsync($"✅ Gave 10x of each raid key to **{count}** players.");
+        }
+
+        // =========================
         // EMBED
         // =========================
         private Embed BuildBossEmbed(ActiveBoss boss)

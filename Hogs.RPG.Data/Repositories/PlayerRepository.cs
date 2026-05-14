@@ -87,6 +87,11 @@ namespace Hogs.RPG.Data.Repositories
             return players;
         }
 
+        public async Task<List<Player>> GetAllPlayersAsync()
+        {
+            return await _context.Players.ToListAsync();
+        }
+
         public async Task<List<Player>> GetTopForGearScoreAsync(int count)
         {
             var players = await _context.Players
