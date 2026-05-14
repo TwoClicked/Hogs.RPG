@@ -17,10 +17,7 @@ namespace Hogs.RPG.Core.GameData.Raids
                 { "bone", 30 },
                 { "feather", 30 },
                 { "claws", 30 },
-                { "monster_blood", 30 },
-                { "wolf_trophy", 3 },
-                { "boar_tusk", 3 },
-                { "stag_antler", 3 }
+                { "wolf_trophy", 3 }
             }
         };
 
@@ -37,7 +34,6 @@ namespace Hogs.RPG.Core.GameData.Raids
                 { "talon", 30 },
                 { "horn", 30 },
                 { "sharp_claw", 30 },
-                { "ancient_feather", 3 },
                 { "bear_heart", 3 },
                 { "alpha_fang", 3 }
             }
@@ -56,7 +52,6 @@ namespace Hogs.RPG.Core.GameData.Raids
                 { "giant_antler", 30 },
                 { "thick_hide", 30 },
                 { "dark_feather", 30 },
-                { "storm_talon", 3 },
                 { "saber_relic", 3 },
                 { "griffin_core", 3 }
             }
