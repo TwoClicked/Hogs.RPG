@@ -92,7 +92,7 @@ namespace Hogs.RPG.Bot.Commands
             await DeferAsync(ephemeral: true);
 
             int tier = int.Parse(tierStr);
-            var role = Enum.Parse<RaidRole>(roleStr);
+            var role = Enum.Parse<RaidRole>(roleStr, ignoreCase: true);
 
             var raidChannel = _client.GetChannel(RAID_CHANNEL_ID) as ITextChannel;
             if (raidChannel == null)
