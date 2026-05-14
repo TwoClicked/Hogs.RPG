@@ -239,16 +239,7 @@ namespace Hogs.RPG.Services.RaidServices
             foreach (var p in session.Participants)
             {
                 var keyItemId = $"raid_key_t{session.Tier}";
-                var item = (await _inventoryRepo.GetInventoryAsync(p.DiscordId))
-                    .FirstOrDefault(i => i.ItemId == keyItemId);
-
-                if (item != null)
-                {
-                    item.Quantity--;
-                    if (item.Quantity <= 0)
-                        _inventoryRepo.GetInventoryAsync(p.DiscordId); // will be removed in repo
-                    await _inventoryRepo.RemoveItemAsync(p.DiscordId, keyItemId, 1);
-                }
+                await _inventoryRepo.RemoveItemAsync(p.DiscordId, keyItemId, 1);
             }
 
             // Scale boss stats off average party stats
