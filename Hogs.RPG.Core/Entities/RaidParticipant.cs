@@ -10,7 +10,6 @@ namespace Hogs.RPG.Core.Entities
         public RaidSession RaidSession { get; set; }
 
         public ulong DiscordId { get; set; }
-        public Player Player { get; set; }
 
         public RaidRole Role { get; set; }
 
