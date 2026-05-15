@@ -19,6 +19,7 @@ namespace Hogs.RPG.Core.Entities
         public int CurrentRound { get; set; } = 0;
         public ulong AggroDiscordId { get; set; } = 0;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime RoundStartedAt { get; set; } = DateTime.UtcNow;
 
         // Stored in DB as serialized string
         public string ActiveEffectsData { get; set; } = "";

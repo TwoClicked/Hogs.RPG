@@ -9,6 +9,7 @@ using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
+using Hogs.RPG.Services.RelicServices;
 using System;
 using System.Linq;
 using System.Text;
@@ -26,19 +27,22 @@ namespace Hogs.RPG.Bot.Commands
         private readonly PlayerRepository _playerRepository;
         private readonly InventoryService _inventoryService;
         private readonly PetService _petService;
+        private readonly RelicService _relicService;
 
         public TestCommands(
             BossService bossService,
             PlayerService playerService,
             PlayerRepository playerRepository,
             InventoryService inventoryService,
-            PetService petService)
+            PetService petService,
+            RelicService relicService)
         {
             _bossService = bossService;
             _playerService = playerService;
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
             _petService = petService;
+            _relicService = relicService;
         }
 
         // =========================
@@ -183,6 +187,26 @@ namespace Hogs.RPG.Bot.Commands
             }
 
             await FollowupAsync($"✅ Gave 10x of each raid key to **{count}** players.");
+        }
+
+        // =========================
+        // GIVE RELIC SHARD
+        // =========================
+        [SlashCommand("giverelicshard", "Give yourself a relic shard (Admin Only)")]
+        public async Task GiveRelicShard(int tier)
+        {
+            if (!await EnsureAdminAsync()) return;
+            await DeferAsync(ephemeral: true);
+
+            if (tier < 1 || tier > 5)
+            {
+                await FollowupAsync("❌ Tier must be between 1 and 5.", ephemeral: true);
+                return;
+            }
+
+            await _relicService.GiveShardAsync(Context.User.Id, tier);
+
+            await FollowupAsync($"✅ Given 1x Tier {tier} Relic Shard.", ephemeral: true);
         }
 
         // =========================

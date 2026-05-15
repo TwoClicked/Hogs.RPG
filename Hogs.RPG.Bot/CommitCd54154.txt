@@ -1,0 +1,18 @@
+
+
+
+
+
+
+Check if empower and shatter are overwriting eachother
+Make it so during the fight that we can see who's used what and who people are waiting on who 
+maybe instead of the message only o get saying action submitted
+it goes huligan used attack
+reina used taunt
+leper used heal
+Fix the buttons to proper colors per role 
+add a cooldown to the boss abilities 
+Change profile to show the relics x2, Displayed on profile 
+Start documentation on game itself
+Introduce pet passives to global boss and raids 
+CD on boss swap

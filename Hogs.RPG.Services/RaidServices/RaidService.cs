@@ -339,13 +339,6 @@ namespace Hogs.RPG.Services.RaidServices
             var dps = session.Participants.First(p => p.Role == RaidRole.Dps);
             var healer = session.Participants.First(p => p.Role == RaidRole.Healer);
 
-            // =========================
-            // TICK DOWN ACTIVE EFFECTS
-            // =========================
-            foreach (var effect in session.ActiveEffects)
-                effect.RoundsRemaining--;
-
-            session.ActiveEffects.RemoveAll(e => e.RoundsRemaining <= 0);
 
             // =========================
             // PROCESS TANK ACTION
@@ -525,6 +518,14 @@ namespace Hogs.RPG.Services.RaidServices
                 await HandleVictoryAsync(session, result);
                 return result;
             }
+
+            // =========================
+            // TICK DOWN ACTIVE EFFECTS
+            // =========================
+            foreach (var effect in session.ActiveEffects)
+                effect.RoundsRemaining--;
+
+            session.ActiveEffects.RemoveAll(e => e.RoundsRemaining <= 0);
 
             // =========================
             // BOSS ACTIONS
