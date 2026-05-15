@@ -259,20 +259,20 @@ namespace Hogs.RPG.Bot.Commands
                     break;
                 case RaidRole.Tank:
                     builder.WithButton("🛡️ Hold", $"raid_action:{sessionId}:{round}:hold",
-                        ButtonStyle.Primary, row: 0);
+                        ButtonStyle.Success, row: 0);
                     builder.WithButton("📣 Taunt", $"raid_action:{sessionId}:{round}:taunt",
                         ButtonStyle.Secondary, row: 0);
                     builder.WithButton("💥 Shatter", $"raid_action:{sessionId}:{round}:shatter",
-                        ButtonStyle.Danger, row: 0,
+                        ButtonStyle.Success, row: 0,
                         disabled: participant.ShatterCooldownRoundsRemaining > 0);
                     break;
                 case RaidRole.Healer:
                     builder.WithButton("💚 Heal", $"raid_action:{sessionId}:{round}:heal",
                         ButtonStyle.Success, row: 0);
                     builder.WithButton("✨ Empower ATK", $"raid_action:{sessionId}:{round}:empower_attack",
-                        ButtonStyle.Secondary, row: 0);
+                        ButtonStyle.Success, row: 0);
                     builder.WithButton("✨ Empower DEF", $"raid_action:{sessionId}:{round}:empower_defense",
-                        ButtonStyle.Secondary, row: 0);
+                        ButtonStyle.Success, row: 0);
                     break;
             }
 
