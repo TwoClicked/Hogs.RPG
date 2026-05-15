@@ -266,23 +266,19 @@ namespace Hogs.RPG.Bot.Commands
                 var raidDef = RaidRegistry.GetByTier(session.Tier);
                 var freshSession = await _raidService.GetSessionAsync(sessionId);
 
-                // Post public raid status embed in thread (no buttons)
-                var embed = BuildRaidEmbed(freshSession, raidDef, "⚔️ The raid has begun! Check your DMs for your action buttons.");
+                // Post public raid status embed in thread
+                var embed = BuildRaidEmbed(freshSession, raidDef, "⚔️ The raid has begun! Each player has their action buttons below.");
                 await thread.SendMessageAsync(
                     string.Join(" ", freshSession.Participants.Select(p => $"<@{p.DiscordId}>")),
                     embed: embed);
 
-                // DM each player their role-specific buttons
+                // Post individual action message per player in thread
                 foreach (var participant in freshSession.Participants)
                 {
-                    var user = await _client.GetUserAsync(participant.DiscordId);
-                    if (user == null) continue;
-
-                    var dmChannel = await user.CreateDMChannelAsync();
                     var actionComponents = BuildActionButtonsForRole(sessionId, freshSession.CurrentRound, participant);
 
-                    await dmChannel.SendMessageAsync(
-                        $"⚔️ **Tier {freshSession.Tier} Raid has started!** Submit your action for Round {freshSession.CurrentRound}:",
+                    await thread.SendMessageAsync(
+                        $"<@{participant.DiscordId}> — Your actions ({participant.Role}):",
                         components: actionComponents);
                 }
             }
