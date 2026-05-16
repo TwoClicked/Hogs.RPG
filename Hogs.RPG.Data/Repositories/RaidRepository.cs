@@ -47,6 +47,7 @@ namespace Hogs.RPG.Data.Repositories
         public async Task<RaidSession?> GetActiveByThreadAsync(ulong threadId)
         {
             var session = await _context.RaidSessions
+                .AsNoTracking()
                 .Include(s => s.Participants)
                 .FirstOrDefaultAsync(s => s.ThreadId == threadId
                     && s.Status == RaidStatus.Active);
@@ -91,6 +92,22 @@ namespace Hogs.RPG.Data.Repositories
         }
 
         // =========================
+        // Get all active sessions
+        // =========================
+        public async Task<List<RaidSession>> GetAllActiveSessionsAsync()
+        {
+            var sessions = await _context.RaidSessions
+                .Include(s => s.Participants)
+                .Where(s => s.Status == RaidStatus.Active)
+                .ToListAsync();
+
+            foreach (var session in sessions)
+                session.DeserializeEffects();
+
+            return sessions;
+        }
+
+        // =========================
         // REMOVE PARTICIPANT
         // =========================
         public async Task RemoveParticipantAsync(int participantId)
@@ -129,6 +146,15 @@ namespace Hogs.RPG.Data.Repositories
                 _context.RaidSessions.Remove(session);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        // =========================
+        // Data level lock for rounds during Raids
+        // =========================
+
+        public async Task AcquireSessionLockAsync(int sessionId)
+        {;
+            await _context.Database.ExecuteSqlRawAsync($"SELECT pf_advisory_xact_lock({sessionId})");
         }
     }
 }

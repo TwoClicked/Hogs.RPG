@@ -100,6 +100,8 @@ namespace Hogs.RPG.Bot.Setup
             services.AddSingleton<ShopService>();
             services.AddSingleton<TradeService>();
             services.AddSingleton<TradeCleanupService>();
+            services.AddSingleton<RaidTimerService>();
+
 
             // DungeonService keeps in-memory state → must stay singleton
             services.AddSingleton<DungeonService>();

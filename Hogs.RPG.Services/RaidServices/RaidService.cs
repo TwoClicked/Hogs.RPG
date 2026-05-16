@@ -273,6 +273,7 @@ namespace Hogs.RPG.Services.RaidServices
 
             session.Status = RaidStatus.Active;
             session.CurrentRound = 1;
+            session.RoundStartedAt = DateTime.UtcNow;
 
             // Create thread
             var thread = await raidChannel.CreateThreadAsync(
@@ -294,6 +295,10 @@ namespace Hogs.RPG.Services.RaidServices
         public async Task<(bool success, string message, RaidRoundResult? roundResult)> SubmitActionAsync(
             ulong discordId, int sessionId, string action)
         {
+
+            // Aqcuire DB-level lock so simultaneos submissions don't race
+            await _raidRepo.AcquireSessionLockAsync(sessionId);
+
             var session = await _raidRepo.GetSessionAsync(sessionId);
             if (session == null)
                 return (false, "❌ Raid not found.", null);
@@ -531,8 +536,9 @@ namespace Hogs.RPG.Services.RaidServices
             // BOSS ACTIONS
             // =========================
 
-            // Roll for aggro swap
-            if (_random.NextDouble() < raidDef.AggroSwapChance)
+            // Roll for aggro swap (minimum 3 round cooldown between swaps)
+            if (_random.NextDouble() < raidDef.AggroSwapChance &&
+                session.CurrentRound - session.LastAggroSwapRound >= 2)
             {
                 var nonTank = session.Participants
                     .Where(p => p.Role != RaidRole.Tank)
@@ -540,6 +546,7 @@ namespace Hogs.RPG.Services.RaidServices
                     .First();
 
                 session.AggroDiscordId = nonTank.DiscordId;
+                session.LastAggroSwapRound = session.CurrentRound;
                 result.BossText += $"🔄 **Boss swapped target to {nonTank.Role}!** Tank must Taunt!\n";
             }
 
@@ -626,6 +633,8 @@ namespace Hogs.RPG.Services.RaidServices
                 return result;
             }
 
+            session.RoundStatusMessageId = 0;
+            session.RoundStartedAt = DateTime.UtcNow;
             session.CurrentRound++;
             result.Session = session;
 
@@ -775,6 +784,14 @@ namespace Hogs.RPG.Services.RaidServices
                 await _playerRepo.UpdatePlayerAsync(player);
             }
 
+            await _raidRepo.SaveSessionAsync(session);
+        }
+
+        public async Task UpdateRoundStatusMessageIdAsync(int sessionId, ulong messageId)
+        {
+            var session = await _raidRepo.GetSessionAsync(sessionId);
+            if (session == null) return;
+            session.RoundStatusMessageId = messageId;
             await _raidRepo.SaveSessionAsync(session);
         }
 

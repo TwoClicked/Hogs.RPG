@@ -42,6 +42,15 @@ namespace Hogs.RPG.Bot.Commands
                 return;
             }
 
+            // Disable the button message immediately so they can't press again
+            if (Context.Interaction is Discord.WebSocket.SocketMessageComponent componentInteraction)
+            {
+                await componentInteraction.Message.ModifyAsync(m =>
+                {
+                    m.Components = new ComponentBuilder().Build();
+                });
+            }
+
             var (success, message, roundResult) = await _raidService.SubmitActionAsync(
                 Context.User.Id, sessionId, action);
 
@@ -53,7 +62,6 @@ namespace Hogs.RPG.Bot.Commands
 
             if (roundResult == null)
             {
-                // Post public status to thread showing who has acted
                 var statusThread = Context.Channel as IThreadChannel;
                 if (statusThread != null)
                 {
@@ -89,8 +97,35 @@ namespace Hogs.RPG.Bot.Commands
                             return $"{roleIcon} <@{p.DiscordId}> — {status}";
                         });
 
-                        await statusThread.SendMessageAsync(
-                            $"**Round {session.CurrentRound} Actions:**\n{string.Join("\n", statusLines)}");
+                        string statusText = $"**Round {session.CurrentRound} Actions:**\n{string.Join("\n", statusLines)}";
+
+                        // Edit existing status message or post new one
+                        if (session.RoundStatusMessageId != 0)
+                        {
+                            try
+                            {
+                                var existing = await statusThread.GetMessageAsync(session.RoundStatusMessageId) as IUserMessage;
+                                if (existing != null)
+                                {
+                                    await existing.ModifyAsync(m => m.Content = statusText);
+                                }
+                                else
+                                {
+                                    var newMsg = await statusThread.SendMessageAsync(statusText);
+                                    await _raidService.UpdateRoundStatusMessageIdAsync(session.Id, newMsg.Id);
+                                }
+                            }
+                            catch
+                            {
+                                var newMsg = await statusThread.SendMessageAsync(statusText);
+                                await _raidService.UpdateRoundStatusMessageIdAsync(session.Id, newMsg.Id);
+                            }
+                        }
+                        else
+                        {
+                            var newMsg = await statusThread.SendMessageAsync(statusText);
+                            await _raidService.UpdateRoundStatusMessageIdAsync(session.Id, newMsg.Id);
+                        }
                     }
                 }
 
@@ -259,11 +294,11 @@ namespace Hogs.RPG.Bot.Commands
                     break;
                 case RaidRole.Tank:
                     builder.WithButton("🛡️ Hold", $"raid_action:{sessionId}:{round}:hold",
-                        ButtonStyle.Success, row: 0);
+                        ButtonStyle.Secondary, row: 0);
                     builder.WithButton("📣 Taunt", $"raid_action:{sessionId}:{round}:taunt",
                         ButtonStyle.Secondary, row: 0);
                     builder.WithButton("💥 Shatter", $"raid_action:{sessionId}:{round}:shatter",
-                        ButtonStyle.Success, row: 0,
+                        ButtonStyle.Secondary, row: 0,
                         disabled: participant.ShatterCooldownRoundsRemaining > 0);
                     break;
                 case RaidRole.Healer:

@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Hogs.RPG.Bot.Setup;
 using Hogs.RPG.Data;
 using Hogs.RPG.Services.Game;
+using Hogs.RPG.Services.RaidServices;
 using Hogs.RPG.Services.TradeServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -120,6 +121,11 @@ namespace Hogs.RPG.Bot
 
                 var tradeCleanup = _services.GetRequiredService<TradeCleanupService>();
                 _ = tradeCleanup.StartAsync(CancellationToken.None);
+
+                Console.WriteLine("🚀 Starting RaidTimerService...");
+
+                var raidTimer = _services.GetRequiredService<RaidTimerService>();
+                _ = raidTimer.StartAsync(CancellationToken.None);
 
                 _schedulerStarted = true;
             }

@@ -20,6 +20,8 @@ namespace Hogs.RPG.Core.Entities
         public ulong AggroDiscordId { get; set; } = 0;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime RoundStartedAt { get; set; } = DateTime.UtcNow;
+        public ulong RoundStatusMessageId { get; set; } = 0;
+        public int LastAggroSwapRound { get; set; } = 0;
 
         // Stored in DB as serialized string
         public string ActiveEffectsData { get; set; } = "";
@@ -33,16 +35,13 @@ namespace Hogs.RPG.Core.Entities
         public void DeserializeEffects()
         {
             ActiveEffects.Clear();
-
             if (string.IsNullOrWhiteSpace(ActiveEffectsData))
                 return;
 
             var effects = ActiveEffectsData.Split(';');
-
             foreach (var effect in effects)
             {
                 var parts = effect.Split('|');
-
                 if (parts.Length == 4)
                 {
                     ActiveEffects.Add(new ActiveRaidEffect
