@@ -154,7 +154,8 @@ namespace Hogs.RPG.Data.Repositories
 
         public async Task AcquireSessionLockAsync(int sessionId)
         {;
-            await _context.Database.ExecuteSqlRawAsync($"SELECT pf_advisory_xact_lock({sessionId})");
+            await _context.Database.ExecuteSqlRawAsync(
+            "SELECT pg_advisory_xact_lock({0})", sessionId);
         }
     }
 }
