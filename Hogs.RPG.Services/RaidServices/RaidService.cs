@@ -310,9 +310,6 @@ namespace Hogs.RPG.Services.RaidServices
             if (participant == null)
                 return (false, "❌ You are not in this raid.", null);
 
-            if (participant.HasActedThisRound)
-                return (false, "⏳ You have already submitted your action this round.", null);
-
             // Validate action for role
             if (!IsValidAction(participant.Role, action))
                 return (false, "❌ Invalid action for your role.", null);

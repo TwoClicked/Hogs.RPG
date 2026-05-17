@@ -42,15 +42,6 @@ namespace Hogs.RPG.Bot.Commands
                 return;
             }
 
-            // Disable the button message immediately so they can't press again
-            if (Context.Interaction is Discord.WebSocket.SocketMessageComponent componentInteraction)
-            {
-                await componentInteraction.Message.ModifyAsync(m =>
-                {
-                    m.Components = new ComponentBuilder().Build();
-                });
-            }
-
             var (success, message, roundResult) = await _raidService.SubmitActionAsync(
                 Context.User.Id, sessionId, action);
 
