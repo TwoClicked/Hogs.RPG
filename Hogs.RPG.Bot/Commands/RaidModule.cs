@@ -196,7 +196,7 @@ namespace Hogs.RPG.Bot.Commands
             await DeferAsync(ephemeral: true);
 
             int sessionId = int.Parse(sessionIdStr);
-            var role = Enum.Parse<RaidRole>(roleStr);
+            var role = Enum.Parse<RaidRole>(roleStr, ignoreCase: true);
 
             var (success, message) = await _raidService.JoinLobbyAsync(
                 Context.User.Id,
