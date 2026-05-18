@@ -2,6 +2,7 @@
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.GameplayServices;
@@ -20,6 +21,7 @@ namespace Hogs.RPG.Services.RaidServices
         private readonly RelicService _relicService;
         private readonly StatService _statService;
         private readonly PetService _petService;
+        private readonly PetPassiveService _petPassiveService;
         private readonly LevelService _levelService;
         private readonly DiscordSocketClient _client;
 
@@ -39,6 +41,7 @@ namespace Hogs.RPG.Services.RaidServices
             RelicService relicService,
             StatService statService,
             PetService petService,
+            PetPassiveService petPassiveService,
             LevelService levelService,
             DiscordSocketClient client)
         {
@@ -48,6 +51,7 @@ namespace Hogs.RPG.Services.RaidServices
             _relicService = relicService;
             _statService = statService;
             _petService = petService;
+            _petPassiveService = petPassiveService;
             _levelService = levelService;
             _client = client;
         }
@@ -295,8 +299,7 @@ namespace Hogs.RPG.Services.RaidServices
         public async Task<(bool success, string message, RaidRoundResult? roundResult)> SubmitActionAsync(
             ulong discordId, int sessionId, string action)
         {
-
-            // Aqcuire DB-level lock so simultaneos submissions don't race
+            // Acquire DB-level lock so simultaneous submissions don't race
             await _raidRepo.AcquireSessionLockAsync(sessionId);
 
             var session = await _raidRepo.GetSessionAsync(sessionId);
@@ -341,7 +344,6 @@ namespace Hogs.RPG.Services.RaidServices
             var dps = session.Participants.First(p => p.Role == RaidRole.Dps);
             var healer = session.Participants.First(p => p.Role == RaidRole.Healer);
 
-
             // =========================
             // PROCESS TANK ACTION
             // =========================
@@ -368,7 +370,6 @@ namespace Hogs.RPG.Services.RaidServices
             }
             else if (tank.PendingAction == "hold" || tank.PendingAction == "shatter")
             {
-                // Hold the line or shatter on cooldown — defaults to hold
                 result.TankText = "🛡️ Tank held the line.";
                 tank.ShatterCooldownRoundsRemaining = Math.Max(0, tank.ShatterCooldownRoundsRemaining - 1);
             }
@@ -387,9 +388,6 @@ namespace Hogs.RPG.Services.RaidServices
                 var (dpsAtk, _, _) = await _statService.CalculateStatsAsync(dpsPlayer);
                 var relicBonuses = await _relicService.GetRelicBonusesAsync(dps.DiscordId);
 
-                // Apply attack percent relic bonus
-                dpsAtk = (int)(dpsAtk * (1f + relicBonuses.AttackPercent));
-
                 // Apply empower buff if active
                 var empowerEffect = session.ActiveEffects.FirstOrDefault(e =>
                     e.EffectType == ActiveEffectType.EmpowerAttack &&
@@ -407,24 +405,35 @@ namespace Hogs.RPG.Services.RaidServices
                 int damage = (int)(dpsAtk * (100.0 / (100.0 + effectiveBossDefense)));
                 damage = Math.Max(1, damage);
 
+                // =========================
+                // 🐾 PET PASSIVES (DPS)
+                // =========================
+                var dpsPet = await _petService.GetEquippedPetAsync(dps.DiscordId);
+                PetDefinition dpsPetDef = null;
+                if (dpsPet != null)
+                    PetRegistry.All.TryGetValue(dpsPet.PetId, out dpsPetDef);
+
+                damage = _petPassiveService.ModifyOutgoingDamage(
+                    damage, dpsPet, dpsPetDef, session.BossCurrentHp, session.BossMaxHp);
+
                 // Executioner bonus
                 double bossHpPercent = (double)session.BossCurrentHp / session.BossMaxHp;
                 if (bossHpPercent < 0.50 && relicBonuses.ExecutionerBonusPercent > 0)
                     damage = (int)(damage * (1f + relicBonuses.ExecutionerBonusPercent));
 
-                // Consecutive hit bonus (tracked via active effect)
-                var consecutiveEffect = session.ActiveEffects.FirstOrDefault(e =>
-                    e.EffectType == ActiveEffectType.EmpowerAttack &&
-                    e.TargetDiscordId == dps.DiscordId);
-
                 session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - damage);
 
-                // Life steal
+                // Life steal (relic + pet passive combined)
+                int totalHeal = 0;
                 if (relicBonuses.LifeStealPercent > 0)
+                    totalHeal += (int)(damage * relicBonuses.LifeStealPercent);
+
+                totalHeal += _petPassiveService.ApplyOnHitEffects(damage, null, dpsPet);
+
+                if (totalHeal > 0)
                 {
-                    int healAmount = (int)(damage * relicBonuses.LifeStealPercent);
-                    dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + healAmount);
-                    result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Life steal healed for **{healAmount}**.";
+                    dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + totalHeal);
+                    result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Life steal healed for **{totalHeal}**.";
                 }
                 else
                 {
@@ -580,8 +589,22 @@ namespace Hogs.RPG.Services.RaidServices
                 int finalDamage = (int)(rawDamage * (1f - damageReduction));
                 finalDamage = Math.Max(1, finalDamage);
 
+                // =========================
+                // 🐾 PET PASSIVES (TANK)
+                // =========================
+                var tankPet = await _petService.GetEquippedPetAsync(tank.DiscordId);
+                finalDamage = _petPassiveService.ModifyIncomingDamage(finalDamage, tankPet);
+                finalDamage = Math.Max(1, finalDamage);
+
                 tank.CurrentHp = Math.Max(0, tank.CurrentHp - finalDamage);
                 result.BossText += $"🗡️ Boss attacks **Tank** for **{finalDamage}** damage.";
+
+                int reflect = _petPassiveService.ApplyOnHitTaken(finalDamage, tankPet);
+                if (reflect > 0)
+                {
+                    session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - reflect);
+                    result.BossText += $"\n🌵 **Thorns reflects {reflect} damage** back at the boss!";
+                }
             }
             else
             {
@@ -739,8 +762,9 @@ namespace Hogs.RPG.Services.RaidServices
 
                 await _petService.AddXPAsync(p.DiscordId, petXp);
 
-                // Relic shard drop
-                bool shardDropped = _random.NextDouble() < RelicShardDropChance;
+                // Relic shard drop (scaled by loot roll relic bonus)
+                float shardDropChance = RelicShardDropChance + relicBonuses.BonusLootRollPercent;
+                bool shardDropped = _random.NextDouble() < shardDropChance;
                 if (shardDropped)
                     await _relicService.GiveShardAsync(p.DiscordId, session.Tier);
 
