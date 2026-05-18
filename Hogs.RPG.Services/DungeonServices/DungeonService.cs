@@ -7,6 +7,7 @@ using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
+using Hogs.RPG.Services.RelicServices;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -116,6 +117,7 @@ namespace Hogs.RPG.Services.Game
             using var scope = _scopeFactory.CreateScope();
             var petService = scope.ServiceProvider.GetRequiredService<PetService>();
             var petPassiveService = scope.ServiceProvider.GetRequiredService<PetPassiveService>();
+            var relicService = scope.ServiceProvider.GetRequiredService<RelicService>();
 
             if (!_active.TryGetValue(userId, out var session))
                 return Simple("You are not in a dungeon.");
@@ -137,9 +139,6 @@ namespace Hogs.RPG.Services.Game
 
             var dungeon = DungeonRegistry.All[session.DungeonId];
 
-            // =========================
-            // ⚔ PLAYER ATTACK
-            // =========================
             // =========================
             // ⛓️ CHAIN SNARE — pre-attack intercept
             // =========================
@@ -165,12 +164,21 @@ namespace Hogs.RPG.Services.Game
             playerDamage = Math.Max(1, playerDamage);
 
             playerDamage = petPassiveService.ModifyOutgoingDamage(
-                playerDamage,
-                pet,
-                petDef,
-                session.EnemyHealth,
-                session.EnemyMaxHealth
-            );
+                            playerDamage,
+                            pet,
+                            petDef,
+                            session.EnemyHealth,
+                            session.EnemyMaxHealth
+                        );
+
+            // =========================
+            // 💎 RELIC COMBAT BONUSES
+            // =========================
+            var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
+
+            double enemyHpPercent = (double)session.EnemyHealth / session.EnemyMaxHealth;
+            if (enemyHpPercent < 0.50 && relicBonuses.ExecutionerBonusPercent > 0)
+                playerDamage = (int)(playerDamage * (1f + relicBonuses.ExecutionerBonusPercent));
 
             string text;
 
@@ -409,19 +417,25 @@ namespace Hogs.RPG.Services.Game
             var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
             var petService = scope.ServiceProvider.GetRequiredService<PetService>();
             var levelService = scope.ServiceProvider.GetRequiredService<LevelService>();
+            var relicService = scope.ServiceProvider.GetRequiredService<RelicService>();
 
             _active.Remove(userId);
 
             var player = await playerRepository.GetByDiscordIdAsync(userId);
             var dungeon = DungeonRegistry.All[session.DungeonId];
+            var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
-            player.Gold += 250;
-            player.XP += 1000;
+            int gold = (int)(250 * (1f + relicBonuses.BonusGoldPercent));
+            int xp = (int)(1000 * (1f + relicBonuses.BonusPlayerXpPercent));
+            int petXp = (int)(50 * (1f + relicBonuses.BonusPetXpPercent));
+
+            player.Gold += gold;
+            player.XP += xp;
 
             // =========================
             // 🐾 PET XP (DUNGEON)
             // =========================
-            var (petLeveledUp, petNewLevel) = await petService.AddXPAsync(userId, 50);
+            var (petLeveledUp, petNewLevel) = await petService.AddXPAsync(userId, petXp);
 
             string petLevelMessage = "";
 
@@ -469,7 +483,7 @@ namespace Hogs.RPG.Services.Game
             {
                 Embed = new EmbedBuilder()
                     .WithTitle("🏆 Dungeon Complete")
-                    .WithDescription($"+250 Gold\n+1000 XP and 50 pet XP{dropText}{levelMessage}{petLevelMessage}")
+                    .WithDescription($"+{gold} Gold\n+{xp} XP and {petXp} pet XP{dropText}{levelMessage}{petLevelMessage}")
                     .WithColor(Color.Gold)
                     .Build(),
                 IsFinished = true
@@ -479,7 +493,7 @@ namespace Hogs.RPG.Services.Game
             {
                 await _announcementChannel.SendMessageAsync(
                     $"🏆 <@{userId}> cleared **{dungeon.Name}**\n" +
-                    $"+400 Gold\n+1000 XP{dropText}{levelMessage}{petLevelMessage}"
+                    $"+{gold} Gold\n+{xp} XP{dropText}{levelMessage}{petLevelMessage}"
                 );
             }
 
