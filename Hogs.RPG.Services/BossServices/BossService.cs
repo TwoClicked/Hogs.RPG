@@ -9,7 +9,9 @@ using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
+using Hogs.RPG.Services.RelicServices;
 using Microsoft.Extensions.DependencyInjection;
+using Hogs.RPG.Core.GameData.Pets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,6 +74,9 @@ namespace Hogs.RPG.Services.Game
             using var scope = _scopeFactory.CreateScope();
             var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
             var statService = scope.ServiceProvider.GetRequiredService<StatService>();
+            var petService = scope.ServiceProvider.GetRequiredService<PetService>();
+            var petPassiveService = scope.ServiceProvider.GetRequiredService<PetPassiveService>();
+            var relicService = scope.ServiceProvider.GetRequiredService<RelicService>();
 
             var player = await playerRepo.GetByDiscordIdAsync(userId);
             if (player == null) return;
@@ -80,6 +85,27 @@ namespace Hogs.RPG.Services.Game
 
             int damage = (int)(attack * (100.0 / (100 + boss.Definition.Defense)));
             damage = Math.Max(1, damage);
+
+            // =========================
+            // 🐾 PET PASSIVES
+            // =========================
+            var pet = await petService.GetEquippedPetAsync(userId);
+            PetDefinition petDef = null;
+            if (pet != null)
+                PetRegistry.All.TryGetValue(pet.PetId, out petDef);
+
+            damage = petPassiveService.ModifyOutgoingDamage(
+                damage, pet, petDef, boss.CurrentHealth, boss.Definition.MaxHealth);
+
+            // =========================
+            // 💎 RELIC COMBAT BONUSES
+            // =========================
+            var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
+
+            // Executioner: bonus damage when boss is below 50% HP
+            double bossHpPercent = (double)boss.CurrentHealth / boss.Definition.MaxHealth;
+            if (bossHpPercent < 0.50 && relicBonuses.ExecutionerBonusPercent > 0)
+                damage = (int)(damage * (1f + relicBonuses.ExecutionerBonusPercent));
 
             boss.CurrentHealth = Math.Max(0, boss.CurrentHealth - damage);
 
@@ -131,12 +157,18 @@ namespace Hogs.RPG.Services.Game
             var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
             var playerService = scope.ServiceProvider.GetRequiredService<PlayerService>();
             var statService = scope.ServiceProvider.GetRequiredService<StatService>();
+            var petService = scope.ServiceProvider.GetRequiredService<PetService>();
+            var relicService = scope.ServiceProvider.GetRequiredService<RelicService>();
 
             foreach (var userId in boss.Participants)
             {
                 var player = await playerService.GetOrCreatePlayerAsync(userId, "Unknown");
+                var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
-                player.Gold += reward;
+                int goldWithBonus = (int)(reward * (1f + relicBonuses.BonusGoldPercent));
+                int petXp = (int)(25 * (1f + relicBonuses.BonusPetXpPercent));
+
+                player.Gold += goldWithBonus;
 
                 var (atk, def, maxHp) = await statService.CalculateStatsAsync(player);
 
@@ -146,8 +178,9 @@ namespace Hogs.RPG.Services.Game
                 player.Health = Math.Min(player.Health, maxHp);
 
                 await playerRepo.UpdatePlayerAsync(player);
+                await petService.AddXPAsync(userId, petXp);
 
-                sb.AppendLine($"<@{userId}> +{reward} gold");
+                sb.AppendLine($"<@{userId}> +{goldWithBonus} gold");
             }
 
             return sb.ToString();
@@ -400,24 +433,31 @@ namespace Hogs.RPG.Services.Game
             var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
             var levelService = scope.ServiceProvider.GetRequiredService<LevelService>();
             var petService = scope.ServiceProvider.GetRequiredService<PetService>();
+            var relicService = scope.ServiceProvider.GetRequiredService<RelicService>();
 
             foreach (var userId in boss.Participants)
             {
                 var player = await playerService.GetOrCreatePlayerAsync(userId, "Unknown");
+                var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
-                player.Gold += reward;
-                player.XP += 2500;
+                int gold = (int)(reward * (1f + relicBonuses.BonusGoldPercent));
+                int xp = (int)(2500 * (1f + relicBonuses.BonusPlayerXpPercent));
+                int petXp = (int)(50 * (1f + relicBonuses.BonusPetXpPercent));
+
+                player.Gold += gold;
+                player.XP += xp;
 
                 if (top3.Contains(userId))
                 {
-                    player.Gold += 250;
-                    player.XP += 2500;
+                    player.Gold += (int)(250 * (1f + relicBonuses.BonusGoldPercent));
+                    player.XP += (int)(2500 * (1f + relicBonuses.BonusPlayerXpPercent));
                     top3Mentions.Add($"<@{userId}>");
                 }
 
                 var (levelMessage, levelsGained) = levelService.CheckLevelUp(player);
 
-                var (petLeveled, petLevel) = await petService.AddXPAsync(userId, 50);
+                var (petLeveled, petLevel) = await petService.AddXPAsync(userId, petXp);
+
                 if (petLeveled)
                 {
                     var feedChannel = _client.GetChannel(_feedChannelId) as IMessageChannel;
