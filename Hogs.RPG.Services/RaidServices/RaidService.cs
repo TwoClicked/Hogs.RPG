@@ -481,7 +481,7 @@ namespace Hogs.RPG.Services.RaidServices
                 {
                     EffectType = ActiveEffectType.EmpowerAttack,
                     TargetDiscordId = dps.DiscordId,
-                    RoundsRemaining = empowerRounds,
+                    RoundsRemaining = empowerRounds + 1,
                     Value = 0.15
                 });
 
@@ -500,7 +500,7 @@ namespace Hogs.RPG.Services.RaidServices
                 {
                     EffectType = ActiveEffectType.EmpowerDefense,
                     TargetDiscordId = tank.DiscordId,
-                    RoundsRemaining = empowerRounds,
+                    RoundsRemaining = empowerRounds + 1,
                     Value = 0.15
                 });
 

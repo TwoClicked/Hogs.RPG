@@ -92,8 +92,8 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         [SlashCommand("relic-equip", "Equip a relic to a slot")]
         public async Task EquipRelic(
-            [Summary("relic_id", "The ID of the relic to equip (shown in /relics)")] int relicId,
-            [Summary("slot", "Slot 1 or 2")] int slot)
+        [Summary("relic_id", "The relic to equip"), Autocomplete(typeof(RelicAutocompleteHandler))] int relicId,
+        [Summary("slot", "Slot 1 or 2"), Autocomplete(typeof(RelicSlotAutocompleteHandler))] int slot)
         {
             await DeferAsync(ephemeral: true);
             if (!await EnsurePlayerAsync()) return;
@@ -155,8 +155,8 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         [SlashCommand("relic-reroll", "Reroll a relic's passive bonus using a shard")]
         public async Task RerollRelic(
-            [Summary("relic_id", "The ID of the relic to reroll (shown in /relics)")] int relicId,
-            [Summary("shard_tier", "Which tier shard to consume (1-5)")] int shardTier)
+            [Summary("relic_id", "The relic to reroll"), Autocomplete(typeof(RelicAutocompleteHandler))] int relicId,
+            [Summary("shard_tier", "Which tier shard to consume"), Autocomplete(typeof(RelicShardAutocompleteHandler))] int shardTier)
         {
             await DeferAsync(ephemeral: true);
             if (!await EnsurePlayerAsync()) return;
@@ -176,8 +176,8 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         [SlashCommand("relic-upgrade", "Upgrade a relic's rank using a shard")]
         public async Task UpgradeRelic(
-            [Summary("relic_id", "The ID of the relic to upgrade (shown in /relics)")] int relicId,
-            [Summary("shard_tier", "Which tier shard to consume (1-5)")] int shardTier)
+            [Summary("relic_id", "The relic to upgrade"), Autocomplete(typeof(RelicAutocompleteHandler))] int relicId,
+            [Summary("shard_tier", "Which tier shard to consume"), Autocomplete(typeof(RelicShardAutocompleteHandler))] int shardTier)
         {
             await DeferAsync(ephemeral: true);
             if (!await EnsurePlayerAsync()) return;

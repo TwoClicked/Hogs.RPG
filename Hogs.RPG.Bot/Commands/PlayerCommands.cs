@@ -9,6 +9,7 @@ using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.GatheringServices;
 using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
+using Hogs.RPG.Services.RelicServices;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ namespace Hogs.RPG.Bot.Commands
         private readonly HunterStaminaService _hunterStaminaService;
         private readonly DiscordSocketClient _client;
         private readonly PetService _petService;
+        private readonly RelicService _relicService;
 
         public PlayerCommands(
             PlayerService playerService,
@@ -36,7 +38,8 @@ namespace Hogs.RPG.Bot.Commands
             EnergyService energyService,
             HunterStaminaService hungerStaminaService,
             DiscordSocketClient client,
-            PetService petService)
+            PetService petService,
+            RelicService relicService)
         {
             _playerService = playerService;
             _playerRepository = playerRepository;
@@ -47,6 +50,7 @@ namespace Hogs.RPG.Bot.Commands
             _hunterStaminaService = hungerStaminaService;
             _client = client;
             _petService = petService;
+            _relicService = relicService;
         }
 
         // =========================
@@ -91,8 +95,8 @@ namespace Hogs.RPG.Bot.Commands
             await _playerRepository.CreatePlayerAsync(newPlayer);
 
             // 🐾 Give starter pet
-            await _petService.GivePetAsync(Context.User.Id, "verdant_wisp");
-            await _petService.EquipPetAsync(Context.User.Id, "verdant_wisp");
+            await _petService.GivePetAsync(Context.User.Id, "verdant_cat");
+            await _petService.EquipPetAsync(Context.User.Id, "verdant_cat");
 
             // 🎭 Assign RPG role
             var guild = _client.GetGuild(Context.Guild.Id);
@@ -199,6 +203,29 @@ namespace Hogs.RPG.Bot.Commands
                     $"Amulet:    {FormatItem(player.Amulet)}",
                     false);
 
+            // =========================
+            // RELICS
+            // =========================
+            var equippedRelics = await _relicService.GetEquippedRelicsAsync(player.DiscordId);
+
+            var slot1Relic = equippedRelics.FirstOrDefault(r => r.SlotIndex == 0);
+            var slot2Relic = equippedRelics.FirstOrDefault(r => r.SlotIndex == 1);
+
+            string relicSlot1 = slot1Relic != null
+                ? $"{RelicRegistry.Get(slot1Relic.RelicId).Name} (Rank {slot1Relic.Rank}) — {_relicService.FormatBonus(slot1Relic.BonusType)}"
+                : "*Empty*";
+
+            string relicSlot2 = slot2Relic != null
+                ? $"{RelicRegistry.Get(slot2Relic.RelicId).Name} (Rank {slot2Relic.Rank}) — {_relicService.FormatBonus(slot2Relic.BonusType)}"
+                : "*Empty*";
+
+            embed.AddField("💎 Relics",
+                $"Slot 1: {relicSlot1}\nSlot 2: {relicSlot2}",
+                false);
+
+            // =========================
+            // PET
+            // =========================
             if (pet != null && PetRegistry.All.TryGetValue(pet.PetId, out var def))
             {
                 var (atk, defStat, hp) = _petService.CalculateStats(pet);
