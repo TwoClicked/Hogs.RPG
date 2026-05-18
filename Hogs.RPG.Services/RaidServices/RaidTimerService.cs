@@ -7,6 +7,7 @@ using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.RaidServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Text;
 
 namespace Hogs.RPG.Services.RaidServices
 {
@@ -96,6 +97,7 @@ namespace Hogs.RPG.Services.RaidServices
                 if (roundResult.IsVictory)
                 {
                     await PostVictoryAsync(thread, roundResult);
+                    await PostRaidVictoryFeedAsync(roundResult);  
                     continue;
                 }
 
@@ -214,6 +216,50 @@ namespace Hogs.RPG.Services.RaidServices
             await thread.SendMessageAsync(embed: embed);
             await thread.ModifyAsync(t => t.Archived = true);
         }
+
+        // =========================
+        // FEED: RAID VICTORY
+        // =========================
+        private async Task PostRaidVictoryFeedAsync(RaidRoundResult result)
+        {
+            var feedChannel = _client.GetChannel(1485357755433750549UL) as IMessageChannel;
+            if (feedChannel == null) return;
+
+            var session = result.Session;
+            var raidDef = RaidRegistry.GetByTier(session?.Tier ?? 0);
+            var bossName = raidDef?.Name ?? "Unknown Raid Boss";
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"The **{bossName}** has been defeated!\n");
+
+            foreach (var reward in result.Rewards)
+            {
+                string roleIcon = reward.Role switch
+                {
+                    RaidRole.Tank => "🛡️",
+                    RaidRole.Dps => "⚔️",
+                    RaidRole.Healer => "💚",
+                    _ => "❓"
+                };
+
+                sb.Append($"{roleIcon} <@{reward.DiscordId}> — 💰 +{reward.Gold} gold | 📈 +{reward.PlayerXp} XP");
+
+                if (reward.ShardDropped)
+                    sb.Append($"\n  💎 **Tier {reward.ShardTier} Relic Shard dropped!**");
+
+                sb.AppendLine();
+            }
+
+            var embed = new EmbedBuilder()
+                .WithTitle($"⚔️ Raid Clear — {bossName}")
+                .WithColor(Color.Gold)
+                .WithDescription(sb.ToString())
+                .WithFooter($"Tier {session?.Tier} Raid")
+                .Build();
+
+            await feedChannel.SendMessageAsync(embed: embed);
+        }
+
 
         private MessageComponent BuildActionButtonsForRole(
             int sessionId,
