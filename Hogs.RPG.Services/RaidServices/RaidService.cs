@@ -27,7 +27,7 @@ namespace Hogs.RPG.Services.RaidServices
 
         private static readonly Random _random = new();
 
-        private const int RaidCooldownHours = 8;
+        private const int RaidCooldownHours = 4;
         private const int RaidGoldReward = 1000;
         private const int RaidPlayerXpReward = 1500;
         private const int RaidPetXpReward = 100;
