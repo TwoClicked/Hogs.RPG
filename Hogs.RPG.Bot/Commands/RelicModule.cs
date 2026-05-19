@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.RelicServices;
@@ -103,6 +104,71 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
+        // /relic-trade — Trade a relic to another player
+        // =========================
+        [SlashCommand("relic-trade", "Trade a relic to another player")]
+        public async Task TradeRelic(
+            [Summary("player", "The player to trade to")] IUser target,
+            [Summary("relic_id", "The relic to trade"), Autocomplete(typeof(RelicAutocompleteHandler))] int relicId)
+        {
+            await DeferAsync(ephemeral: true);
+            if (!await EnsurePlayerAsync()) return;
+
+            if (target.Id == Context.User.Id)
+            {
+                await FollowupAsync("❌ You cannot trade a relic to yourself.", ephemeral: true);
+                return;
+            }
+
+            var relic = await _relicService.GetRelicByIdAsync(relicId);
+
+            if (relic == null || relic.DiscordId != Context.User.Id)
+            {
+                await FollowupAsync("❌ Relic not found in your inventory.", ephemeral: true);
+                return;
+            }
+
+            if (relic.IsEquipped)
+            {
+                await FollowupAsync("❌ Unequip the relic before trading it.", ephemeral: true);
+                return;
+            }
+
+            relic.DiscordId = target.Id;
+            await _relicService.SaveRelicAsync(relic);
+
+            await FollowupAsync($"✅ **{RelicRegistry.Get(relic.RelicId).Name}** traded to <@{target.Id}>.", ephemeral: true);
+        }
+
+
+        // =========================
+        // /relic-unequip — Unequip a relic from a slot
+        // =========================
+        [SlashCommand("relic-unequip", "Unequip a relic from a slot")]
+        public async Task UnequipRelic(
+            [Summary("slot", "Slot 1 or 2"), Autocomplete(typeof(RelicSlotAutocompleteHandler))] int slot)
+        {
+            await DeferAsync(ephemeral: true);
+            if (!await EnsurePlayerAsync()) return;
+
+            var relics = await _relicService.GetRelicsAsync(Context.User.Id);
+            var equipped = relics.FirstOrDefault(r => r.IsEquipped && r.SlotIndex == slot - 1);
+
+            if (equipped == null)
+            {
+                await FollowupAsync($"❌ No relic equipped in slot {slot}.", ephemeral: true);
+                return;
+            }
+
+            equipped.IsEquipped = false;
+            await _relicService.SaveRelicAsync(equipped);
+
+            var def = RelicRegistry.Get(equipped.RelicId);
+            await FollowupAsync($"✅ **{def.Name}** unequipped from slot {slot}.", ephemeral: true);
+        }
+
+
+        // =========================
         // /relic-unlock — Spend a T1 shard to unlock a new relic
         // =========================
         [SlashCommand("relic-unlock", "Spend a Tier 1 shard to unlock a new relic")]
@@ -195,7 +261,6 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         // HELPER — Shard display
         // =========================
-
         public async Task<bool> ConsumeShardAsync(ulong discordId, int tier)
         {
             return await _repo.RemoveShardAsync(discordId, tier, 1);

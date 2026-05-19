@@ -263,7 +263,16 @@ namespace Hogs.RPG.Services.RelicServices
             };
         }
 
+        public async Task<PlayerRelic?> GetRelicByIdAsync(int relicId)
+        {
+            return await _repo.GetByIdAsync(relicId);
+        }
 
+
+        public async Task SaveRelicAsync(PlayerRelic relic)
+        {
+            await _repo.SaveAsync();
+        }
 
         // =========================
         // 💎 GET SHARDS
