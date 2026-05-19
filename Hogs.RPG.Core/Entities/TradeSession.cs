@@ -27,5 +27,7 @@ namespace Hogs.RPG.Core.Entities
 
         public int Player1Gold { get; set; }
         public int Player2Gold { get; set; }
+        public List<int> Player1Relics { get; set; } = new();
+        public List<int> Player2Relics { get; set; } = new();
     }
 }

@@ -4,8 +4,10 @@ using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.InventoryItems;
+using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PlayerServices;
+using Hogs.RPG.Services.RelicServices;
 using Hogs.RPG.Services.TradeServices;
 using System;
 using System.Collections.Generic;
@@ -19,14 +21,20 @@ namespace Hogs.RPG.Bot.Commands
         private readonly TradeService _tradeService;
         private readonly InventoryService _inventoryService;
         private readonly PlayerService _playerService;
+        private readonly RelicService _relicService;
 
         private const ulong TRADE_CHANNEL_ID = 1489405758603923477;
 
-        public TradeModule(TradeService tradeService, InventoryService inventoryService, PlayerService playerService)
+        public TradeModule(
+            TradeService tradeService,
+            InventoryService inventoryService,
+            PlayerService playerService,
+            RelicService relicService)
         {
             _tradeService = tradeService;
             _inventoryService = inventoryService;
             _playerService = playerService;
+            _relicService = relicService;
         }
 
         private async Task<bool> EnsureTradeChannel()
@@ -43,7 +51,7 @@ namespace Hogs.RPG.Bot.Commands
 
         private Embed BuildTradeEmbed(TradeSession trade)
         {
-            string Format(Dictionary<string, int> offer, int gold, List<int> pets)
+            string Format(Dictionary<string, int> offer, int gold, List<int> pets, List<int> relics)
             {
                 var lines = new List<string>();
 
@@ -52,6 +60,9 @@ namespace Hogs.RPG.Bot.Commands
 
                 if (pets.Any())
                     lines.AddRange(pets.Select(p => $"🐾 Pet #{p}"));
+
+                if (relics.Any())
+                    lines.AddRange(relics.Select(r => $"💎 Relic #{r}"));
 
                 if (offer.Any())
                 {
@@ -75,11 +86,11 @@ namespace Hogs.RPG.Bot.Commands
                 .WithColor(Color.DarkBlue)
                 .AddField(
                     $"👤 <@{trade.Player1Id}> {(trade.Player1Confirmed ? "🔒" : "🔓")}",
-                    Format(trade.Player1Offer, trade.Player1Gold, trade.Player1Pets),
+                    Format(trade.Player1Offer, trade.Player1Gold, trade.Player1Pets, trade.Player1Relics),
                     true)
                 .AddField(
                     $"👤 <@{trade.Player2Id}> {(trade.Player2Confirmed ? "🔒" : "🔓")}",
-                    Format(trade.Player2Offer, trade.Player2Gold, trade.Player2Pets),
+                    Format(trade.Player2Offer, trade.Player2Gold, trade.Player2Pets, trade.Player2Relics),
                     true)
                 .WithFooter("🔒 = Confirmed | 🔓 = Not Confirmed")
                 .Build();
@@ -113,6 +124,94 @@ namespace Hogs.RPG.Bot.Commands
             await RespondAsync(
                 $"📦 {target.Mention}, {Context.User.Mention} wants to trade.\n" +
                 $"Use `/tradeaccept` to accept.");
+        }
+
+        [SlashCommand("tradeaccept", "Accept a trade request")]
+        public async Task TradeAccept()
+        {
+            if (!await EnsureTradeChannel()) return;
+
+            var trade = _tradeService.GetTrade(Context.User.Id);
+
+            if (trade == null)
+            {
+                await RespondAsync("No trade request found.", ephemeral: true);
+                return;
+            }
+
+            if (trade.State != TradeState.Pending)
+            {
+                await RespondAsync("This trade is already active.", ephemeral: true);
+                return;
+            }
+
+            if (Context.User.Id != trade.Player2Id)
+            {
+                await RespondAsync("You are not the one being invited to this trade.", ephemeral: true);
+                return;
+            }
+
+            trade.LastUpdatedAt = DateTime.UtcNow;
+            trade.WarningSent = false;
+            trade.State = TradeState.Active;
+
+            await RespondAsync(
+                $"✅ Trade started between <@{trade.Player1Id}> and <@{trade.Player2Id}>!\n" +
+                $"Use `/tradeadd`, `/tradeaddpet`, `/tradeaddrelic`, or `/tradeaddgold`.");
+        }
+
+        [SlashCommand("tradeadd", "Add item to trade")]
+        public async Task TradeAdd(
+            [Autocomplete(typeof(TradeItemAutocompleteHandler))] string itemId,
+            int amount)
+        {
+            if (!await EnsureTradeChannel()) return;
+
+            var trade = _tradeService.GetTrade(Context.User.Id);
+
+            if (trade == null || trade.State != TradeState.Active)
+            {
+                await RespondAsync("No active trade.", ephemeral: true);
+                return;
+            }
+
+            var owned = await _inventoryService.GetItemAmountAsync(Context.User.Id, itemId);
+
+            if (owned <= 0)
+            {
+                await RespondAsync("You do not own this item.", ephemeral: true);
+                return;
+            }
+
+            if (amount <= 0 || amount > owned)
+            {
+                await RespondAsync($"Invalid amount. You own **{owned}**.", ephemeral: true);
+                return;
+            }
+
+            if (trade.State == TradeState.Confirming)
+                trade.State = TradeState.Active;
+
+            trade.LastUpdatedAt = DateTime.UtcNow;
+            trade.WarningSent = false;
+
+            var isPlayer1 = trade.Player1Id == Context.User.Id;
+            var offer = isPlayer1 ? trade.Player1Offer : trade.Player2Offer;
+
+            offer[itemId] = offer.ContainsKey(itemId)
+                ? offer[itemId] + amount
+                : amount;
+
+            trade.Player1Confirmed = false;
+            trade.Player2Confirmed = false;
+
+            var name = InventoryItemDefinitions.All.TryGetValue(itemId, out var def)
+                ? def.Name
+                : itemId;
+
+            await RespondAsync(
+                $"➕ <@{Context.User.Id}> added **{amount}x {name}**",
+                embed: BuildTradeEmbed(trade));
         }
 
         [SlashCommand("tradeaddgold", "Add gold to trade")]
@@ -215,66 +314,12 @@ namespace Hogs.RPG.Bot.Commands
                 embed: BuildTradeEmbed(trade));
         }
 
-        [SlashCommand("tradecancel", "Cancel the current trade")]
-        public async Task TradeCancel()
-        {
-            if (!await EnsureTradeChannel()) return;
-
-            var trade = _tradeService.GetTrade(Context.User.Id);
-
-            if (trade == null)
-            {
-                await RespondAsync("You are not in a trade.", ephemeral: true);
-                return;
-            }
-
-            trade.LastUpdatedAt = DateTime.UtcNow;
-            trade.WarningSent = false;
-
-            await RespondAsync(
-                $"❌ Trade between <@{trade.Player1Id}> and <@{trade.Player2Id}> has been cancelled.");
-
-            _tradeService.RemoveTrade(trade);
-        }
-
-        [SlashCommand("tradeaccept", "Accept a trade request")]
-        public async Task TradeAccept()
-        {
-            if (!await EnsureTradeChannel()) return;
-
-            var trade = _tradeService.GetTrade(Context.User.Id);
-
-            if (trade == null)
-            {
-                await RespondAsync("No trade request found.", ephemeral: true);
-                return;
-            }
-
-            if (trade.State != TradeState.Pending)
-            {
-                await RespondAsync("This trade is already active.", ephemeral: true);
-                return;
-            }
-
-            if (Context.User.Id != trade.Player2Id)
-            {
-                await RespondAsync("You are not the one being invited to this trade.", ephemeral: true);
-                return;
-            }
-
-            trade.LastUpdatedAt = DateTime.UtcNow;
-            trade.WarningSent = false;
-            trade.State = TradeState.Active;
-
-            await RespondAsync(
-                $"✅ Trade started between <@{trade.Player1Id}> and <@{trade.Player2Id}>!\n" +
-                $"Use `/tradeadd`, `/tradeaddpet`, or `/tradeaddgold`.");
-        }
-
-        [SlashCommand("tradeadd", "Add item to trade")]
-        public async Task TradeAdd(
-            [Autocomplete(typeof(TradeItemAutocompleteHandler))] string itemId,
-            int amount)
+        // =========================
+        // /tradeaddrelic
+        // =========================
+        [SlashCommand("tradeaddrelic", "Add a relic to the trade")]
+        public async Task TradeAddRelic(
+            [Summary("relic_id", "The relic to add"), Autocomplete(typeof(RelicAutocompleteHandler))] int relicId)
         {
             if (!await EnsureTradeChannel()) return;
 
@@ -286,17 +331,17 @@ namespace Hogs.RPG.Bot.Commands
                 return;
             }
 
-            var owned = await _inventoryService.GetItemAmountAsync(Context.User.Id, itemId);
+            var relic = await _relicService.GetRelicByIdAsync(relicId);
 
-            if (owned <= 0)
+            if (relic == null || relic.DiscordId != Context.User.Id)
             {
-                await RespondAsync("You do not own this item.", ephemeral: true);
+                await RespondAsync("❌ You do not own this relic.", ephemeral: true);
                 return;
             }
 
-            if (amount <= 0 || amount > owned)
+            if (relic.IsEquipped)
             {
-                await RespondAsync($"Invalid amount. You own **{owned}**.", ephemeral: true);
+                await RespondAsync("❌ Unequip the relic before adding it to a trade.", ephemeral: true);
                 return;
             }
 
@@ -306,22 +351,25 @@ namespace Hogs.RPG.Bot.Commands
             trade.LastUpdatedAt = DateTime.UtcNow;
             trade.WarningSent = false;
 
-            var isPlayer1 = trade.Player1Id == Context.User.Id;
-            var offer = isPlayer1 ? trade.Player1Offer : trade.Player2Offer;
+            var list = Context.User.Id == trade.Player1Id
+                ? trade.Player1Relics
+                : trade.Player2Relics;
 
-            offer[itemId] = offer.ContainsKey(itemId)
-                ? offer[itemId] + amount
-                : amount;
+            if (list.Contains(relicId))
+            {
+                await RespondAsync("❌ Relic already added to trade.", ephemeral: true);
+                return;
+            }
+
+            list.Add(relicId);
 
             trade.Player1Confirmed = false;
             trade.Player2Confirmed = false;
 
-            var name = InventoryItemDefinitions.All.TryGetValue(itemId, out var def)
-                ? def.Name
-                : itemId;
+            var def = RelicRegistry.Get(relic.RelicId);
 
             await RespondAsync(
-                $"➕ <@{Context.User.Id}> added **{amount}x {name}**",
+                $"💎 <@{Context.User.Id}> added **{def.Name}** (Rank {relic.Rank})",
                 embed: BuildTradeEmbed(trade));
         }
 
@@ -356,6 +404,7 @@ namespace Hogs.RPG.Bot.Commands
 
             if (!trade.Player1Offer.Any() && !trade.Player2Offer.Any()
                 && !trade.Player1Pets.Any() && !trade.Player2Pets.Any()
+                && !trade.Player1Relics.Any() && !trade.Player2Relics.Any()
                 && trade.Player1Gold == 0 && trade.Player2Gold == 0)
             {
                 await RespondAsync("You cannot confirm an empty trade.", ephemeral: true);
@@ -393,6 +442,28 @@ namespace Hogs.RPG.Bot.Commands
             {
                 await RespondAsync("🔒 You confirmed. Waiting for the other player...");
             }
+        }
+
+        [SlashCommand("tradecancel", "Cancel the current trade")]
+        public async Task TradeCancel()
+        {
+            if (!await EnsureTradeChannel()) return;
+
+            var trade = _tradeService.GetTrade(Context.User.Id);
+
+            if (trade == null)
+            {
+                await RespondAsync("You are not in a trade.", ephemeral: true);
+                return;
+            }
+
+            trade.LastUpdatedAt = DateTime.UtcNow;
+            trade.WarningSent = false;
+
+            await RespondAsync(
+                $"❌ Trade between <@{trade.Player1Id}> and <@{trade.Player2Id}> has been cancelled.");
+
+            _tradeService.RemoveTrade(trade);
         }
 
         private async Task ExecuteTrade(TradeSession trade)
@@ -444,6 +515,25 @@ namespace Hogs.RPG.Bot.Commands
                     throw new Exception($"Player 2 has pet #{petId} equipped.");
             }
 
+            // ✅ VALIDATE RELICS
+            foreach (var relicId in trade.Player1Relics)
+            {
+                var relic = await _relicService.GetRelicByIdAsync(relicId);
+                if (relic == null || relic.DiscordId != trade.Player1Id)
+                    throw new Exception($"Player 1 no longer owns relic #{relicId}.");
+                if (relic.IsEquipped)
+                    throw new Exception($"Player 1 has relic #{relicId} equipped. Unequip it first.");
+            }
+
+            foreach (var relicId in trade.Player2Relics)
+            {
+                var relic = await _relicService.GetRelicByIdAsync(relicId);
+                if (relic == null || relic.DiscordId != trade.Player2Id)
+                    throw new Exception($"Player 2 no longer owns relic #{relicId}.");
+                if (relic.IsEquipped)
+                    throw new Exception($"Player 2 has relic #{relicId} equipped. Unequip it first.");
+            }
+
             // ✅ TRANSFER GOLD
             p1.Gold -= trade.Player1Gold;
             p2.Gold += trade.Player1Gold;
@@ -472,6 +562,27 @@ namespace Hogs.RPG.Bot.Commands
 
             foreach (var petId in trade.Player2Pets)
                 await _playerService.TransferPet(petId, trade.Player2Id, trade.Player1Id);
+
+            // ✅ TRANSFER RELICS
+            foreach (var relicId in trade.Player1Relics)
+            {
+                var relic = await _relicService.GetRelicByIdAsync(relicId);
+                if (relic != null)
+                {
+                    relic.DiscordId = trade.Player2Id;
+                    await _relicService.SaveRelicAsync(relic);
+                }
+            }
+
+            foreach (var relicId in trade.Player2Relics)
+            {
+                var relic = await _relicService.GetRelicByIdAsync(relicId);
+                if (relic != null)
+                {
+                    relic.DiscordId = trade.Player1Id;
+                    await _relicService.SaveRelicAsync(relic);
+                }
+            }
         }
     }
 }

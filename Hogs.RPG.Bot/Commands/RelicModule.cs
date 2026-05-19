@@ -104,44 +104,6 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
-        // /relic-trade — Trade a relic to another player
-        // =========================
-        [SlashCommand("relic-trade", "Trade a relic to another player")]
-        public async Task TradeRelic(
-            [Summary("player", "The player to trade to")] IUser target,
-            [Summary("relic_id", "The relic to trade"), Autocomplete(typeof(RelicAutocompleteHandler))] int relicId)
-        {
-            await DeferAsync(ephemeral: true);
-            if (!await EnsurePlayerAsync()) return;
-
-            if (target.Id == Context.User.Id)
-            {
-                await FollowupAsync("❌ You cannot trade a relic to yourself.", ephemeral: true);
-                return;
-            }
-
-            var relic = await _relicService.GetRelicByIdAsync(relicId);
-
-            if (relic == null || relic.DiscordId != Context.User.Id)
-            {
-                await FollowupAsync("❌ Relic not found in your inventory.", ephemeral: true);
-                return;
-            }
-
-            if (relic.IsEquipped)
-            {
-                await FollowupAsync("❌ Unequip the relic before trading it.", ephemeral: true);
-                return;
-            }
-
-            relic.DiscordId = target.Id;
-            await _relicService.SaveRelicAsync(relic);
-
-            await FollowupAsync($"✅ **{RelicRegistry.Get(relic.RelicId).Name}** traded to <@{target.Id}>.", ephemeral: true);
-        }
-
-
-        // =========================
         // /relic-unequip — Unequip a relic from a slot
         // =========================
         [SlashCommand("relic-unequip", "Unequip a relic from a slot")]
