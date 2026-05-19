@@ -519,6 +519,14 @@ namespace Hogs.RPG.Services.ShopServices
                 case "rpg_pet_dungeon_reset":
                     _petService.ResetPetDungeonCooldown(userId);
                     break;
+
+                // =========================
+                // ⚔️ RAID COOLDOWN RESET
+                // =========================
+                case "rpg_raid_reset":
+                    player.LastRaidAt = null;
+                    await playerRepo.UpdatePlayerAsync(player);
+                    break;
             }
         }
 

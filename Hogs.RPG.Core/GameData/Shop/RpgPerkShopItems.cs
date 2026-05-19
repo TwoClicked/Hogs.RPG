@@ -125,5 +125,16 @@ namespace Hogs.RPG.Core.GameData.Shop
             Type = ShopItemType.FixedPrice,
             Price = 3_000
         };
+
+        public static readonly ShopItemDefinition RaidReset = new()
+        {
+            Id = "rpg_raid_reset",
+            Name = "Raid Cooldown Reset",
+            Description = "Clear your raid cooldown and enter another raid immediately.",
+            Icon = "⚔️",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 6_000
+        };
     }
 }
