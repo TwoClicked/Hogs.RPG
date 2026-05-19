@@ -59,7 +59,7 @@ namespace Hogs.RPG.Services.RaidServices
 
                 Console.WriteLine($"⏳ Raid {session.Id} round {session.CurrentRound} timed out — auto-resolving.");
 
-                // Auto-submit default action for players who haven't acted
+                // Set default actions for players who haven't acted
                 foreach (var participant in session.Participants.Where(p => !p.HasActedThisRound))
                 {
                     string defaultAction = participant.Role switch
@@ -78,11 +78,17 @@ namespace Hogs.RPG.Services.RaidServices
 
                 await raidRepo.SaveSessionAsync(session);
 
-                // Now resolve the round via RaidService
-                var (success, message, roundResult) = await raidService.SubmitActionAsync(
-                    session.Participants.First().DiscordId, session.Id, session.Participants.First().PendingAction);
-
-                if (roundResult == null) continue;
+                // Force resolve directly — bypasses SubmitActionAsync to avoid HasActedThisRound conflict
+                RaidRoundResult roundResult;
+                try
+                {
+                    roundResult = await raidService.ForceResolveRoundAsync(session.Id);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ ForceResolveRoundAsync failed for session {session.Id}: {ex.Message}");
+                    continue;
+                }
 
                 // Post result to thread
                 var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
@@ -97,7 +103,7 @@ namespace Hogs.RPG.Services.RaidServices
                 if (roundResult.IsVictory)
                 {
                     await PostVictoryAsync(thread, roundResult);
-                    await PostRaidVictoryFeedAsync(roundResult);  
+                    await PostRaidVictoryFeedAsync(roundResult);
                     continue;
                 }
 
@@ -260,7 +266,6 @@ namespace Hogs.RPG.Services.RaidServices
             await feedChannel.SendMessageAsync(embed: embed);
         }
 
-
         private MessageComponent BuildActionButtonsForRole(
             int sessionId,
             int round,
@@ -273,6 +278,12 @@ namespace Hogs.RPG.Services.RaidServices
                 case RaidRole.Dps:
                     builder.WithButton("⚔️ Attack", $"raid_action:{sessionId}:{round}:attack",
                         ButtonStyle.Danger, row: 0);
+                    builder.WithButton("💀 Reckless", $"raid_action:{sessionId}:{round}:reckless",
+                        ButtonStyle.Danger, row: 0,
+                        disabled: participant.RecklessCooldownRoundsRemaining > 0);
+                    builder.WithButton("🎯 Focus", $"raid_action:{sessionId}:{round}:focus",
+                        ButtonStyle.Danger, row: 0,
+                        disabled: participant.FocusCooldownRoundsRemaining > 0);
                     break;
                 case RaidRole.Tank:
                     builder.WithButton("🛡️ Hold", $"raid_action:{sessionId}:{round}:hold",
@@ -286,10 +297,15 @@ namespace Hogs.RPG.Services.RaidServices
                 case RaidRole.Healer:
                     builder.WithButton("💚 Heal", $"raid_action:{sessionId}:{round}:heal",
                         ButtonStyle.Success, row: 0);
+                    builder.WithButton("🌿 Party Heal", $"raid_action:{sessionId}:{round}:party_heal",
+                        ButtonStyle.Success, row: 0);
+                    builder.WithButton("⚡ Emergency", $"raid_action:{sessionId}:{round}:emergency_menu",
+                        ButtonStyle.Success, row: 0,
+                        disabled: participant.EmergencyHealCooldownRoundsRemaining > 0);
                     builder.WithButton("✨ Empower ATK", $"raid_action:{sessionId}:{round}:empower_attack",
-                        ButtonStyle.Success, row: 0);
+                        ButtonStyle.Success, row: 1);
                     builder.WithButton("✨ Empower DEF", $"raid_action:{sessionId}:{round}:empower_defense",
-                        ButtonStyle.Success, row: 0);
+                        ButtonStyle.Success, row: 1);
                     break;
             }
 

@@ -921,6 +921,15 @@ namespace Hogs.RPG.Services.RaidServices
             return await _raidRepo.GetActiveByThreadAsync(threadId);
         }
 
+        public async Task<RaidRoundResult> ForceResolveRoundAsync(int sessionId)
+        {
+            var session = await _raidRepo.GetSessionAsync(sessionId);
+            if (session == null)
+                throw new Exception($"Session {sessionId} not found.");
+
+            return await ResolveRoundAsync(session);
+        }
+
         public async Task UpdateLobbyMessageIdAsync(int sessionId, ulong messageId)
         {
             var session = await _raidRepo.GetSessionAsync(sessionId);
