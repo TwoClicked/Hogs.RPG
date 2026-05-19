@@ -813,6 +813,7 @@ namespace Hogs.RPG.Services.RaidServices
         private async Task HandleVictoryAsync(RaidSession session, RaidRoundResult result)
         {
             session.Status = RaidStatus.Victory;
+            result.Session = session;
 
             foreach (var p in session.Participants)
             {
