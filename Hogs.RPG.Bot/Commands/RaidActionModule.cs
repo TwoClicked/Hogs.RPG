@@ -167,6 +167,49 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
+        // EMERGENCY HEAL TARGET MENU
+        // =========================
+        [ComponentInteraction("raid_action:*:*:emergency_menu")]
+        public async Task EmergencyHealMenu(string sessionIdStr, string roundStr)
+        {
+            // Disable the emergency button immediately
+            if (Context.Interaction is SocketMessageComponent comp)
+            {
+                await comp.UpdateAsync(m =>
+                {
+                    m.Components = new ComponentBuilder().Build();
+                });
+            }
+            else
+            {
+                await DeferAsync(ephemeral: true);
+            }
+
+            int sessionId = int.Parse(sessionIdStr);
+            int round = int.Parse(roundStr);
+
+            // Check they haven't already acted this round
+            var session = await _raidService.GetSessionAsync(sessionId);
+            if (session != null)
+            {
+                var participant = session.Participants.FirstOrDefault(p => p.DiscordId == Context.User.Id);
+                if (participant != null && participant.HasActedThisRound)
+                {
+                    await FollowupAsync("⏳ You have already submitted your action this round.", ephemeral: true);
+                    return;
+                }
+            }
+
+            var components = new ComponentBuilder()
+                .WithButton("🛡️ Heal Tank", $"raid_action:{sessionId}:{round}:emergency_heal_tank", ButtonStyle.Success)
+                .WithButton("⚔️ Heal DPS", $"raid_action:{sessionId}:{round}:emergency_heal_dps", ButtonStyle.Success)
+                .WithButton("💚 Heal Myself", $"raid_action:{sessionId}:{round}:emergency_heal_healer", ButtonStyle.Success)
+                .Build();
+
+            await FollowupAsync("⚡ **Emergency Heal** — Choose your target (costs 3 potions, 10 round cooldown):", components: components, ephemeral: true);
+        }
+
+        // =========================
         // POST ROUND RESULT
         // =========================
         private async Task PostRoundResultAsync(
@@ -323,26 +366,6 @@ namespace Hogs.RPG.Bot.Commands
                 .Build();
 
             await feedChannel.SendMessageAsync(embed: embed);
-        }
-
-        // =========================
-        // EMERGENCY HEAL TARGET MENU
-        // =========================
-        [ComponentInteraction("raid_action:*:*:emergency_menu")]
-        public async Task EmergencyHealMenu(string sessionIdStr, string roundStr)
-        {
-            await DeferAsync(ephemeral: true);
-
-            int sessionId = int.Parse(sessionIdStr);
-            int round = int.Parse(roundStr);
-
-            var components = new ComponentBuilder()
-                .WithButton("🛡️ Heal Tank", $"raid_action:{sessionId}:{round}:emergency_heal_tank", ButtonStyle.Success)
-                .WithButton("⚔️ Heal DPS", $"raid_action:{sessionId}:{round}:emergency_heal_dps", ButtonStyle.Success)
-                .WithButton("💚 Heal Myself", $"raid_action:{sessionId}:{round}:emergency_heal_healer", ButtonStyle.Success)
-                .Build();
-
-            await FollowupAsync("⚡ **Emergency Heal** — Choose your target (costs 3 potions, 10 round cooldown):", components: components, ephemeral: true);
         }
 
         // =========================
