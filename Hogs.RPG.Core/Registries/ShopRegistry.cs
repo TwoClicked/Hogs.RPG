@@ -27,8 +27,6 @@ namespace Hogs.RPG.Core.Registries
             // ===== Discord Rewards =====
             { DiscordShopItems.CustomTitle.Id, DiscordShopItems.CustomTitle },
             { DiscordShopItems.NameColor.Id,   DiscordShopItems.NameColor   },
-            { DiscordShopItems.VipLounge.Id,   DiscordShopItems.VipLounge   },
-            { DiscordShopItems.Shoutout.Id,    DiscordShopItems.Shoutout    },
 
 
             // ===== RPG Perks =====

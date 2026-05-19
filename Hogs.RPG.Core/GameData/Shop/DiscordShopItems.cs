@@ -8,7 +8,6 @@ namespace Hogs.RPG.Core.GameData.Shop
         // Placeholder role IDs — replace with real Discord role IDs once created
         private const ulong TitleRole = 1111111111111111111;
         private const ulong NameColorRole = 2222222222222222222;
-        private const ulong VipLoungeRole = 3333333333333333333;
 
         public static readonly ShopItemDefinition CustomTitle = new()
         {
@@ -34,27 +33,5 @@ namespace Hogs.RPG.Core.GameData.Shop
             RewardRoleId = NameColorRole
         };
 
-        public static readonly ShopItemDefinition VipLounge = new()
-        {
-            Id = "discord_vip",
-            Name = "VIP Lounge Access",
-            Description = "Unlock access to the exclusive VIP channel.",
-            Icon = "👑",
-            Category = ShopCategory.DiscordRewards,
-            Type = ShopItemType.FixedPrice,
-            Price = 20_000,
-            RewardRoleId = VipLoungeRole
-        };
-
-        public static readonly ShopItemDefinition Shoutout = new()
-        {
-            Id = "discord_shoutout",
-            Name = "Server Shoutout",
-            Description = "Get a bot announcement shoutout in the server.",
-            Icon = "📣",
-            Category = ShopCategory.DiscordRewards,
-            Type = ShopItemType.FixedPrice,
-            Price = 8_000
-        };
     }
 }

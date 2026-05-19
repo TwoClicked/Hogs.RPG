@@ -6,6 +6,7 @@
         EmpowerAttack,
         EmpowerDefense,
         Venom,
-        Enrage
+        Enrage,
+        Focus
     }
 }

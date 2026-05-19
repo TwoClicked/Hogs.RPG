@@ -73,10 +73,17 @@ namespace Hogs.RPG.Bot.Commands
                             string actionLabel = p.PendingAction switch
                             {
                                 "attack" => "⚔️ Attack",
+                                "reckless" => "💀 Reckless",
+                                "focus" => "🎯 Focus",
                                 "hold" => "🛡️ Hold",
                                 "taunt" => "📣 Taunt",
                                 "shatter" => "💥 Shatter",
                                 "heal" => "💚 Heal",
+                                "party_heal" => "🌿 Party Heal",
+                                "emergency_menu" => "⚡ Emergency...",
+                                "emergency_heal_tank" => "⚡ Emergency (Tank)",
+                                "emergency_heal_dps" => "⚡ Emergency (DPS)",
+                                "emergency_heal_healer" => "⚡ Emergency (Self)",
                                 "empower_attack" => "✨ Empower ATK",
                                 "empower_defense" => "✨ Empower DEF",
                                 _ => "..."
@@ -313,12 +320,29 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
+        // EMERGENCY HEAL TARGET MENU
+        // =========================
+        [ComponentInteraction("raid_action:*:*:emergency_menu")]
+        public async Task EmergencyHealMenu(string sessionIdStr, string roundStr)
+        {
+            await DeferAsync(ephemeral: true);
+
+            int sessionId = int.Parse(sessionIdStr);
+            int round = int.Parse(roundStr);
+
+            var components = new ComponentBuilder()
+                .WithButton("🛡️ Heal Tank", $"raid_action:{sessionId}:{round}:emergency_heal_tank", ButtonStyle.Success)
+                .WithButton("⚔️ Heal DPS", $"raid_action:{sessionId}:{round}:emergency_heal_dps", ButtonStyle.Success)
+                .WithButton("💚 Heal Myself", $"raid_action:{sessionId}:{round}:emergency_heal_healer", ButtonStyle.Success)
+                .Build();
+
+            await FollowupAsync("⚡ **Emergency Heal** — Choose your target (costs 3 potions, 10 round cooldown):", components: components, ephemeral: true);
+        }
+
+        // =========================
         // ACTION BUTTONS BUILDER — PER ROLE
         // =========================
-        private MessageComponent BuildActionButtonsForRole(
-            int sessionId,
-            int round,
-            Hogs.RPG.Core.Entities.RaidParticipant participant)
+        private MessageComponent BuildActionButtonsForRole(int sessionId, int round, Hogs.RPG.Core.Entities.RaidParticipant participant)
         {
             var builder = new ComponentBuilder();
 
@@ -327,7 +351,14 @@ namespace Hogs.RPG.Bot.Commands
                 case RaidRole.Dps:
                     builder.WithButton("⚔️ Attack", $"raid_action:{sessionId}:{round}:attack",
                         ButtonStyle.Danger, row: 0);
+                    builder.WithButton("💀 Reckless", $"raid_action:{sessionId}:{round}:reckless",
+                        ButtonStyle.Danger, row: 0,
+                        disabled: participant.RecklessCooldownRoundsRemaining > 0);
+                    builder.WithButton("🎯 Focus", $"raid_action:{sessionId}:{round}:focus",
+                        ButtonStyle.Danger, row: 0,
+                        disabled: participant.FocusCooldownRoundsRemaining > 0);
                     break;
+
                 case RaidRole.Tank:
                     builder.WithButton("🛡️ Hold", $"raid_action:{sessionId}:{round}:hold",
                         ButtonStyle.Secondary, row: 0);
@@ -337,13 +368,19 @@ namespace Hogs.RPG.Bot.Commands
                         ButtonStyle.Secondary, row: 0,
                         disabled: participant.ShatterCooldownRoundsRemaining > 0);
                     break;
+
                 case RaidRole.Healer:
                     builder.WithButton("💚 Heal", $"raid_action:{sessionId}:{round}:heal",
                         ButtonStyle.Success, row: 0);
+                    builder.WithButton("🌿 Party Heal", $"raid_action:{sessionId}:{round}:party_heal",
+                        ButtonStyle.Success, row: 0);
+                    builder.WithButton("⚡ Emergency", $"raid_action:{sessionId}:{round}:emergency_menu",
+                        ButtonStyle.Success, row: 0,
+                        disabled: participant.EmergencyHealCooldownRoundsRemaining > 0);
                     builder.WithButton("✨ Empower ATK", $"raid_action:{sessionId}:{round}:empower_attack",
-                        ButtonStyle.Success, row: 0);
+                        ButtonStyle.Success, row: 1);
                     builder.WithButton("✨ Empower DEF", $"raid_action:{sessionId}:{round}:empower_defense",
-                        ButtonStyle.Success, row: 0);
+                        ButtonStyle.Success, row: 1);
                     break;
             }
 

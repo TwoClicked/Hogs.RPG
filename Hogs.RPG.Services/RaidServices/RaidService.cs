@@ -230,7 +230,6 @@ namespace Hogs.RPG.Services.RaidServices
             if (session.Participants.Count < 3)
                 return (false, "❌ You need 3 players to start a raid.");
 
-            // Check all players have keys
             foreach (var p in session.Participants)
             {
                 if (!await HasKeyAsync(p.DiscordId, session.Tier))
@@ -239,14 +238,12 @@ namespace Hogs.RPG.Services.RaidServices
 
             var raidDef = RaidRegistry.GetByTier(session.Tier);
 
-            // Consume keys from all players
             foreach (var p in session.Participants)
             {
                 var keyItemId = $"raid_key_t{session.Tier}";
                 await _inventoryRepo.RemoveItemAsync(p.DiscordId, keyItemId, 1);
             }
 
-            // Scale boss stats off average party stats
             int totalAtk = 0, totalDef = 0, totalHp = 0;
 
             foreach (var p in session.Participants)
@@ -257,7 +254,6 @@ namespace Hogs.RPG.Services.RaidServices
                 totalDef += def;
                 totalHp += hp;
 
-                // Set participant HP from their actual max HP
                 p.MaxHp = hp;
                 p.CurrentHp = hp;
             }
@@ -270,7 +266,6 @@ namespace Hogs.RPG.Services.RaidServices
             session.BossAttack = (int)(avgDef * raidDef.AttackMultiplier);
             session.BossDefense = (int)(avgAtk * raidDef.DefenseMultiplier);
 
-            // Set initial aggro to tank
             var tank = session.Participants.FirstOrDefault(p => p.Role == RaidRole.Tank);
             if (tank != null)
                 session.AggroDiscordId = tank.DiscordId;
@@ -279,7 +274,6 @@ namespace Hogs.RPG.Services.RaidServices
             session.CurrentRound = 1;
             session.RoundStartedAt = DateTime.UtcNow;
 
-            // Create thread
             var thread = await raidChannel.CreateThreadAsync(
                 name: $"⚔️ {raidDef.Name} — Tier {session.Tier} Raid",
                 autoArchiveDuration: ThreadArchiveDuration.OneDay,
@@ -299,7 +293,6 @@ namespace Hogs.RPG.Services.RaidServices
         public async Task<(bool success, string message, RaidRoundResult? roundResult)> SubmitActionAsync(
             ulong discordId, int sessionId, string action)
         {
-            // Acquire DB-level lock so simultaneous submissions don't race
             await _raidRepo.AcquireSessionLockAsync(sessionId);
 
             var session = await _raidRepo.GetSessionAsync(sessionId);
@@ -313,7 +306,9 @@ namespace Hogs.RPG.Services.RaidServices
             if (participant == null)
                 return (false, "❌ You are not in this raid.", null);
 
-            // Validate action for role
+            if (participant.HasActedThisRound)
+                return (false, "⏳ You have already submitted your action this round.", null);
+
             if (!IsValidAction(participant.Role, action))
                 return (false, "❌ Invalid action for your role.", null);
 
@@ -322,7 +317,6 @@ namespace Hogs.RPG.Services.RaidServices
 
             await _raidRepo.SaveSessionAsync(session);
 
-            // Check if all participants have acted
             if (session.Participants.All(p => p.HasActedThisRound))
             {
                 var result = await ResolveRoundAsync(session);
@@ -382,13 +376,20 @@ namespace Hogs.RPG.Services.RaidServices
             // =========================
             // PROCESS DPS ACTION
             // =========================
-            if (dps.PendingAction == "attack")
+            if (dps.PendingAction == "focus")
+            {
+                dps.FocusStacks++;
+                dps.FocusCooldownRoundsRemaining = 5;
+                result.DpsText = $"🎯 DPS focuses! Next attack will hit harder. (Focus stacks: {dps.FocusStacks})";
+            }
+            else if (dps.PendingAction == "attack" || dps.PendingAction == "reckless")
             {
                 var dpsPlayer = await _playerRepo.GetByDiscordIdAsync(dps.DiscordId);
                 var (dpsAtk, _, _) = await _statService.CalculateStatsAsync(dpsPlayer);
                 var relicBonuses = await _relicService.GetRelicBonusesAsync(dps.DiscordId);
 
-                // Apply empower buff if active
+                dpsAtk = (int)(dpsAtk * (1f + relicBonuses.AttackPercent));
+
                 var empowerEffect = session.ActiveEffects.FirstOrDefault(e =>
                     e.EffectType == ActiveEffectType.EmpowerAttack &&
                     e.TargetDiscordId == dps.DiscordId);
@@ -396,7 +397,6 @@ namespace Hogs.RPG.Services.RaidServices
                 if (empowerEffect != null)
                     dpsAtk = (int)(dpsAtk * (1f + (float)empowerEffect.Value));
 
-                // Apply shatter debuff
                 float bossDefenseMultiplier = 1f;
                 if (session.ActiveEffects.Any(e => e.EffectType == ActiveEffectType.Shatter))
                     bossDefenseMultiplier = 0.80f;
@@ -405,39 +405,53 @@ namespace Hogs.RPG.Services.RaidServices
                 int damage = (int)(dpsAtk * (100.0 / (100.0 + effectiveBossDefense)));
                 damage = Math.Max(1, damage);
 
-                // =========================
-                // 🐾 PET PASSIVES (DPS)
-                // =========================
-                var dpsPet = await _petService.GetEquippedPetAsync(dps.DiscordId);
-                PetDefinition dpsPetDef = null;
-                if (dpsPet != null)
-                    PetRegistry.All.TryGetValue(dpsPet.PetId, out dpsPetDef);
-
-                damage = _petPassiveService.ModifyOutgoingDamage(
-                    damage, dpsPet, dpsPetDef, session.BossCurrentHp, session.BossMaxHp);
-
-                // Executioner bonus
                 double bossHpPercent = (double)session.BossCurrentHp / session.BossMaxHp;
                 if (bossHpPercent < 0.50 && relicBonuses.ExecutionerBonusPercent > 0)
                     damage = (int)(damage * (1f + relicBonuses.ExecutionerBonusPercent));
 
-                session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - damage);
-
-                // Life steal (relic + pet passive combined)
-                int totalHeal = 0;
-                if (relicBonuses.LifeStealPercent > 0)
-                    totalHeal += (int)(damage * relicBonuses.LifeStealPercent);
-
-                totalHeal += _petPassiveService.ApplyOnHitEffects(damage, null, dpsPet);
-
-                if (totalHeal > 0)
+                if (dps.PendingAction == "reckless")
                 {
-                    dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + totalHeal);
-                    result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Life steal healed for **{totalHeal}**.";
+                    damage = damage * 2;
+
+                    if (dps.FocusStacks > 0)
+                    {
+                        float focusMultiplier = 1.5f * dps.FocusStacks;
+                        damage = (int)(damage * focusMultiplier);
+                    }
+
+                    int recoilDamage = (int)(damage * 0.25f);
+                    dps.CurrentHp = Math.Max(0, dps.CurrentHp - recoilDamage);
+
+                    session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - damage);
+
+                    result.DpsText = dps.FocusStacks > 0
+                        ? $"💀 Reckless Strike! ({dps.FocusStacks}x Focus) dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self."
+                        : $"💀 Reckless Strike dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self.";
+
+                    dps.FocusStacks = 0;
+                    dps.RecklessCooldownRoundsRemaining = 5;
                 }
                 else
                 {
-                    result.DpsText = $"⚔️ DPS dealt **{damage}** damage!";
+                    if (dps.FocusStacks > 0)
+                    {
+                        float focusMultiplier = 1.5f * dps.FocusStacks;
+                        damage = (int)(damage * focusMultiplier);
+                        dps.FocusStacks = 0;
+                    }
+
+                    session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - damage);
+
+                    if (relicBonuses.LifeStealPercent > 0)
+                    {
+                        int healAmount = (int)(damage * relicBonuses.LifeStealPercent);
+                        dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + healAmount);
+                        result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Life steal healed for **{healAmount}**.";
+                    }
+                    else
+                    {
+                        result.DpsText = $"⚔️ DPS dealt **{damage}** damage!";
+                    }
                 }
             }
 
@@ -453,7 +467,6 @@ namespace Hogs.RPG.Services.RaidServices
                 {
                     var relicBonuses = await _relicService.GetRelicBonusesAsync(healer.DiscordId);
 
-                    // Find lowest HP participant
                     var target = session.Participants
                         .OrderBy(p => (double)p.CurrentHp / p.MaxHp)
                         .First();
@@ -462,19 +475,74 @@ namespace Hogs.RPG.Services.RaidServices
                     int healAmount = (int)(target.MaxHp * healPercent);
                     target.CurrentHp = Math.Min(target.MaxHp, target.CurrentHp + healAmount);
 
-                    // Chance to save potion
                     bool savedPotion = _random.NextDouble() < relicBonuses.ChanceToSavePotion;
                     if (!savedPotion)
                         await _inventoryRepo.RemoveItemAsync(healer.DiscordId, "health_potion", 1);
 
-                    var targetRole = target.Role.ToString();
                     result.HealerText = savedPotion
-                        ? $"💚 Healer restored **{healAmount} HP** to the {targetRole}! ✨ Potion saved!"
-                        : $"💚 Healer restored **{healAmount} HP** to the {targetRole}.";
+                        ? $"💚 Healer restored **{healAmount} HP** to the {target.Role}! ✨ Potion saved!"
+                        : $"💚 Healer restored **{healAmount} HP** to the {target.Role}.";
                 }
                 else
                 {
                     result.HealerText = "❌ Healer has no potions left!";
+                }
+            }
+            else if (healer.PendingAction == "party_heal")
+            {
+                var healerInventory = await _inventoryRepo.GetInventoryAsync(healer.DiscordId);
+                var potion = healerInventory.FirstOrDefault(i => i.ItemId == "health_potion");
+
+                if (potion != null && potion.Quantity >= 2)
+                {
+                    var relicBonuses = await _relicService.GetRelicBonusesAsync(healer.DiscordId);
+                    float healPercent = 0.25f + relicBonuses.IncreasedHealPercent;
+
+                    foreach (var p in session.Participants)
+                    {
+                        int healAmount = (int)(p.MaxHp * healPercent);
+                        p.CurrentHp = Math.Min(p.MaxHp, p.CurrentHp + healAmount);
+                    }
+
+                    await _inventoryRepo.RemoveItemAsync(healer.DiscordId, "health_potion", 2);
+                    result.HealerText = $"🌿 Party Heal! All members restored **{(int)(session.Participants.Average(p => p.MaxHp) * healPercent)} HP** each. (2 potions used)";
+                }
+                else
+                {
+                    result.HealerText = "❌ Party Heal requires **2 potions**. Not enough!";
+                }
+            }
+            else if (healer.PendingAction != null && healer.PendingAction.StartsWith("emergency_heal_"))
+            {
+                var healerInventory = await _inventoryRepo.GetInventoryAsync(healer.DiscordId);
+                var potion = healerInventory.FirstOrDefault(i => i.ItemId == "health_potion");
+
+                if (healer.EmergencyHealCooldownRoundsRemaining > 0)
+                {
+                    result.HealerText = $"❌ Emergency Heal is on cooldown for **{healer.EmergencyHealCooldownRoundsRemaining}** more round(s).";
+                }
+                else if (potion != null && potion.Quantity >= 3)
+                {
+                    RaidRole targetRole = healer.PendingAction switch
+                    {
+                        "emergency_heal_tank" => RaidRole.Tank,
+                        "emergency_heal_dps" => RaidRole.Dps,
+                        "emergency_heal_healer" => RaidRole.Healer,
+                        _ => RaidRole.Tank
+                    };
+
+                    var target = session.Participants.FirstOrDefault(p => p.Role == targetRole);
+                    if (target != null)
+                    {
+                        target.CurrentHp = target.MaxHp;
+                        await _inventoryRepo.RemoveItemAsync(healer.DiscordId, "health_potion", 3);
+                        healer.EmergencyHealCooldownRoundsRemaining = 10;
+                        result.HealerText = $"⚡ Emergency Heal! **{targetRole}** fully restored to **{target.MaxHp} HP**! (3 potions used)";
+                    }
+                }
+                else
+                {
+                    result.HealerText = "❌ Emergency Heal requires **3 potions**. Not enough!";
                 }
             }
             else if (healer.PendingAction == "empower_attack")
@@ -538,11 +606,36 @@ namespace Hogs.RPG.Services.RaidServices
 
             session.ActiveEffects.RemoveAll(e => e.RoundsRemaining <= 0);
 
+            // Tick down participant cooldowns
+            foreach (var p in session.Participants)
+            {
+                p.ShatterCooldownRoundsRemaining = Math.Max(0, p.ShatterCooldownRoundsRemaining - 1);
+                p.RecklessCooldownRoundsRemaining = Math.Max(0, p.RecklessCooldownRoundsRemaining - 1);
+                p.FocusCooldownRoundsRemaining = Math.Max(0, p.FocusCooldownRoundsRemaining - 1);
+                p.EmergencyHealCooldownRoundsRemaining = Math.Max(0, p.EmergencyHealCooldownRoundsRemaining - 1);
+            }
+
+            // =========================
+            // BOSS ATTACK SETUP
+            // =========================
+            var aggroTarget = session.Participants.First(p => p.DiscordId == session.AggroDiscordId);
+            bool aggroOnTank = aggroTarget.Role == RaidRole.Tank;
+
+            int bossAttack = session.BossAttack;
+
+            var tankEmpower = session.ActiveEffects.FirstOrDefault(e =>
+                e.EffectType == ActiveEffectType.EmpowerDefense &&
+                e.TargetDiscordId == tank.DiscordId);
+
+            bool tankIsHolding = tank.PendingAction == "hold";
+            float damageReduction = tankIsHolding ? 0.35f : 0f;
+            if (tankEmpower != null) damageReduction += (float)tankEmpower.Value;
+
             // =========================
             // BOSS ACTIONS
             // =========================
 
-            // Roll for aggro swap (minimum 3 round cooldown between swaps)
+            // Roll for aggro swap (minimum 2 round cooldown between swaps)
             if (_random.NextDouble() < raidDef.AggroSwapChance &&
                 session.CurrentRound - session.LastAggroSwapRound >= 2)
             {
@@ -560,25 +653,10 @@ namespace Hogs.RPG.Services.RaidServices
             if (raidDef.AbilityPool.Count > 0 && _random.Next(0, 100) < 30)
             {
                 var ability = raidDef.AbilityPool[_random.Next(raidDef.AbilityPool.Count)];
-                result.BossText += HandleBossAbility(session, ability, raidDef);
+                result.BossText += HandleBossAbility(session, ability, raidDef, tankIsHolding, damageReduction);
             }
 
             // Boss attack
-            var aggroTarget = session.Participants.First(p => p.DiscordId == session.AggroDiscordId);
-            bool aggroOnTank = aggroTarget.Role == RaidRole.Tank;
-
-            int bossAttack = session.BossAttack;
-
-            // Apply empower defense if tank has it
-            var tankEmpower = session.ActiveEffects.FirstOrDefault(e =>
-                e.EffectType == ActiveEffectType.EmpowerDefense &&
-                e.TargetDiscordId == tank.DiscordId);
-
-            // Apply hold the line reduction
-            bool tankHolding = tank.PendingAction == "hold";
-            float damageReduction = tankHolding ? 0.35f : 0f;
-            if (tankEmpower != null) damageReduction += (float)tankEmpower.Value;
-
             if (aggroOnTank)
             {
                 var (_, tankDef, _) = await _statService.CalculateStatsAsync(
@@ -589,9 +667,6 @@ namespace Hogs.RPG.Services.RaidServices
                 int finalDamage = (int)(rawDamage * (1f - damageReduction));
                 finalDamage = Math.Max(1, finalDamage);
 
-                // =========================
-                // 🐾 PET PASSIVES (TANK)
-                // =========================
                 var tankPet = await _petService.GetEquippedPetAsync(tank.DiscordId);
                 finalDamage = _petPassiveService.ModifyIncomingDamage(finalDamage, tankPet);
                 finalDamage = Math.Max(1, finalDamage);
@@ -608,7 +683,6 @@ namespace Hogs.RPG.Services.RaidServices
             }
             else
             {
-                // Boss hits non-tank at 4x damage
                 var (_, targetDef, _) = await _statService.CalculateStatsAsync(
                     await _playerRepo.GetByDiscordIdAsync(aggroTarget.DiscordId));
 
@@ -665,7 +739,7 @@ namespace Hogs.RPG.Services.RaidServices
         // =========================
         // 🔥 BOSS ABILITY HANDLER
         // =========================
-        private string HandleBossAbility(RaidSession session, BossAbilityType ability, RaidDefinition raidDef)
+        private string HandleBossAbility(RaidSession session, BossAbilityType ability, RaidDefinition raidDef, bool tankIsHolding, float tankDamageReduction)
         {
             switch (ability)
             {
@@ -678,6 +752,8 @@ namespace Hogs.RPG.Services.RaidServices
                 case BossAbilityType.CrushingBlow:
                     var tank = session.Participants.First(p => p.Role == RaidRole.Tank);
                     int crushDamage = session.BossAttack * 2;
+                    if (tankIsHolding)
+                        crushDamage = (int)(crushDamage * (1f - tankDamageReduction));
                     tank.CurrentHp = Math.Max(0, tank.CurrentHp - crushDamage);
                     return $"\n💢 **Crushing Blow!** Tank takes **{crushDamage}** damage!";
 
@@ -697,8 +773,8 @@ namespace Hogs.RPG.Services.RaidServices
 
                 case BossAbilityType.Frenzy:
                     int frenzyDamage = (int)(session.BossAttack * 0.75);
-                    var target = session.Participants.First(p => p.DiscordId == session.AggroDiscordId);
-                    target.CurrentHp = Math.Max(0, target.CurrentHp - frenzyDamage);
+                    var frenzyTarget = session.Participants.First(p => p.DiscordId == session.AggroDiscordId);
+                    frenzyTarget.CurrentHp = Math.Max(0, frenzyTarget.CurrentHp - frenzyDamage);
                     return $"\n💨 **Frenzy!** Boss strikes again for **{frenzyDamage}** damage!";
 
                 case BossAbilityType.Venom:
@@ -740,8 +816,6 @@ namespace Hogs.RPG.Services.RaidServices
         {
             session.Status = RaidStatus.Victory;
 
-            var raidDef = RaidRegistry.GetByTier(session.Tier);
-
             foreach (var p in session.Participants)
             {
                 var player = await _playerRepo.GetByDiscordIdAsync(p.DiscordId);
@@ -762,7 +836,6 @@ namespace Hogs.RPG.Services.RaidServices
 
                 await _petService.AddXPAsync(p.DiscordId, petXp);
 
-                // Relic shard drop (scaled by loot roll relic bonus)
                 float shardDropChance = RelicShardDropChance + relicBonuses.BonusLootRollPercent;
                 bool shardDropped = _random.NextDouble() < shardDropChance;
                 if (shardDropped)
@@ -823,9 +896,9 @@ namespace Hogs.RPG.Services.RaidServices
         {
             return role switch
             {
-                RaidRole.Dps => action == "attack",
+                RaidRole.Dps => action is "attack" or "reckless" or "focus",
                 RaidRole.Tank => action is "hold" or "taunt" or "shatter",
-                RaidRole.Healer => action is "heal" or "empower_attack" or "empower_defense",
+                RaidRole.Healer => action is "heal" or "party_heal" or "emergency_heal_tank" or "emergency_heal_dps" or "emergency_heal_healer" or "empower_attack" or "empower_defense",
                 _ => false
             };
         }

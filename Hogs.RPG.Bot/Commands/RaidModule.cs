@@ -436,18 +436,38 @@ namespace Hogs.RPG.Bot.Commands
             switch (participant.Role)
             {
                 case RaidRole.Dps:
-                    builder.WithButton("⚔️ Attack", $"raid_action:{sessionId}:{round}:attack", ButtonStyle.Danger, row: 0);
+                    builder.WithButton("⚔️ Attack", $"raid_action:{sessionId}:{round}:attack",
+                        ButtonStyle.Danger, row: 0);
+                    builder.WithButton("💀 Reckless", $"raid_action:{sessionId}:{round}:reckless",
+                        ButtonStyle.Danger, row: 0,
+                        disabled: participant.RecklessCooldownRoundsRemaining > 0);
+                    builder.WithButton("🎯 Focus", $"raid_action:{sessionId}:{round}:focus",
+                        ButtonStyle.Danger, row: 0,
+                        disabled: participant.FocusCooldownRoundsRemaining > 0);
                     break;
+
                 case RaidRole.Tank:
-                    builder.WithButton("🛡️ Hold", $"raid_action:{sessionId}:{round}:hold", ButtonStyle.Primary, row: 0);
-                    builder.WithButton("📣 Taunt", $"raid_action:{sessionId}:{round}:taunt", ButtonStyle.Secondary, row: 0);
-                    builder.WithButton("💥 Shatter", $"raid_action:{sessionId}:{round}:shatter", ButtonStyle.Danger, row: 0,
+                    builder.WithButton("🛡️ Hold", $"raid_action:{sessionId}:{round}:hold",
+                        ButtonStyle.Secondary, row: 0);
+                    builder.WithButton("📣 Taunt", $"raid_action:{sessionId}:{round}:taunt",
+                        ButtonStyle.Secondary, row: 0);
+                    builder.WithButton("💥 Shatter", $"raid_action:{sessionId}:{round}:shatter",
+                        ButtonStyle.Secondary, row: 0,
                         disabled: participant.ShatterCooldownRoundsRemaining > 0);
                     break;
+
                 case RaidRole.Healer:
-                    builder.WithButton("💚 Heal", $"raid_action:{sessionId}:{round}:heal", ButtonStyle.Success, row: 0);
-                    builder.WithButton("✨ Empower ATK", $"raid_action:{sessionId}:{round}:empower_attack", ButtonStyle.Secondary, row: 0);
-                    builder.WithButton("✨ Empower DEF", $"raid_action:{sessionId}:{round}:empower_defense", ButtonStyle.Secondary, row: 0);
+                    builder.WithButton("💚 Heal", $"raid_action:{sessionId}:{round}:heal",
+                        ButtonStyle.Success, row: 0);
+                    builder.WithButton("🌿 Party Heal", $"raid_action:{sessionId}:{round}:party_heal",
+                        ButtonStyle.Success, row: 0);
+                    builder.WithButton("⚡ Emergency", $"raid_action:{sessionId}:{round}:emergency_menu",
+                        ButtonStyle.Success, row: 0,
+                        disabled: participant.EmergencyHealCooldownRoundsRemaining > 0);
+                    builder.WithButton("✨ Empower ATK", $"raid_action:{sessionId}:{round}:empower_attack",
+                        ButtonStyle.Success, row: 1);
+                    builder.WithButton("✨ Empower DEF", $"raid_action:{sessionId}:{round}:empower_defense",
+                        ButtonStyle.Success, row: 1);
                     break;
             }
 

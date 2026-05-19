@@ -20,5 +20,9 @@ namespace Hogs.RPG.Core.Entities
         public string? PendingAction { get; set; } = null;
 
         public int ShatterCooldownRoundsRemaining { get; set; } = 0;
+        public int RecklessCooldownRoundsRemaining { get; set; } = 0;
+        public int FocusCooldownRoundsRemaining { get; set; } = 0;
+        public int FocusStacks { get; set; } = 0;
+        public int EmergencyHealCooldownRoundsRemaining { get; set; } = 0;
     }
 }
