@@ -25,7 +25,18 @@ namespace Hogs.RPG.Bot.Commands
         [ComponentInteraction("raid_action:*:*:*")]
         public async Task HandleAction(string sessionIdStr, string roundStr, string action)
         {
-            await DeferAsync(ephemeral: true);
+            // Disable buttons immediately — prevents double press
+            if (Context.Interaction is SocketMessageComponent comp)
+            {
+                await comp.UpdateAsync(m =>
+                {
+                    m.Components = new ComponentBuilder().Build();
+                });
+            }
+            else
+            {
+                await DeferAsync(ephemeral: true);
+            }
 
             int sessionId = int.Parse(sessionIdStr);
             int buttonRound = int.Parse(roundStr);
@@ -98,16 +109,13 @@ namespace Hogs.RPG.Bot.Commands
 
                         string statusText = $"**Round {session.CurrentRound} Actions:**\n{string.Join("\n", statusLines)}";
 
-                        // Edit existing status message or post new one
                         if (session.RoundStatusMessageId != 0)
                         {
                             try
                             {
                                 var existing = await statusThread.GetMessageAsync(session.RoundStatusMessageId) as IUserMessage;
                                 if (existing != null)
-                                {
                                     await existing.ModifyAsync(m => m.Content = statusText);
-                                }
                                 else
                                 {
                                     var newMsg = await statusThread.SendMessageAsync(statusText);
@@ -206,10 +214,8 @@ namespace Hogs.RPG.Bot.Commands
 
             embed.WithFooter($"Round {session.CurrentRound} — Submit your actions below.");
 
-            // Post round result embed first
             await thread.SendMessageAsync(embed: embed.Build());
 
-            // Post individual action buttons per player
             foreach (var p in session.Participants)
             {
                 var actionComponents = BuildActionButtonsForRole(sessionId, session.CurrentRound, p);

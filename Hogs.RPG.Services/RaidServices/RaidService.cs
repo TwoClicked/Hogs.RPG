@@ -615,12 +615,6 @@ namespace Hogs.RPG.Services.RaidServices
                 p.EmergencyHealCooldownRoundsRemaining = Math.Max(0, p.EmergencyHealCooldownRoundsRemaining - 1);
             }
 
-            // =========================
-            // BOSS ATTACK SETUP
-            // =========================
-            var aggroTarget = session.Participants.First(p => p.DiscordId == session.AggroDiscordId);
-            bool aggroOnTank = aggroTarget.Role == RaidRole.Tank;
-
             int bossAttack = session.BossAttack;
 
             var tankEmpower = session.ActiveEffects.FirstOrDefault(e =>
@@ -655,6 +649,10 @@ namespace Hogs.RPG.Services.RaidServices
                 var ability = raidDef.AbilityPool[_random.Next(raidDef.AbilityPool.Count)];
                 result.BossText += HandleBossAbility(session, ability, raidDef, tankIsHolding, damageReduction);
             }
+
+            // Re-fetch aggro target AFTER ability roll in case TargetSwap fired
+            var aggroTarget = session.Participants.First(p => p.DiscordId == session.AggroDiscordId);
+            bool aggroOnTank = aggroTarget.Role == RaidRole.Tank;
 
             // Boss attack
             if (aggroOnTank)
