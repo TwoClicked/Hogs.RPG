@@ -25,18 +25,7 @@ namespace Hogs.RPG.Bot.Commands
         [ComponentInteraction("raid_action:*:*:*")]
         public async Task HandleAction(string sessionIdStr, string roundStr, string action)
         {
-            // Disable buttons immediately — prevents double press
-            if (Context.Interaction is SocketMessageComponent comp)
-            {
-                await comp.UpdateAsync(m =>
-                {
-                    m.Components = new ComponentBuilder().Build();
-                });
-            }
-            else
-            {
-                await DeferAsync(ephemeral: true);
-            }
+            await DeferAsync(ephemeral: true);
 
             int sessionId = int.Parse(sessionIdStr);
             int buttonRound = int.Parse(roundStr);
@@ -59,7 +48,8 @@ namespace Hogs.RPG.Bot.Commands
 
             if (!success)
             {
-                await FollowupAsync(message, ephemeral: true);
+                // Already acted — silently acknowledge
+                await FollowupAsync("✅ Action already registered!", ephemeral: true);
                 return;
             }
 
@@ -172,18 +162,7 @@ namespace Hogs.RPG.Bot.Commands
         [ComponentInteraction("raid_action:*:*:emergency_menu")]
         public async Task EmergencyHealMenu(string sessionIdStr, string roundStr)
         {
-            // Disable the emergency button immediately
-            if (Context.Interaction is SocketMessageComponent comp)
-            {
-                await comp.UpdateAsync(m =>
-                {
-                    m.Components = new ComponentBuilder().Build();
-                });
-            }
-            else
-            {
-                await DeferAsync(ephemeral: true);
-            }
+            await DeferAsync(ephemeral: true);
 
             int sessionId = int.Parse(sessionIdStr);
             int round = int.Parse(roundStr);
@@ -195,7 +174,7 @@ namespace Hogs.RPG.Bot.Commands
                 var participant = session.Participants.FirstOrDefault(p => p.DiscordId == Context.User.Id);
                 if (participant != null && participant.HasActedThisRound)
                 {
-                    await FollowupAsync("⏳ You have already submitted your action this round.", ephemeral: true);
+                    await FollowupAsync("✅ Action already registered!", ephemeral: true);
                     return;
                 }
             }
