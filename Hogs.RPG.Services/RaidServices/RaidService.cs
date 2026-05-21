@@ -27,7 +27,7 @@ namespace Hogs.RPG.Services.RaidServices
 
         private static readonly Random _random = new();
 
-        private const int RaidCooldownHours = 4;
+        private const int MaxRaidsPerDay = 5;
         private const int RaidGoldReward = 1000;
         private const int RaidPlayerXpReward = 1500;
         private const int RaidPetXpReward = 100;
@@ -64,15 +64,20 @@ namespace Hogs.RPG.Services.RaidServices
             var player = await _playerRepo.GetByDiscordIdAsync(discordId);
             if (player == null) return (false, TimeSpan.Zero);
 
-            if (string.IsNullOrEmpty(player.LastRaidAt))
-                return (false, TimeSpan.Zero);
-
-            var lastRaid = DateTimeOffset.Parse(player.LastRaidAt);
-            var elapsed = DateTimeOffset.UtcNow - lastRaid;
-
-            if (elapsed.TotalHours < RaidCooldownHours)
+            // Reset daily count if it's a new UTC day
+            var todayUtc = DateTime.UtcNow.ToString("yyyy-MM-dd");
+            if (player.LastRaidDayReset != todayUtc)
             {
-                var remaining = TimeSpan.FromHours(RaidCooldownHours) - elapsed;
+                player.RaidsToday = 0;
+                player.LastRaidDayReset = todayUtc;
+                await _playerRepo.UpdatePlayerAsync(player);
+            }
+
+            if (player.RaidsToday >= MaxRaidsPerDay)
+            {
+                // Time until next UTC midnight
+                var tomorrow = DateTime.UtcNow.Date.AddDays(1);
+                var remaining = tomorrow - DateTime.UtcNow;
                 return (true, remaining);
             }
 
@@ -98,7 +103,7 @@ namespace Hogs.RPG.Services.RaidServices
 
             var (onCooldown, remaining) = await CheckCooldownAsync(discordId);
             if (onCooldown)
-                return (false, $"⏳ You can raid again in **{remaining.Hours}h {remaining.Minutes}m**.", null);
+                return (false, $"⏳ You've used all **{MaxRaidsPerDay} raids** for today. Resets in **{(int)remaining.TotalHours}h {remaining.Minutes}m** (UTC midnight).", null);
 
             var existing = await _raidRepo.GetPlayerActiveSessionAsync(discordId);
             if (existing != null)
@@ -154,7 +159,7 @@ namespace Hogs.RPG.Services.RaidServices
 
             var (onCooldown, remaining) = await CheckCooldownAsync(discordId);
             if (onCooldown)
-                return (false, $"⏳ You can raid again in **{remaining.Hours}h {remaining.Minutes}m**.");
+                return (false, $"⏳ You've used all **{MaxRaidsPerDay} raids** for today. Resets in **{(int)remaining.TotalHours}h {remaining.Minutes}m** (UTC midnight).");
 
             var existing = await _raidRepo.GetPlayerActiveSessionAsync(discordId);
             if (existing != null)
@@ -854,6 +859,18 @@ namespace Hogs.RPG.Services.RaidServices
                 player.XP += xp;
                 player.LastRaidAt = DateTimeOffset.UtcNow.ToString("o");
 
+                // Increment daily raid count
+                var todayUtc = DateTime.UtcNow.ToString("yyyy-MM-dd");
+                if (player.LastRaidDayReset != todayUtc)
+                {
+                    player.RaidsToday = 1;
+                    player.LastRaidDayReset = todayUtc;
+                }
+                else
+                {
+                    player.RaidsToday++;
+                }
+
                 var (levelMessage, _) = _levelService.CheckLevelUp(player);
                 await _playerRepo.UpdatePlayerAsync(player);
 
@@ -894,6 +911,18 @@ namespace Hogs.RPG.Services.RaidServices
 
                 player.Gold = Math.Max(0, player.Gold - WipeGoldPenalty);
                 player.LastRaidAt = DateTimeOffset.UtcNow.ToString("o");
+
+                // Increment daily raid count (wipes count too)
+                var todayUtc = DateTime.UtcNow.ToString("yyyy-MM-dd");
+                if (player.LastRaidDayReset != todayUtc)
+                {
+                    player.RaidsToday = 1;
+                    player.LastRaidDayReset = todayUtc;
+                }
+                else
+                {
+                    player.RaidsToday++;
+                }
 
                 var (_, _, maxHp) = await _statService.CalculateStatsAsync(player);
                 player.Health = maxHp;
