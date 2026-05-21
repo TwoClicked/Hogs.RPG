@@ -9,10 +9,12 @@ namespace Hogs.RPG.Services.PetServices
     public class PetService
     {
         private readonly PetRepository _repo;
+        private readonly PlayerRepository _playerRepo;
 
-        public PetService(PetRepository repo)
+        public PetService(PetRepository repo, PlayerRepository playerRepo)
         {
             _repo = repo;
+            _playerRepo = playerRepo;
         }
 
         // =========================
@@ -148,6 +150,82 @@ namespace Hogs.RPG.Services.PetServices
             }
 
             await _repo.SaveAsync();
+        }
+
+        // =========================
+        // 🎲 REROLL PASSIVE
+        // =========================
+        public async Task<(bool success, string message)> RerollPassiveAsync(ulong userId, int slot, string sacrificePetId)
+        {
+            const int RerollCost = 5000;
+
+            // Must have an equipped pet
+            var equippedPet = await _repo.GetEquippedPetAsync(userId);
+            if (equippedPet == null)
+                return (false, "❌ You don't have a pet equipped.");
+
+            // Slot must be unlocked
+            if (slot == 1 && equippedPet.Passive1 == null)
+                return (false, "❌ Your pet hasn't unlocked Passive Slot 1 yet. Reach **Level 15** first.");
+
+            if (slot == 2 && equippedPet.Passive2 == null)
+                return (false, "❌ Your pet hasn't unlocked Passive Slot 2 yet. Reach **Level 20** first.");
+
+            // Sacrifice pet must be owned and unequipped
+            var sacrificePet = await _repo.GetPetAsync(userId, sacrificePetId);
+            if (sacrificePet == null)
+                return (false, "❌ You don't own that pet.");
+
+            if (sacrificePet.IsEquipped)
+                return (false, "❌ You can't sacrifice your equipped pet. Unequip it first.");
+
+            // Sacrifice pet must be Tier 2
+            if (!PetRegistry.All.TryGetValue(sacrificePetId, out var sacrificeDef) || sacrificeDef.Tier != 2)
+                return (false, "❌ Only **Tier 2** pets can be used as a reroll sacrifice.");
+
+            // Gold check
+            var player = await _playerRepo.GetByDiscordIdAsync(userId);
+            if (player == null)
+                return (false, "❌ Player not found.");
+
+            if (player.Gold < RerollCost)
+                return (false, $"❌ You need **{RerollCost:N0} gold** to reroll. You only have **{player.Gold:N0}**.");
+
+            // All checks passed — execute
+            player.Gold -= RerollCost;
+
+            PetPassive oldPassive;
+            PetPassive newPassive;
+
+            if (slot == 1)
+            {
+                oldPassive = equippedPet.Passive1!.Value;
+                newPassive = GetRandomPassiveExcluding(equippedPet.Passive2);
+                equippedPet.Passive1 = newPassive;
+            }
+            else
+            {
+                oldPassive = equippedPet.Passive2!.Value;
+                newPassive = GetRandomPassiveExcluding(equippedPet.Passive1);
+                equippedPet.Passive2 = newPassive;
+            }
+
+            _repo.RemovePet(sacrificePet);
+            await _playerRepo.UpdatePlayerAsync(player);
+            await _repo.SaveAsync();
+
+            if (!PetRegistry.All.TryGetValue(equippedPet.PetId, out var petDef))
+                return (false, "❌ Equipped pet not found in registry.");
+
+            string displayName = equippedPet.CustomName ?? petDef.Name;
+            string sacrificeName = $"{sacrificeDef.Icon} {sacrificeDef.Name}";
+
+            return (true,
+                $"🎲 **Passive Rerolled!**\n\n" +
+                $"{sacrificeName} was consumed.\n\n" +
+                $"**{displayName}** — Slot {slot}\n" +
+                $"~~{PetPassiveFormatter.Format(oldPassive)}~~\n" +
+                $"✨ {PetPassiveFormatter.Format(newPassive)}");
         }
 
         private PetPassive GetRandomPassiveExcluding(params PetPassive?[] exclude)

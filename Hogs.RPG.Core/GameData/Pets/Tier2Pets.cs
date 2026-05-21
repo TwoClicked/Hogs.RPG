@@ -17,6 +17,7 @@ namespace Hogs.RPG.Core.GameData.Pets
             BaseDefense = 2,
             BaseHealth = 6,
             Scaling = 0.8f,
+            Tier = 2
         };
 
         // =========================
@@ -32,6 +33,7 @@ namespace Hogs.RPG.Core.GameData.Pets
             BaseDefense = 10,
             BaseHealth = 12,
             Scaling = 0.8f,
+            Tier = 2
         };
 
         // =========================
@@ -47,6 +49,7 @@ namespace Hogs.RPG.Core.GameData.Pets
             BaseDefense = 4,
             BaseHealth = 22,
             Scaling = 0.8f,
+            Tier = 2
         };
     }
 }

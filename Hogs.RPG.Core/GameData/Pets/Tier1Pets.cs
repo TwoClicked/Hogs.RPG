@@ -19,6 +19,7 @@ namespace Hogs.RPG.Core.GameData.Pets
             BaseDefense = 1,
             BaseHealth = 5,
             Scaling = 0.2f,
+            Tier = 1
         };
     }
 }

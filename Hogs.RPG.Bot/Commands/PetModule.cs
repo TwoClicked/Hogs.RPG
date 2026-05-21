@@ -85,6 +85,24 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
+        // 🎲 REROLL PASSIVE
+        // =========================
+        [SlashCommand("pet-reroll", "Sacrifice a T2 pet to reroll a passive on your equipped pet")]
+        public async Task RerollPassive(
+            [Summary("slot", "Which passive slot to reroll (1 = Level 15, 2 = Level 20)")]
+            [Choice("Slot 1", 1), Choice("Slot 2", 2)] int slot,
+            [Summary("sacrifice", "The T2 pet to sacrifice (costs 5,000 gold)")]
+            [Autocomplete(typeof(T2PetBagAutocompleteHandler))] string sacrificePetId)
+        {
+            await DeferAsync(ephemeral: true);
+
+            var (success, message) = await _petService.RerollPassiveAsync(Context.User.Id, slot, sacrificePetId);
+
+            await FollowupAsync(message, ephemeral: true);
+        }
+
+
+        // =========================
         // 🐾 UNEQUIP PET
         // =========================
         [SlashCommand("pet-unequip", "Unequip your current pet")]
