@@ -216,8 +216,6 @@ namespace Hogs.RPG.Bot.Commands
             await FollowupAsync(message, ephemeral: true);
         }
 
-
-
         // =========================
         // START RAID BUTTON
         // =========================
@@ -390,10 +388,6 @@ namespace Hogs.RPG.Bot.Commands
             Hogs.RPG.Core.Entities.RaidDefinition raidDef,
             string description)
         {
-            int bossHpPercent = session.BossMaxHp > 0
-                ? (int)((double)session.BossCurrentHp / session.BossMaxHp * 100)
-                : 0;
-
             string HpBar(int current, int max, int barLength = 10)
             {
                 int filled = max > 0 ? (int)((double)current / max * barLength) : 0;
@@ -461,7 +455,8 @@ namespace Hogs.RPG.Bot.Commands
                         ButtonStyle.Success, row: 0);
                     builder.WithButton("🌿 Party Heal", $"raid_action:{sessionId}:{round}:party_heal",
                         ButtonStyle.Success, row: 0);
-                    builder.WithButton("⚡ Emergency", $"raid_action:{sessionId}:{round}:emergency_menu",
+                    // Emergency Heal — single tap, auto-targets lowest HP member
+                    builder.WithButton("⚡ Emergency", $"raid_action:{sessionId}:{round}:emergency_heal",
                         ButtonStyle.Success, row: 0,
                         disabled: participant.EmergencyHealCooldownRoundsRemaining > 0);
                     builder.WithButton("✨ Empower ATK", $"raid_action:{sessionId}:{round}:empower_attack",
@@ -473,7 +468,6 @@ namespace Hogs.RPG.Bot.Commands
 
             return builder.Build();
         }
-
 
         // =========================
         // HELPERS — Lobby refresh
