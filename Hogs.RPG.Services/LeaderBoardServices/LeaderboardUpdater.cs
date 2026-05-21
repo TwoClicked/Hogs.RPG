@@ -139,7 +139,7 @@ public class LeaderboardUpdater
     {
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>
-            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **Lv.{p.Level}** ({p.XP:N0})"));
+            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **Lv.{p.Level}**"));
     }
 
     private string FormatGear(List<(Hogs.RPG.Core.Entities.Player player, int score)> data)
