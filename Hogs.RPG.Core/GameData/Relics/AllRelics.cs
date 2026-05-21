@@ -157,7 +157,7 @@ namespace Hogs.RPG.Core.GameData.Relics
             Description = "Fortune follows those who wander — gold finds its way to your hands.",
             Affinity = RelicAffinity.Universal,
             BonusType = RelicBonusType.BonusGold,
-            BonusPerRank = new float[] { 0.03f, 0.06f, 0.10f, 0.14f, 0.18f }
+            BonusPerRank = new float[] { 0.01f, 0.02f, 0.03f, 0.04f, 0.05f },
         };
 
         public static readonly RelicDefinition ScholarsTome = new()
@@ -187,7 +187,7 @@ namespace Hogs.RPG.Core.GameData.Relics
             Description = "You never leave empty handed — every clear hides a bonus prize.",
             Affinity = RelicAffinity.Universal,
             BonusType = RelicBonusType.BonusLootRoll,
-            BonusPerRank = new float[] { 0.03f, 0.06f, 0.10f, 0.14f, 0.18f },
+            BonusPerRank = new float[] { 0.01f, 0.02f, 0.03f, 0.04f, 0.05f },
             SpecialEffectDescription = "Bonus loot roll chance on dungeon, boss and raid clears."
         };
     }
