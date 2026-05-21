@@ -151,6 +151,7 @@ namespace Hogs.RPG.Bot.Commands
                     .Build();
 
                 await thread.SendMessageAsync(embed: embed);
+                await PostRaidVictoryFeedAsync(result);
                 return;
             }
 
@@ -213,6 +214,47 @@ namespace Hogs.RPG.Bot.Commands
                     $"<@{p.DiscordId}> — Your actions ({p.Role}):",
                     components: actionComponents);
             }
+        }
+
+        // =========================
+        // FEED: RAID VICTORY
+        // =========================
+        private async Task PostRaidVictoryFeedAsync(RaidRoundResult result)
+        {
+            var feedChannel = _client.GetChannel(1485357755433750549UL) as IMessageChannel;
+            if (feedChannel == null) return;
+
+            var session = result.Session;
+            var raidDef = RaidRegistry.GetByTier(session?.Tier ?? 0);
+            var bossName = raidDef?.Name ?? "Unknown Raid Boss";
+
+            var sb = new StringBuilder();
+            sb.AppendLine("🎉 **Raid Complete!**\n");
+
+            foreach (var reward in result.Rewards)
+            {
+                string roleIcon = reward.Role switch
+                {
+                    RaidRole.Tank => "🛡️",
+                    RaidRole.Dps => "⚔️",
+                    RaidRole.Healer => "💚",
+                    _ => "❓"
+                };
+
+                sb.AppendLine($"{roleIcon} <@{reward.DiscordId}> — 💰 +{reward.Gold} gold | 📈 +{reward.PlayerXp} XP | 🐾 +{reward.PetXp} Pet XP");
+
+                if (reward.ShardDropped)
+                    sb.AppendLine($"  💎 **Tier {reward.ShardTier} Relic Shard dropped!**");
+            }
+
+            var embed = new EmbedBuilder()
+                .WithTitle($"⚔️ Raid Clear — {bossName}")
+                .WithColor(Color.Gold)
+                .WithDescription(sb.ToString())
+                .WithFooter($"Tier {session?.Tier} Raid")
+                .Build();
+
+            await feedChannel.SendMessageAsync(embed: embed);
         }
 
         // =========================
