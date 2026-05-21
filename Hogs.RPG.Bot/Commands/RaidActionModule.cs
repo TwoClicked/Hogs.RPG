@@ -48,8 +48,7 @@ namespace Hogs.RPG.Bot.Commands
 
             if (!success)
             {
-                // Already acted — silently acknowledge
-                await FollowupAsync("✅ Action already registered!", ephemeral: true);
+                await FollowupAsync(message, ephemeral: true);
                 return;
             }
 
@@ -81,123 +80,43 @@ namespace Hogs.RPG.Bot.Commands
                                 "shatter" => "💥 Shatter",
                                 "heal" => "💚 Heal",
                                 "party_heal" => "🌿 Party Heal",
-                                "emergency_menu" => "⚡ Emergency...",
-                                "emergency_heal_tank" => "⚡ Emergency (Tank)",
-                                "emergency_heal_dps" => "⚡ Emergency (DPS)",
-                                "emergency_heal_healer" => "⚡ Emergency (Self)",
+                                "emergency_heal" => "⚡ Emergency Heal",
                                 "empower_attack" => "✨ Empower ATK",
                                 "empower_defense" => "✨ Empower DEF",
                                 _ => "..."
                             };
 
                             string status = p.HasActedThisRound
-                                ? $"✅ {actionLabel}"
-                                : "⏳ Waiting...";
+                                ? $"{roleIcon} **{p.Role}** — {actionLabel} ✅"
+                                : $"{roleIcon} **{p.Role}** — ⏳ Waiting...";
 
-                            return $"{roleIcon} <@{p.DiscordId}> — {status}";
+                            return status;
                         });
 
-                        string statusText = $"**Round {session.CurrentRound} Actions:**\n{string.Join("\n", statusLines)}";
-
-                        if (session.RoundStatusMessageId != 0)
-                        {
-                            try
-                            {
-                                var existing = await statusThread.GetMessageAsync(session.RoundStatusMessageId) as IUserMessage;
-                                if (existing != null)
-                                    await existing.ModifyAsync(m => m.Content = statusText);
-                                else
-                                {
-                                    var newMsg = await statusThread.SendMessageAsync(statusText);
-                                    await _raidService.UpdateRoundStatusMessageIdAsync(session.Id, newMsg.Id);
-                                }
-                            }
-                            catch
-                            {
-                                var newMsg = await statusThread.SendMessageAsync(statusText);
-                                await _raidService.UpdateRoundStatusMessageIdAsync(session.Id, newMsg.Id);
-                            }
-                        }
-                        else
-                        {
-                            var newMsg = await statusThread.SendMessageAsync(statusText);
-                            await _raidService.UpdateRoundStatusMessageIdAsync(session.Id, newMsg.Id);
-                        }
+                        await FollowupAsync(
+                            $"✅ Action registered!\n\n{string.Join("\n", statusLines)}",
+                            ephemeral: true);
+                        return;
                     }
                 }
 
-                await FollowupAsync("✅ Action submitted!", ephemeral: true);
+                await FollowupAsync("✅ Action registered!", ephemeral: true);
                 return;
             }
 
-            var thread = Context.Channel as IThreadChannel;
-            if (thread == null)
-            {
-                await FollowupAsync("❌ Could not find raid thread.", ephemeral: true);
-                return;
-            }
-
-            if (roundResult.IsWipe)
-            {
-                await PostWipeResultAsync(thread, roundResult);
-                await FollowupAsync("💀 The raid ended in a wipe.", ephemeral: true);
-                return;
-            }
-
-            if (roundResult.IsVictory)
-            {
-                await PostVictoryResultAsync(thread, roundResult);
-                await PostRaidVictoryFeedAsync(roundResult);
-                await FollowupAsync("🏆 Victory!", ephemeral: true);
-                return;
-            }
-
-            await PostRoundResultAsync(thread, roundResult, sessionId);
+            // Round resolved — post results
+            await PostRoundResultAsync(roundResult, sessionId);
             await FollowupAsync("✅ Round resolved!", ephemeral: true);
-        }
-
-        // =========================
-        // EMERGENCY HEAL TARGET MENU
-        // =========================
-        [ComponentInteraction("raid_action:*:*:emergency_menu")]
-        public async Task EmergencyHealMenu(string sessionIdStr, string roundStr)
-        {
-            await DeferAsync(ephemeral: true);
-
-            int sessionId = int.Parse(sessionIdStr);
-            int round = int.Parse(roundStr);
-
-            // Check they haven't already acted this round
-            var session = await _raidService.GetSessionAsync(sessionId);
-            if (session != null)
-            {
-                var participant = session.Participants.FirstOrDefault(p => p.DiscordId == Context.User.Id);
-                if (participant != null && participant.HasActedThisRound)
-                {
-                    await FollowupAsync("✅ Action already registered!", ephemeral: true);
-                    return;
-                }
-            }
-
-            var components = new ComponentBuilder()
-                .WithButton("🛡️ Heal Tank", $"raid_action:{sessionId}:{round}:emergency_heal_tank", ButtonStyle.Success)
-                .WithButton("⚔️ Heal DPS", $"raid_action:{sessionId}:{round}:emergency_heal_dps", ButtonStyle.Success)
-                .WithButton("💚 Heal Myself", $"raid_action:{sessionId}:{round}:emergency_heal_healer", ButtonStyle.Success)
-                .Build();
-
-            await FollowupAsync("⚡ **Emergency Heal** — Choose your target (costs 3 potions, 10 round cooldown):", components: components, ephemeral: true);
         }
 
         // =========================
         // POST ROUND RESULT
         // =========================
         private async Task PostRoundResultAsync(
-            IThreadChannel thread,
-            RaidRoundResult result,
-            int sessionId)
+            RaidRoundResult result, int sessionId)
         {
-            var session = result.Session;
-            var raidDef = RaidRegistry.GetByTier(session.Tier);
+            var thread = Context.Channel as IThreadChannel;
+            if (thread == null) return;
 
             string HpBar(int current, int max, int barLength = 10)
             {
@@ -205,9 +124,57 @@ namespace Hogs.RPG.Bot.Commands
                 return $"[{new string('█', filled)}{new string('░', barLength - filled)}] {current}/{max}";
             }
 
-            var embed = new EmbedBuilder()
-                .WithTitle($"⚔️ Round {result.Round} Complete")
-                .WithColor(new Color(0xE67E22))
+            if (result.IsVictory)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine("🎉 **Raid Complete!**\n");
+
+                foreach (var reward in result.Rewards)
+                {
+                    sb.AppendLine($"<@{reward.DiscordId}> ({reward.Role})");
+                    sb.AppendLine($"  💰 +{reward.Gold} Gold | ⭐ +{reward.PlayerXp} XP | 🐾 +{reward.PetXp} Pet XP");
+                    if (reward.ShardDropped)
+                        sb.AppendLine($"  💎 Relic Shard (Tier {reward.ShardTier}) dropped!");
+                    if (!string.IsNullOrEmpty(reward.LevelUpMessage))
+                        sb.AppendLine($"  🎊 {reward.LevelUpMessage}");
+                    sb.AppendLine();
+                }
+
+                var raidDef = RaidRegistry.GetByTier(result.Session?.Tier ?? 1);
+                string bossName = raidDef?.Name ?? "Boss";
+
+                var embed = new EmbedBuilder()
+                    .WithTitle($"⚔️ Raid Clear — {bossName}")
+                    .WithColor(Color.Gold)
+                    .WithDescription(sb.ToString())
+                    .WithFooter($"Tier {result.Session?.Tier} Raid")
+                    .Build();
+
+                await thread.SendMessageAsync(embed: embed);
+                return;
+            }
+
+            if (result.IsWipe)
+            {
+                var embed = new EmbedBuilder()
+                    .WithTitle("💀 Raid Wiped")
+                    .WithColor(Color.DarkRed)
+                    .WithDescription(
+                        $"{result.WipeReason}\n\n" +
+                        $"The party has been defeated.\n" +
+                        $"Each player lost **1000 gold** and their raid key.")
+                    .Build();
+
+                await thread.SendMessageAsync(embed: embed);
+                return;
+            }
+
+            var session = result.Session;
+            if (session == null) return;
+
+            var roundEmbed = new EmbedBuilder()
+                .WithTitle($"⚔️ Round {result.Round} Results")
+                .WithColor(new Color(0x5865F2))
                 .AddField("🛡️ Tank", result.TankText, inline: false)
                 .AddField("⚔️ DPS", result.DpsText, inline: false)
                 .AddField("💚 Healer", result.HealerText, inline: false)
@@ -228,15 +195,16 @@ namespace Hogs.RPG.Bot.Commands
                 bool hasAggro = session.AggroDiscordId == p.DiscordId;
                 string aggroTag = hasAggro ? " 🎯" : "";
 
-                embed.AddField(
+                roundEmbed.AddField(
                     $"{roleIcon} {p.Role}{aggroTag}",
                     HpBar(p.CurrentHp, p.MaxHp, 8),
                     inline: true);
             }
 
-            embed.WithFooter($"Round {session.CurrentRound} — Submit your actions below.");
+            roundEmbed.WithFooter($"Round {session.CurrentRound} — Submit your actions below.");
 
-            await thread.SendMessageAsync(embed: embed.Build());
+            var statusMsg = await thread.SendMessageAsync(embed: roundEmbed.Build());
+            await _raidService.UpdateRoundStatusMessageIdAsync(sessionId, statusMsg.Id);
 
             foreach (var p in session.Participants)
             {
@@ -248,109 +216,12 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
-        // POST WIPE RESULT
-        // =========================
-        private async Task PostWipeResultAsync(IThreadChannel thread, RaidRoundResult result)
-        {
-            var embed = new EmbedBuilder()
-                .WithTitle("💀 Raid Wiped")
-                .WithColor(Color.DarkRed)
-                .WithDescription(
-                    $"{result.WipeReason}\n\n" +
-                    $"The party has been defeated.\n" +
-                    $"Each player lost **1000 gold** and their raid key.")
-                .Build();
-
-            await thread.SendMessageAsync(embed: embed);
-            await thread.ModifyAsync(t => t.Archived = true);
-        }
-
-        // =========================
-        // POST VICTORY RESULT
-        // =========================
-        private async Task PostVictoryResultAsync(IThreadChannel thread, RaidRoundResult result)
-        {
-            var description = "🏆 **The boss has been defeated!**\n\n";
-
-            foreach (var reward in result.Rewards)
-            {
-                string roleIcon = reward.Role switch
-                {
-                    RaidRole.Tank => "🛡️",
-                    RaidRole.Dps => "⚔️",
-                    RaidRole.Healer => "💚",
-                    _ => "❓"
-                };
-
-                description += $"{roleIcon} <@{reward.DiscordId}>\n";
-                description += $"💰 +{reward.Gold} gold | 📈 +{reward.PlayerXp} XP | 🐾 +{reward.PetXp} Pet XP\n";
-
-                if (reward.ShardDropped)
-                    description += $"💎 **Tier {reward.ShardTier} Relic Shard dropped!**\n";
-
-                if (!string.IsNullOrEmpty(reward.LevelUpMessage))
-                    description += $"{reward.LevelUpMessage}\n";
-
-                description += "\n";
-            }
-
-            var embed = new EmbedBuilder()
-                .WithTitle("🏆 Victory!")
-                .WithColor(Color.Gold)
-                .WithDescription(description)
-                .Build();
-
-            await thread.SendMessageAsync(embed: embed);
-            await thread.ModifyAsync(t => t.Archived = true);
-        }
-
-        // =========================
-        // FEED: RAID VICTORY
-        // =========================
-        private async Task PostRaidVictoryFeedAsync(RaidRoundResult result)
-        {
-            var feedChannel = _client.GetChannel(1485357755433750549UL) as IMessageChannel;
-            if (feedChannel == null) return;
-
-            var session = result.Session;
-            var raidDef = RaidRegistry.GetByTier(session?.Tier ?? 0);
-            var bossName = raidDef?.Name ?? "Unknown Raid Boss";
-
-            var sb = new StringBuilder();
-            sb.AppendLine($"The **{bossName}** has been defeated!\n");
-
-            foreach (var reward in result.Rewards)
-            {
-                string roleIcon = reward.Role switch
-                {
-                    RaidRole.Tank => "🛡️",
-                    RaidRole.Dps => "⚔️",
-                    RaidRole.Healer => "💚",
-                    _ => "❓"
-                };
-
-                sb.Append($"{roleIcon} <@{reward.DiscordId}> — 💰 +{reward.Gold} gold | 📈 +{reward.PlayerXp} XP");
-
-                if (reward.ShardDropped)
-                    sb.Append($"\n  💎 **Tier {reward.ShardTier} Relic Shard dropped!**");
-
-                sb.AppendLine();
-            }
-
-            var embed = new EmbedBuilder()
-                .WithTitle($"⚔️ Raid Clear — {bossName}")
-                .WithColor(Color.Gold)
-                .WithDescription(sb.ToString())
-                .WithFooter($"Tier {session?.Tier} Raid")
-                .Build();
-
-            await feedChannel.SendMessageAsync(embed: embed);
-        }
-
-        // =========================
         // ACTION BUTTONS BUILDER — PER ROLE
         // =========================
-        private MessageComponent BuildActionButtonsForRole(int sessionId, int round, Hogs.RPG.Core.Entities.RaidParticipant participant)
+        private MessageComponent BuildActionButtonsForRole(
+            int sessionId,
+            int round,
+            Hogs.RPG.Core.Entities.RaidParticipant participant)
         {
             var builder = new ComponentBuilder();
 
@@ -382,7 +253,8 @@ namespace Hogs.RPG.Bot.Commands
                         ButtonStyle.Success, row: 0);
                     builder.WithButton("🌿 Party Heal", $"raid_action:{sessionId}:{round}:party_heal",
                         ButtonStyle.Success, row: 0);
-                    builder.WithButton("⚡ Emergency", $"raid_action:{sessionId}:{round}:emergency_menu",
+                    // Emergency Heal — single tap, auto-targets lowest HP member
+                    builder.WithButton("⚡ Emergency", $"raid_action:{sessionId}:{round}:emergency_heal",
                         ButtonStyle.Success, row: 0,
                         disabled: participant.EmergencyHealCooldownRoundsRemaining > 0);
                     builder.WithButton("✨ Empower ATK", $"raid_action:{sessionId}:{round}:empower_attack",

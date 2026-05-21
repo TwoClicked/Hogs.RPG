@@ -409,6 +409,18 @@ namespace Hogs.RPG.Services.RaidServices
                 if (bossHpPercent < 0.50 && relicBonuses.ExecutionerBonusPercent > 0)
                     damage = (int)(damage * (1f + relicBonuses.ExecutionerBonusPercent));
 
+                // =========================
+                // 🐾 PET PASSIVES (OUTGOING)
+                // DoubleStrike and Executioner proc here, before reckless/focus multipliers
+                // =========================
+                var dpsPet = await _petService.GetEquippedPetAsync(dps.DiscordId);
+                PetDefinition dpsPetDef = null;
+                if (dpsPet != null)
+                    PetRegistry.All.TryGetValue(dpsPet.PetId, out dpsPetDef);
+
+                damage = _petPassiveService.ModifyOutgoingDamage(
+                    damage, dpsPet, dpsPetDef, session.BossCurrentHp, session.BossMaxHp);
+
                 if (dps.PendingAction == "reckless")
                 {
                     damage = damage * 2;
@@ -424,9 +436,18 @@ namespace Hogs.RPG.Services.RaidServices
 
                     session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - damage);
 
+                    // 🐾 Pet lifesteal on hit
+                    int petLifesteal = _petPassiveService.ApplyOnHitEffects(damage, dpsPlayer, dpsPet);
+                    if (petLifesteal > 0)
+                        dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + petLifesteal);
+
+                    string lifestealSuffix = petLifesteal > 0
+                        ? $" 🩸 Pet lifesteal: **+{petLifesteal} HP**."
+                        : "";
+
                     result.DpsText = dps.FocusStacks > 0
-                        ? $"💀 Reckless Strike! ({dps.FocusStacks}x Focus) dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self."
-                        : $"💀 Reckless Strike dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self.";
+                        ? $"💀 Reckless Strike! ({dps.FocusStacks}x Focus) dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self.{lifestealSuffix}"
+                        : $"💀 Reckless Strike dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self.{lifestealSuffix}";
 
                     dps.FocusStacks = 0;
                     dps.RecklessCooldownRoundsRemaining = 5;
@@ -442,16 +463,24 @@ namespace Hogs.RPG.Services.RaidServices
 
                     session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - damage);
 
-                    if (relicBonuses.LifeStealPercent > 0)
-                    {
-                        int healAmount = (int)(damage * relicBonuses.LifeStealPercent);
-                        dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + healAmount);
-                        result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Life steal healed for **{healAmount}**.";
-                    }
+                    // 🐾 Pet lifesteal on hit
+                    int petLifesteal = _petPassiveService.ApplyOnHitEffects(damage, dpsPlayer, dpsPet);
+                    if (petLifesteal > 0)
+                        dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + petLifesteal);
+
+                    // Build heal text combining relic lifesteal + pet lifesteal
+                    int relicHeal = (int)(damage * relicBonuses.LifeStealPercent);
+                    if (relicHeal > 0)
+                        dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + relicHeal);
+
+                    if (relicHeal > 0 && petLifesteal > 0)
+                        result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Life steal: **+{relicHeal}** (relic) + **+{petLifesteal}** (pet).";
+                    else if (relicHeal > 0)
+                        result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Life steal healed for **{relicHeal}**.";
+                    else if (petLifesteal > 0)
+                        result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Pet lifesteal: **+{petLifesteal} HP**.";
                     else
-                    {
                         result.DpsText = $"⚔️ DPS dealt **{damage}** damage!";
-                    }
                 }
             }
 
@@ -512,7 +541,7 @@ namespace Hogs.RPG.Services.RaidServices
                     result.HealerText = "❌ Party Heal requires **2 potions**. Not enough!";
                 }
             }
-            else if (healer.PendingAction != null && healer.PendingAction.StartsWith("emergency_heal_"))
+            else if (healer.PendingAction == "emergency_heal")
             {
                 var healerInventory = await _inventoryRepo.GetInventoryAsync(healer.DiscordId);
                 var potion = healerInventory.FirstOrDefault(i => i.ItemId == "health_potion");
@@ -523,22 +552,15 @@ namespace Hogs.RPG.Services.RaidServices
                 }
                 else if (potion != null && potion.Quantity >= 3)
                 {
-                    RaidRole targetRole = healer.PendingAction switch
-                    {
-                        "emergency_heal_tank" => RaidRole.Tank,
-                        "emergency_heal_dps" => RaidRole.Dps,
-                        "emergency_heal_healer" => RaidRole.Healer,
-                        _ => RaidRole.Tank
-                    };
+                    // Auto-target the party member with the lowest HP percentage
+                    var target = session.Participants
+                        .OrderBy(p => (double)p.CurrentHp / p.MaxHp)
+                        .First();
 
-                    var target = session.Participants.FirstOrDefault(p => p.Role == targetRole);
-                    if (target != null)
-                    {
-                        target.CurrentHp = target.MaxHp;
-                        await _inventoryRepo.RemoveItemAsync(healer.DiscordId, "health_potion", 3);
-                        healer.EmergencyHealCooldownRoundsRemaining = 10;
-                        result.HealerText = $"⚡ Emergency Heal! **{targetRole}** fully restored to **{target.MaxHp} HP**! (3 potions used)";
-                    }
+                    target.CurrentHp = target.MaxHp;
+                    await _inventoryRepo.RemoveItemAsync(healer.DiscordId, "health_potion", 3);
+                    healer.EmergencyHealCooldownRoundsRemaining = 10;
+                    result.HealerText = $"⚡ Emergency Heal! **{target.Role}** fully restored to **{target.MaxHp} HP**! (3 potions used, 10 round cooldown)";
                 }
                 else
                 {
@@ -643,11 +665,15 @@ namespace Hogs.RPG.Services.RaidServices
                 result.BossText += $"🔄 **Boss swapped target to {nonTank.Role}!** Tank must Taunt!\n";
             }
 
+            // Fetch tank def once — used by both CrushingBlow and the regular boss attack
+            var (_, tankDef, _) = await _statService.CalculateStatsAsync(
+                await _playerRepo.GetByDiscordIdAsync(tank.DiscordId));
+
             // Roll boss ability
             if (raidDef.AbilityPool.Count > 0 && _random.Next(0, 100) < 30)
             {
                 var ability = raidDef.AbilityPool[_random.Next(raidDef.AbilityPool.Count)];
-                result.BossText += HandleBossAbility(session, ability, raidDef, tankIsHolding, damageReduction);
+                result.BossText += HandleBossAbility(session, ability, raidDef, tankIsHolding, damageReduction, tankDef);
             }
 
             // Re-fetch aggro target AFTER ability roll in case TargetSwap fired
@@ -657,9 +683,6 @@ namespace Hogs.RPG.Services.RaidServices
             // Boss attack
             if (aggroOnTank)
             {
-                var (_, tankDef, _) = await _statService.CalculateStatsAsync(
-                    await _playerRepo.GetByDiscordIdAsync(tank.DiscordId));
-
                 int rawDamage = (int)(bossAttack * (100.0 / (100.0 + tankDef)));
                 rawDamage = Math.Max(1, rawDamage);
                 int finalDamage = (int)(rawDamage * (1f - damageReduction));
@@ -737,7 +760,7 @@ namespace Hogs.RPG.Services.RaidServices
         // =========================
         // 🔥 BOSS ABILITY HANDLER
         // =========================
-        private string HandleBossAbility(RaidSession session, BossAbilityType ability, RaidDefinition raidDef, bool tankIsHolding, float tankDamageReduction)
+        private string HandleBossAbility(RaidSession session, BossAbilityType ability, RaidDefinition raidDef, bool tankIsHolding, float tankDamageReduction, int tankDef)
         {
             switch (ability)
             {
@@ -749,7 +772,8 @@ namespace Hogs.RPG.Services.RaidServices
 
                 case BossAbilityType.CrushingBlow:
                     var tank = session.Participants.First(p => p.Role == RaidRole.Tank);
-                    int crushDamage = session.BossAttack * 2;
+                    int crushDamage = (int)(session.BossAttack * 2 * (100.0 / (100.0 + tankDef)));
+                    crushDamage = Math.Max(1, crushDamage);
                     if (tankIsHolding)
                         crushDamage = (int)(crushDamage * (1f - tankDamageReduction));
                     tank.CurrentHp = Math.Max(0, tank.CurrentHp - crushDamage);
@@ -897,7 +921,7 @@ namespace Hogs.RPG.Services.RaidServices
             {
                 RaidRole.Dps => action is "attack" or "reckless" or "focus",
                 RaidRole.Tank => action is "hold" or "taunt" or "shatter",
-                RaidRole.Healer => action is "heal" or "party_heal" or "emergency_heal_tank" or "emergency_heal_dps" or "emergency_heal_healer" or "empower_attack" or "empower_defense",
+                RaidRole.Healer => action is "heal" or "party_heal" or "emergency_heal" or "empower_attack" or "empower_defense",
                 _ => false
             };
         }
