@@ -115,6 +115,9 @@ namespace Hogs.RPG.Services.Game
             boss.DamageDealt[userId] += damage;
             boss.Participants.Add(userId);
 
+            player.TotalBossDamage += damage;
+            await playerRepo.UpdatePlayerAsync(player);
+
             if (boss.CurrentHealth <= 0 && !boss.IsDead)
             {
                 boss.IsDead = true;

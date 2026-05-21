@@ -77,20 +77,17 @@ public class LeaderboardUpdater
             return;
         }
 
-        // Recover message ID after restart
         if (_mainMsgId == 0)
-        {
             _mainMsgId = await FindExistingMessage(channel);
-        }
-
-        Console.WriteLine($"✅ Channel found: {channel.Id}");
 
         var gold = await service.GetTopGold(5);
         var xp = await service.GetTopXP(5);
         var gear = await service.GetTopGearScore(5);
         var dungeons = await service.GetTopDungeonRuns(5);
-        var petLevel = await service.GetTopPetLevel(5);
+        var raids = await service.GetTopRaidsCompleted(5);
+        var bossDmg = await service.GetTopBossDamage(5);
         var petGear = await service.GetTopPetGearScore(5);
+        var deaths = await service.GetTopDeaths(5);
 
         var embed = new EmbedBuilder()
             .WithTitle("🏆 HOGS RPG — LEADERBOARDS")
@@ -100,16 +97,19 @@ public class LeaderboardUpdater
 
         embed.AddField("💰 Gold", FormatGold(gold), true);
         embed.AddField("📈 Level", FormatXP(xp), true);
-        embed.AddField("⚔ Gear Score", FormatGear(gear), true);
+        embed.AddField("⚔️ Gear Score", FormatGear(gear), true);
 
         embed.AddField("🏰 Dungeons", FormatDungeons(dungeons), true);
-        embed.AddField("🐾 Pet Level", FormatPetLevel(petLevel), true);
+        embed.AddField("⚔️ Raids", FormatRaids(raids), true);
+        embed.AddField("💥 Boss Damage", FormatBossDmg(bossDmg), true);
+
         embed.AddField("🐾 Pet Power", FormatPetGear(petGear), true);
+        embed.AddField("💀 Deaths", FormatDeaths(deaths), true);
 
         _mainMsgId = await SendOrUpdate(channel, embed.Build(), _mainMsgId);
     }
 
-    // =========================
+    // ========================
     // 🏅 FORMATTING
     // =========================
 
@@ -148,16 +148,37 @@ public class LeaderboardUpdater
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.DungeonRunsCompleted}**"));
     }
 
-    private string FormatPetLevel(List<(Hogs.RPG.Core.Entities.Player player, Hogs.RPG.Core.Entities.PlayerPet pet)> data)
-    {
-        return string.Join("\n", data.Select((x, i) =>
-            $"{GetMedal(i + 1)} {GetDisplayName(x.player.DiscordId, x.player.Username)} — **Lv.{x.pet.Level}**"));
-    }
-
     private string FormatPetGear(List<(Hogs.RPG.Core.Entities.Player player, Hogs.RPG.Core.Entities.PlayerPet pet, int score)> data)
     {
+        if (!data.Any()) return "*No data yet*";
         return string.Join("\n", data.Select((x, i) =>
-            $"{GetMedal(i + 1)} {GetDisplayName(x.player.DiscordId, x.player.Username)} — **{x.score}**"));
+        {
+            Hogs.RPG.Core.Entities.PetDefinition petDef = null;
+            Hogs.RPG.Core.GameData.Registries.PetRegistry.All.TryGetValue(x.pet.PetId, out petDef);
+            var petName = x.pet.CustomName ?? petDef?.Name ?? "Unknown";
+            return $"{GetMedal(i + 1)} **{petName}** (Lv.{x.pet.Level}) — **{x.score}**";
+        }));
+    }
+
+    private string FormatRaids(List<Hogs.RPG.Core.Entities.Player> players)
+    {
+        if (!players.Any()) return "*No data yet*";
+        return string.Join("\n", players.Select((p, i) =>
+            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.RaidsCompleted}**"));
+    }
+
+    private string FormatBossDmg(List<Hogs.RPG.Core.Entities.Player> players)
+    {
+        if (!players.Any()) return "*No data yet*";
+        return string.Join("\n", players.Select((p, i) =>
+            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.TotalBossDamage:N0}**"));
+    }
+
+    private string FormatDeaths(List<Hogs.RPG.Core.Entities.Player> players)
+    {
+        if (!players.Any()) return "*No data yet*";
+        return string.Join("\n", players.Select((p, i) =>
+            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.Deaths}**"));
     }
 
     // =========================

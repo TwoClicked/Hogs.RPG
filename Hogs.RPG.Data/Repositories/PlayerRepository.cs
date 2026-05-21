@@ -105,5 +105,38 @@ namespace Hogs.RPG.Data.Repositories
             return players;
         }
 
+        public async Task<List<Player>> GetTopRaidsCompletedAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.RaidsCompleted)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players) p.DeserializeBuffs();
+            return players;
+        }
+
+        public async Task<List<Player>> GetTopBossDamageAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.TotalBossDamage)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players) p.DeserializeBuffs();
+            return players;
+        }
+
+        public async Task<List<Player>> GetTopDeathsAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.Deaths)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players) p.DeserializeBuffs();
+            return players;
+        }
+
     }
 }

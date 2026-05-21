@@ -71,18 +71,6 @@ namespace Hogs.RPG.Services
         }
 
         // =========================
-        // 🐾 PET LEVEL
-        // =========================
-        public async Task<List<(Player player, PlayerPet pet)>> GetTopPetLevel(int count = 10)
-        {
-            var pets = await _petRepository.GetTopPetLevelWithPlayerAsync(count);
-
-            return pets
-                .Select(p => (player: p.Player, pet: p))
-                .ToList();
-        }
-
-        // =========================
         // 🐾 PET GEAR SCORE
         // =========================
         public async Task<List<(Player player, PlayerPet pet, int score)>> GetTopPetGearScore(int count = 10)
@@ -99,5 +87,23 @@ namespace Hogs.RPG.Services
                 .Take(count)
                 .ToList();
         }
+
+        // =========================
+        // ⚔️ RAIDS COMPLETED
+        // =========================
+        public async Task<List<Player>> GetTopRaidsCompleted(int count = 5)
+            => await _playerRepository.GetTopRaidsCompletedAsync(count);
+
+        // =========================
+        // 💥 BOSS DAMAGE
+        // =========================
+        public async Task<List<Player>> GetTopBossDamage(int count = 5)
+            => await _playerRepository.GetTopBossDamageAsync(count);
+
+        // =========================
+        // 💀 DEATHS
+        // =========================
+        public async Task<List<Player>> GetTopDeaths(int count = 5)
+            => await _playerRepository.GetTopDeathsAsync(count);
     }
 }

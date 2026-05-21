@@ -858,6 +858,7 @@ namespace Hogs.RPG.Services.RaidServices
                 player.Gold += gold;
                 player.XP += xp;
                 player.LastRaidAt = DateTimeOffset.UtcNow.ToString("o");
+                player.RaidsCompleted++;
 
                 // Increment daily raid count
                 var todayUtc = DateTime.UtcNow.ToString("yyyy-MM-dd");
@@ -911,6 +912,7 @@ namespace Hogs.RPG.Services.RaidServices
 
                 player.Gold = Math.Max(0, player.Gold - WipeGoldPenalty);
                 player.LastRaidAt = DateTimeOffset.UtcNow.ToString("o");
+                player.Deaths++;
 
                 // Increment daily raid count (wipes count too)
                 var todayUtc = DateTime.UtcNow.ToString("yyyy-MM-dd");

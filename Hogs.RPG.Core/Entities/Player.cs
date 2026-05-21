@@ -55,6 +55,9 @@ namespace Hogs.RPG.Core.Entities
 
         //LeaderBoard
         public int DungeonRunsCompleted { get; set; }
+        public int RaidsCompleted { get; set; }
+        public long TotalBossDamage { get; set; }
+        public int Deaths { get; set; }
 
         // Shop perks
         public DateTime? XpBoostExpiry { get; set; }
