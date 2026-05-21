@@ -314,6 +314,7 @@ namespace Hogs.RPG.Services.DungeonServices
             player.XP += xp;
             player.DungeonRunsCompleted++;
 
+
             // =========================
             // 🐾 PET XP
             // =========================
@@ -386,6 +387,7 @@ namespace Hogs.RPG.Services.DungeonServices
 
             player.Gold = Math.Max(0, player.Gold - 250);
             player.XP = Math.Max(0, (int)(player.XP * 0.8f));
+            player.Deaths++;
 
             var (_, _, maxHealth) = statService.CalculateStats(player);
             player.Health = maxHealth;

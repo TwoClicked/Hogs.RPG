@@ -381,6 +381,7 @@ namespace Hogs.RPG.Services.Game
 
             player.Gold = Math.Max(0, player.Gold - 250);
             player.XP = Math.Max(0, (int)(player.XP * 0.8f));
+            player.Deaths++;
 
             var (attack, defense, maxHealth) = statService.CalculateStats(player);
             player.Health = maxHealth;
