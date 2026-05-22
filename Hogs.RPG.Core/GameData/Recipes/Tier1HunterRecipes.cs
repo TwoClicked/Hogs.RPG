@@ -43,8 +43,8 @@ public static class Tier1HunterRecipes
 
     public static readonly Recipe HunterLeggings = new()
     {
-        Id = "hunter_leggings",
-        Name = "Hunter Leggings",
+        Id = "leather_leggings",
+        Name = "leather_leggings",
         ResultItem = "hunter_leggings",
         ResultAmount = 1,
         Materials = new Dictionary<string, int>

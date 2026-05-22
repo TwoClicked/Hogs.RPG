@@ -51,8 +51,8 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
 
         public static readonly ItemDefinition HunterLeggings = new()
         {
-            Id = "hunter_leggings",
-            Name = "Hunter Leggings",
+            Id = "leather_leggings",
+            Name = "leather_leggings",
             Icon = "<:hunter_leggings:1484923823022411906>",
             Type = "Equipment",
             Description = "Flexible leggings favored by hunters.",

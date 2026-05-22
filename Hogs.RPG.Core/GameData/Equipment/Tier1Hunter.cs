@@ -29,8 +29,8 @@ public static class Tier1Hunter
 
     public static readonly EquipmentDefinition HunterLeggings = new()
     {
-        Id = "hunter_leggings",
-        Name = "Hunter Leggings",
+        Id = "leather_leggings",
+        Name = "leather_leggings",
         Slot = EquipmentSlot.Legs,
         Defense = 16
     };
