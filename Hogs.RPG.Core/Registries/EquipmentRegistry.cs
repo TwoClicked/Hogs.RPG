@@ -10,7 +10,7 @@ public static class EquipmentRegistry
         { Tier1Hunter.BoneBuckler.Id,      Tier1Hunter.BoneBuckler      },
         { Tier1Hunter.BoneHelm.Id,         Tier1Hunter.BoneHelm         },
         { Tier1Hunter.LeatherVest.Id,      Tier1Hunter.LeatherVest      },
-        { Tier1Hunter.HunterLeggings.Id,   Tier1Hunter.HunterLeggings   },
+        { Tier1Hunter.LeatherLeggings.Id,   Tier1Hunter.LeatherLeggings   },
         { Tier1Hunter.HideBoots.Id,        Tier1Hunter.HideBoots        },
         { Tier1Hunter.FurGloves.Id,        Tier1Hunter.FurGloves        },
         { Tier1Hunter.FeatherBand.Id,      Tier1Hunter.FeatherBand      },

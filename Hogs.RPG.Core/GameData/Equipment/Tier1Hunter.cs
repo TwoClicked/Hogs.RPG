@@ -27,7 +27,7 @@ public static class Tier1Hunter
         Defense = 18
     };
 
-    public static readonly EquipmentDefinition HunterLeggings = new()
+    public static readonly EquipmentDefinition LeatherLeggings = new()
     {
         Id = "leather_leggings",
         Name = "leather_leggings",
