@@ -49,12 +49,18 @@ public class HuntAutocompleteHandler : AutocompleteHandler
             Enum.TryParse<HuntCategory>(categoryValue, true, out var parsed))
             selectedCategory = parsed;
 
+        // Tier label based on actual hunt tier bands (T1=1-9, T2=10-19, T3=20-29, T4=30-39, T5=40+)
         string GetTierLabel(int requiredLevel)
         {
-            int start = (requiredLevel / 5) * 5;
-            if (start == 0) start = 1;
-            int end = start + 4;
-            return $"[Lv {start}-{end}]";
+            var tier = requiredLevel switch
+            {
+                < 10 => "T1",
+                < 20 => "T2",
+                < 30 => "T3",
+                < 40 => "T4",
+                _ => "T5"
+            };
+            return $"[{tier}]";
         }
 
         string BuildLabel(HuntTarget h)
