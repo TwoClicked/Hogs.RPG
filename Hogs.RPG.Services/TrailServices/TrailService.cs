@@ -20,16 +20,10 @@ namespace Hogs.RPG.Services.TrailServices
         private readonly DiscordSocketClient _client;
         private readonly Random _random = new();
 
-        // In-memory state — one entry per player currently on a trail
         private readonly Dictionary<ulong, TrailState> _activeTrails = new();
 
         private const int MaxDailyTrails = 3;
         private const ulong FeedChannelId = 1485357755433750549;
-
-        // =========================
-        // MATERIAL POOLS
-        // Sourced directly from InventoryItemDefinitions — no hardcoded IDs
-        // =========================
 
         private static readonly string[] AllRareMaterials = InventoryItemDefinitions.All.Values
             .Where(i => i.Type == "Material" && i.SubCategory == "Rare")
@@ -100,7 +94,6 @@ namespace Hogs.RPG.Services.TrailServices
 
             await ProcessAutoEventsAsync(state, scope.ServiceProvider);
 
-            // If the entire trail was auto events (no decisions), finalize now
             if (state.CurrentEventIndex >= state.Events.Count)
             {
                 await FinalizeTrailAsync(state, scope.ServiceProvider);
@@ -125,8 +118,6 @@ namespace Hogs.RPG.Services.TrailServices
 
         // =========================
         // HANDLE DECISION
-        // Returns the rebuilt message so the interaction can update it reliably.
-        // Returns null if there is no active trail for this user.
         // =========================
         public async Task<(Embed embed, MessageComponent? components)?> HandleDecisionAsync(
             ulong userId, string choice)
@@ -146,9 +137,6 @@ namespace Hogs.RPG.Services.TrailServices
 
             switch (decisionEvent.Type)
             {
-                // =========================
-                // AMBUSH ENCOUNTER
-                // =========================
                 case TrailEventType.AmbushEncounter:
                     if (choice == "ambush")
                     {
@@ -173,9 +161,6 @@ namespace Hogs.RPG.Services.TrailServices
                     }
                     break;
 
-                // =========================
-                // TRACKER'S GAMBLE
-                // =========================
                 case TrailEventType.TrackersGamble:
                     if (choice == "pressluck")
                     {
@@ -203,9 +188,6 @@ namespace Hogs.RPG.Services.TrailServices
                     }
                     break;
 
-                // =========================
-                // RARE SIGHTING
-                // =========================
                 case TrailEventType.RareSighting:
                     if (choice == "investigate")
                     {
@@ -233,9 +215,6 @@ namespace Hogs.RPG.Services.TrailServices
                     }
                     break;
 
-                // =========================
-                // LEGENDARY ENCOUNTER
-                // =========================
                 case TrailEventType.LegendaryEncounter:
                     if (choice == "approach")
                     {
@@ -272,17 +251,14 @@ namespace Hogs.RPG.Services.TrailServices
             state.EventLog.Add(logEntry);
             state.CurrentEventIndex++;
 
-            // Continue resolving any subsequent auto events
             await ProcessAutoEventsAsync(state, scope.ServiceProvider);
 
-            // Finalize if all 5 events are complete
             if (state.CurrentEventIndex >= state.Events.Count)
             {
                 await FinalizeTrailAsync(state, scope.ServiceProvider);
                 _activeTrails.Remove(userId);
             }
 
-            // Return the rebuilt message so the calling interaction can apply it
             var (embed, components) = BuildTrailMessage(state);
             return (embed, components);
         }
@@ -376,7 +352,7 @@ namespace Hogs.RPG.Services.TrailServices
         }
 
         // =========================
-        // UPDATE DM MESSAGE (legacy — kept for compatibility, unused by decision flow)
+        // UPDATE DM MESSAGE (legacy — unused by decision flow)
         // =========================
         public async Task UpdateDmMessageAsync(TrailState state)
         {
@@ -583,22 +559,24 @@ namespace Hogs.RPG.Services.TrailServices
             switch (category)
             {
                 case "gear":
-                    cost = itemId switch
-                    {
-                        "hunter_vest" or "hunter_bow" => 130,
-                        "hunter_helm" or "hunter_leggings" or "hunter_quiver" => 110,
-                        _ => 80
-                    };
+                    // All 9 Hunter's gear pieces cost 200 tokens each
+                    cost = 200;
                     quantity = 1;
                     break;
 
                 case "craft":
-                    cost = 5;
+                    // Level 30 required — prevents tier skipping
+                    if (player.Level < 30)
+                        return "❌ Craft materials are locked until **Level 30**. Keep hunting and grinding!";
+                    cost = 50;
                     quantity = 100;
                     break;
 
                 case "rare":
-                    cost = 10;
+                    // Level 30 required — prevents tier skipping
+                    if (player.Level < 30)
+                        return "❌ Rare materials are locked until **Level 30**. Keep hunting and grinding!";
+                    cost = 75;
                     quantity = 5;
                     break;
 
