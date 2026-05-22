@@ -187,11 +187,12 @@ namespace Hogs.RPG.Bot.Commands
                 .AddField("Energy", $"⚡ {player.Energy}", true)
                 .AddField("Hunter Stamina", $"🏹 {player.HunterStamina}/{staminaMax}", true)
 
-                .AddField("✨ Double XP", xpBoostText, false)
+                .AddField("✨ Double XP", xpBoostText, true)
                 .AddField("⚡ Stamina Boost", staminaBoostText, true)
+                .AddField("\u200b", "\u200b", true)
                 .AddField("🐾 Hunting Companion", player.HasHuntingPet
                     ? "✅ Active — +5% XP, +5% materials, +3% rare drop on all hunts"
-                    : "❌ Not found — discover it on the Ashwood Trail", true)
+                    : "❌ Not found — discover it on the Ashwood Trail", false)
 
                 .AddField(
                     "⚒ Equipment",
