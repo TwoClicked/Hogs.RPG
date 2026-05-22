@@ -399,7 +399,7 @@ namespace Hogs.RPG.Bot.Commands
 
             var sb = new StringBuilder();
             foreach (var (id, name) in pageItems)
-                sb.AppendLine($"★ **{name}** — 5x for **10 tokens**");
+                sb.AppendLine($"★ **{name}** — 5x for **75 tokens**");
 
             embed.WithDescription(sb.ToString().Trim());
             embed.WithFooter($"Page {page + 1}/{totalPages}");
@@ -407,7 +407,7 @@ namespace Hogs.RPG.Bot.Commands
             for (int i = 0; i < pageItems.Count; i++)
             {
                 var (id, name) = pageItems[i];
-                components.WithButton($"Buy 5x {name} (10🪙)", $"trail_buy_{id}_rare_{page}", ButtonStyle.Success, row: i);
+                components.WithButton($"Buy 5x {name} (75)", $"trail_buy_{id}_rare_{page}", ButtonStyle.Success, row: i);
             }
 
             if (totalPages > 1)
