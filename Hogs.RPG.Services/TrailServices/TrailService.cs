@@ -111,6 +111,13 @@ namespace Hogs.RPG.Services.TrailServices
             // Resolve all leading auto events before returning
             await ProcessAutoEventsAsync(state, scope.ServiceProvider);
 
+            // If the entire trail was auto events (no decisions), finalize now
+            if (state.CurrentEventIndex >= state.Events.Count)
+            {
+                await FinalizeTrailAsync(state, scope.ServiceProvider);
+                _activeTrails.Remove(userId);
+            }
+
             var (embed, components) = BuildTrailMessage(state);
             return (null, embed, components);
         }
