@@ -22,6 +22,8 @@ namespace Hogs.RPG.Data
         public DbSet<PlayerRelicShard> PlayerRelicShards { get; set; }
         public DbSet<RaidSession> RaidSessions { get; set; }
         public DbSet<RaidParticipant> RaidParticipants { get; set; }
+        public DbSet<GearSet> GearSets { get; set; }
+
 
         public GameDbContext(DbContextOptions<GameDbContext> options)
             : base(options)
@@ -64,6 +66,12 @@ namespace Hogs.RPG.Data
                 .HasOne(p => p.RaidSession)
                 .WithMany(s => s.Participants)
                 .HasForeignKey(p => p.RaidSessionId);
+
+            modelBuilder.Entity<GearSet>()
+                .HasOne(g => g.Player)
+                .WithMany()
+                .HasForeignKey(g => g.DiscordId)
+                .HasPrincipalKey(p => p.DiscordId);
         }
     }
 }

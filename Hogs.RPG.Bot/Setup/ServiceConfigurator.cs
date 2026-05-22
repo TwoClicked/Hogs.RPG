@@ -59,6 +59,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<ShopRepository>();
             services.AddScoped<RelicRepository>();
             services.AddScoped<RaidRepository>();
+            services.AddScoped<GearSetRepository>();
 
             // =========================
             // ⚙️ CORE GAME SERVICES (Scoped)
@@ -84,6 +85,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<PetPassiveService>();
             services.AddScoped<RelicService>();
             services.AddScoped<RaidService>();
+            services.AddScoped<GearSetService>();
 
             // =========================
             // 🏆 LEADERBOARDS
