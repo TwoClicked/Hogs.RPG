@@ -272,13 +272,13 @@ namespace Hogs.RPG.Bot.Commands
             {
                 ("hunter-vest",      "Hunter's Vest",      200),
                 ("hunter-bow",       "Hunter's Bow",       200),
-                ("hunter-helm",      "Hunter's Helm",      150),
-                ("hunter-leggings",  "Hunter's Leggings",  150),
-                ("hunter-quiver",    "Hunter's Quiver",    150),
-                ("hunter-boots",     "Hunter's Boots",      100),
-                ("hunter-gloves",    "Hunter's Gloves",     100),
-                ("hunter-ring",      "Hunter's Ring",       75),
-                ("hunter-amulet",    "Hunter's Amulet",     75),
+                ("hunter-helm",      "Hunter's Helm",      200),
+                ("hunter-leggings",  "Hunter's Leggings",  200),
+                ("hunter-quiver",    "Hunter's Quiver",    200),
+                ("hunter-boots",     "Hunter's Boots",      200),
+                ("hunter-gloves",    "Hunter's Gloves",     200),
+                ("hunter-ring",      "Hunter's Ring",       200),
+                ("hunter-amulet",    "Hunter's Amulet",     200),
             };
 
             const int perPage = 4;
