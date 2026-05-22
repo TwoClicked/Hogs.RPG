@@ -55,7 +55,7 @@ public static class Tier2RaiderRecipes
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
-            { "hunter_leggings", 1 },
+            { "leather_leggings", 1 },
             { "hide", 100 }
         }
     };

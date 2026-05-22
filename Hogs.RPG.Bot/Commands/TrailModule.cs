@@ -294,7 +294,7 @@ namespace Hogs.RPG.Bot.Commands
                 sb.AppendLine($"⚔️ **{name}** — {cost} tokens");
 
             embed.WithDescription(sb.ToString().Trim());
-            embed.WithFooter($"Page {page + 1}/{totalPages} · Full set: ~950 tokens over ~1 month");
+            embed.WithFooter($"Page {page + 1}/{totalPages} ·");
 
             for (int i = 0; i < pageItems.Count; i++)
             {

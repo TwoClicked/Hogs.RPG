@@ -45,7 +45,7 @@ public static class Tier1HunterRecipes
     {
         Id = "leather_leggings",
         Name = "leather_leggings",
-        ResultItem = "hunter_leggings",
+        ResultItem = "leather_leggings",
         ResultAmount = 1,
         Materials = new Dictionary<string, int>
         {
