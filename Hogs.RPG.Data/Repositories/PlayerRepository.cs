@@ -138,5 +138,18 @@ namespace Hogs.RPG.Data.Repositories
             return players;
         }
 
+        public async Task<List<Player>> GetTopTrailsAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.TrailsCompleted)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players)
+                p.DeserializeBuffs();
+
+            return players;
+        }
+
     }
 }

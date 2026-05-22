@@ -88,6 +88,7 @@ public class LeaderboardUpdater
         var bossDmg = await service.GetTopBossDamage(5);
         var petGear = await service.GetTopPetGearScore(5);
         var deaths = await service.GetTopDeaths(5);
+        var trails = await service.GetTopTrails(5);
 
         var embed = new EmbedBuilder()
             .WithTitle("🏆 HOGS RPG — LEADERBOARDS")
@@ -108,7 +109,7 @@ public class LeaderboardUpdater
         // Row 3
         embed.AddField("🐾 Pet Power", FormatPetGear(petGear), true);
         embed.AddField("💀 Deaths", FormatDeaths(deaths), true);
-        embed.AddField("\u200b", "\u200b", true); // filler
+        embed.AddField("🏕️ Trails", FormatTrails(trails), true);
 
         _mainMsgId = await SendOrUpdate(channel, embed.Build(), _mainMsgId);
     }
@@ -187,6 +188,13 @@ public class LeaderboardUpdater
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.Deaths}**"));
+    }
+
+    private string FormatTrails(List<Hogs.RPG.Core.Entities.Player> players)
+    {
+        if (!players.Any()) return "*No data yet*";
+        return string.Join("\n", players.Select((p, i) =>
+            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.TrailsCompleted}**"));
     }
 
     // =========================

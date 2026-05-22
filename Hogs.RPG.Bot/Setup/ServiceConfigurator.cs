@@ -15,6 +15,7 @@ using Hogs.RPG.Services.RaidServices;
 using Hogs.RPG.Services.RelicServices;
 using Hogs.RPG.Services.ShopServices;
 using Hogs.RPG.Services.TradeServices;
+using Hogs.RPG.Services.TrailServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -103,6 +104,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddSingleton<TradeService>();
             services.AddSingleton<TradeCleanupService>();
             services.AddSingleton<RaidTimerService>();
+            services.AddSingleton<TrailService>();
 
 
             // DungeonService keeps in-memory state → must stay singleton

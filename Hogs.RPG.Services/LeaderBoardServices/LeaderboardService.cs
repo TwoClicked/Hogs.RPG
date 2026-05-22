@@ -105,5 +105,11 @@ namespace Hogs.RPG.Services
         // =========================
         public async Task<List<Player>> GetTopDeaths(int count = 5)
             => await _playerRepository.GetTopDeathsAsync(count);
+
+        // =========================
+        // 🏕️ TRAILS COMPLETED
+        // =========================
+        public async Task<List<Player>> GetTopTrails(int count = 5)
+            => await _playerRepository.GetTopTrailsAsync(count);
     }
 }

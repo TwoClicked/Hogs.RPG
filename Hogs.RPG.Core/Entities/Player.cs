@@ -48,25 +48,42 @@ namespace Hogs.RPG.Core.Entities
 
         // Bosses
         public string? LastBossAttack { get; set; }
+
         // Raids
         public string? LastRaidAt { get; set; }
         public int RaidsToday { get; set; } = 0;
         public string? LastRaidDayReset { get; set; }
 
-        //LeaderBoard
+        // Leaderboard
         public int DungeonRunsCompleted { get; set; }
         public int RaidsCompleted { get; set; }
         public long TotalBossDamage { get; set; }
         public int Deaths { get; set; }
+        public int TrailsCompleted { get; set; } = 0;
 
         // Shop perks
         public DateTime? XpBoostExpiry { get; set; }
         public DateTime? StaminaBoostExpiry { get; set; }
 
         // =========================
-        // 🔄 BUFF SERIALIZATION
+        // TRAIL SYSTEM
         // =========================
 
+        // Tracker Tokens — currency for the Tracker's Camp shop
+        public int TrackerTokens { get; set; } = 0;
+
+        // Trails run today — enforces the daily 3-trail cap
+        public int TrailsToday { get; set; } = 0;
+
+        // Date string of last trail — used to reset TrailsToday at midnight UTC
+        public string? LastTrailDate { get; set; }
+
+        // Whether the player owns the hunting companion pet
+        public bool HasHuntingPet { get; set; } = false;
+
+        // =========================
+        // 🔄 BUFF SERIALIZATION
+        // =========================
         public void DeserializeBuffs()
         {
             ActiveBuffs.Clear();
