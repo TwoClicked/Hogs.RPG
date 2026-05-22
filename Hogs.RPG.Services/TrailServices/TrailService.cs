@@ -31,21 +31,17 @@ namespace Hogs.RPG.Services.TrailServices
         // Sourced directly from InventoryItemDefinitions — no hardcoded IDs
         // =========================
 
-        // All rare hunt materials — used by RareSighting on investigate success
         private static readonly string[] AllRareMaterials = InventoryItemDefinitions.All.Values
             .Where(i => i.Type == "Material" && i.SubCategory == "Rare")
             .Select(i => i.Id)
             .ToArray();
 
-        // Common rare materials (first 5 defined) — used by HiddenCache
-        // Matches: WolfTrophy, BoarTusk, StagAntler, AncientFeather, BearHeart
         private static readonly string[] CommonRareMaterials = InventoryItemDefinitions.All.Values
             .Where(i => i.Type == "Material" && i.SubCategory == "Rare")
             .Select(i => i.Id)
             .Take(5)
             .ToArray();
 
-        // T1 and T2 craft materials — used by SnareSet
         private static readonly string[] SnareMaterials = InventoryItemDefinitions.All.Values
             .Where(i => i.Type == "Material" && i.SubCategory == "Craft" && i.Tier <= 2)
             .Select(i => i.Id)
@@ -59,7 +55,6 @@ namespace Hogs.RPG.Services.TrailServices
 
         // =========================
         // START TRAIL
-        // Called by /trail run — validates, deducts daily charge, rolls events
         // =========================
         public async Task<(string? error, Embed? embed, MessageComponent? components)> StartTrailAsync(
             ulong userId, string zoneId)
@@ -71,18 +66,15 @@ namespace Hogs.RPG.Services.TrailServices
             if (player == null)
                 return ("You need to start your adventure first.", null, null);
 
-            // Prevent starting a second trail while one is active
             if (_activeTrails.ContainsKey(userId))
                 return ("You are already on a trail. Check your DMs to continue.", null, null);
 
-            // Validate zone
             if (!TrailZoneRegistry.All.TryGetValue(zoneId, out var zone))
                 return ("Unknown trail zone.", null, null);
 
             if (player.Level < zone.RequiredLevel)
                 return ($"You must be level {zone.RequiredLevel} to run this trail.", null, null);
 
-            // Daily reset — check if last trail date was a different UTC day
             var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
             if (player.LastTrailDate != today)
             {
@@ -93,11 +85,9 @@ namespace Hogs.RPG.Services.TrailServices
             if (player.TrailsToday >= MaxDailyTrails)
                 return ($"You've used all {MaxDailyTrails} trails for today. Resets at midnight UTC.", null, null);
 
-            // Consume one trail charge
             player.TrailsToday++;
             await playerRepo.UpdatePlayerAsync(player);
 
-            // Build trail state
             var state = new TrailState
             {
                 UserId = userId,
@@ -108,7 +98,6 @@ namespace Hogs.RPG.Services.TrailServices
 
             _activeTrails[userId] = state;
 
-            // Resolve all leading auto events before returning
             await ProcessAutoEventsAsync(state, scope.ServiceProvider);
 
             // If the entire trail was auto events (no decisions), finalize now
@@ -124,7 +113,6 @@ namespace Hogs.RPG.Services.TrailServices
 
         // =========================
         // STORE DM MESSAGE REFERENCE
-        // Called by module after the initial DM is sent
         // =========================
         public void SetTrailMessage(ulong userId, ulong messageId, ulong channelId)
         {
@@ -137,12 +125,14 @@ namespace Hogs.RPG.Services.TrailServices
 
         // =========================
         // HANDLE DECISION
-        // Called by button interaction handlers in TrailModule
+        // Returns the rebuilt message so the interaction can update it reliably.
+        // Returns null if there is no active trail for this user.
         // =========================
-        public async Task HandleDecisionAsync(ulong userId, string choice)
+        public async Task<(Embed embed, MessageComponent? components)?> HandleDecisionAsync(
+            ulong userId, string choice)
         {
             if (!_activeTrails.TryGetValue(userId, out var state))
-                return;
+                return null;
 
             using var scope = _scopeFactory.CreateScope();
             var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
@@ -151,7 +141,6 @@ namespace Hogs.RPG.Services.TrailServices
             var decisionEvent = state.Events[state.CurrentEventIndex];
             string logEntry = $"{decisionEvent.Icon} **{decisionEvent.Name}**";
 
-            // Carry forward any FreshTracks boost active on this event
             bool boosted = state.NextEventBoosted;
             state.NextEventBoosted = false;
 
@@ -159,8 +148,6 @@ namespace Hogs.RPG.Services.TrailServices
             {
                 // =========================
                 // AMBUSH ENCOUNTER
-                // Ambush: 60% success → +10 tokens | 40% fail → -20% tokens
-                // Pass: safe → +2 tokens
                 // =========================
                 case TrailEventType.AmbushEncounter:
                     if (choice == "ambush")
@@ -188,8 +175,6 @@ namespace Hogs.RPG.Services.TrailServices
 
                 // =========================
                 // TRACKER'S GAMBLE
-                // Press luck: 50% → double tokens | 50% → lose 40% tokens
-                // Take safe: guaranteed +5 tokens
                 // =========================
                 case TrailEventType.TrackersGamble:
                     if (choice == "pressluck")
@@ -220,8 +205,6 @@ namespace Hogs.RPG.Services.TrailServices
 
                 // =========================
                 // RARE SIGHTING
-                // Investigate: 40% → rare material drop | 60% → lose 20% tokens
-                // Move on: safe → +1 token
                 // =========================
                 case TrailEventType.RareSighting:
                     if (choice == "investigate")
@@ -252,9 +235,6 @@ namespace Hogs.RPG.Services.TrailServices
 
                 // =========================
                 // LEGENDARY ENCOUNTER
-                // Approach: 3% pet drop (or 15 token consolation if already owned)
-                //         + always +5 tokens on approach
-                // Retreat: safe → +3 tokens
                 // =========================
                 case TrailEventType.LegendaryEncounter:
                     if (choice == "approach")
@@ -272,7 +252,6 @@ namespace Hogs.RPG.Services.TrailServices
                         }
                         else if (petDrop && player.HasHuntingPet)
                         {
-                            // Consolation tokens — already owns the pet
                             state.TokensEarned += 15;
                             logEntry += " — You already have a companion, but the creature left a gift. **+15 tokens**";
                         }
@@ -303,12 +282,13 @@ namespace Hogs.RPG.Services.TrailServices
                 _activeTrails.Remove(userId);
             }
 
-            await UpdateDmMessageAsync(state);
+            // Return the rebuilt message so the calling interaction can apply it
+            var (embed, components) = BuildTrailMessage(state);
+            return (embed, components);
         }
 
         // =========================
         // PROCESS AUTO EVENTS
-        // Resolves events sequentially until a decision event is hit
         // =========================
         private async Task ProcessAutoEventsAsync(TrailState state, IServiceProvider services)
         {
@@ -318,30 +298,25 @@ namespace Hogs.RPG.Services.TrailServices
             {
                 var evt = state.Events[state.CurrentEventIndex];
 
-                // Pause here — player must make a choice
                 if (IsDecisionEvent(evt.Type))
                     break;
 
-                // Apply FreshTracks boost to this event's modifier if flagged
                 int modifier = state.NextEventBoosted
                     ? (int)(evt.TokenModifier * 1.5)
                     : evt.TokenModifier;
 
-                // FreshTracks sets the flag; all other auto events clear it
                 state.NextEventBoosted = false;
 
                 string logEntry = $"{evt.Icon} **{evt.Name}**";
 
                 switch (evt.Type)
                 {
-                    // Adds tokens + boosts the next event's modifier by 50%
                     case TrailEventType.FreshTracks:
                         state.TokensEarned += modifier;
                         state.NextEventBoosted = true;
                         logEntry += $" — Promising signs ahead. **+{modifier} tokens** *(next event boosted)*";
                         break;
 
-                    // Adds tokens + drops a small amount of T1/T2 craft material
                     case TrailEventType.SnareSet:
                         state.TokensEarned += modifier;
                         var snareMat = SnareMaterials[_random.Next(SnareMaterials.Length)];
@@ -352,14 +327,12 @@ namespace Hogs.RPG.Services.TrailServices
                         state.NotableDrops.Add($"{snareQty}x {snareMatName}");
                         break;
 
-                    // Subtracts tokens — floors at 0
                     case TrailEventType.RoughTerrain:
                         int terrainPenalty = Math.Abs(modifier);
                         state.TokensEarned = Math.Max(0, state.TokensEarned - terrainPenalty);
                         logEntry += $" — Rough going. **-{terrainPenalty} tokens**";
                         break;
 
-                    // Adds tokens + drops a common rare material
                     case TrailEventType.HiddenCache:
                         state.TokensEarned += modifier;
                         var cacheMat = CommonRareMaterials[_random.Next(CommonRareMaterials.Length)];
@@ -369,7 +342,6 @@ namespace Hogs.RPG.Services.TrailServices
                         state.NotableDrops.Add($"1x {cacheMatName}");
                         break;
 
-                    // Simple token bonus — no side effects
                     case TrailEventType.ClearPath:
                         state.TokensEarned += modifier;
                         logEntry += $" — Smooth sailing. **+{modifier} tokens**";
@@ -383,14 +355,12 @@ namespace Hogs.RPG.Services.TrailServices
 
         // =========================
         // FINALIZE TRAIL
-        // Awards total tokens, increments lifetime stats, saves player
         // =========================
         private async Task FinalizeTrailAsync(TrailState state, IServiceProvider services)
         {
             var playerRepo = services.GetRequiredService<PlayerRepository>();
             var player = await playerRepo.GetByDiscordIdAsync(state.UserId);
 
-            // Total = event tokens + base trail yield, minimum 1
             int total = Math.Max(1, state.TokensEarned + state.BaseTokens);
 
             player.TrackerTokens += total;
@@ -406,8 +376,7 @@ namespace Hogs.RPG.Services.TrailServices
         }
 
         // =========================
-        // UPDATE DM MESSAGE
-        // Edits the existing DM as events resolve
+        // UPDATE DM MESSAGE (legacy — kept for compatibility, unused by decision flow)
         // =========================
         public async Task UpdateDmMessageAsync(TrailState state)
         {
@@ -428,19 +397,16 @@ namespace Hogs.RPG.Services.TrailServices
 
         // =========================
         // BUILD TRAIL MESSAGE
-        // Renders the current trail state as an embed
         // =========================
         private (Embed embed, MessageComponent? components) BuildTrailMessage(TrailState state)
         {
             var sb = new StringBuilder();
 
-            // Resolved events
             foreach (var log in state.EventLog)
                 sb.AppendLine($"✅ {log}");
 
             MessageComponent? components = null;
 
-            // Current pending decision event
             if (!state.IsComplete && state.CurrentEventIndex < state.Events.Count)
             {
                 var current = state.Events[state.CurrentEventIndex];
@@ -488,7 +454,6 @@ namespace Hogs.RPG.Services.TrailServices
 
         // =========================
         // BUILD DECISION COMPONENTS
-        // Returns the correct button set for each decision event type
         // =========================
         private static MessageComponent? BuildDecisionComponents(TrailEventType type)
         {
@@ -525,7 +490,6 @@ namespace Hogs.RPG.Services.TrailServices
 
         // =========================
         // ROLL EVENTS
-        // Weighted random draw — hard cap of 1 Legendary per trail
         // =========================
         private List<TrailEventDefinition> RollEvents(TrailZoneDefinition zone)
         {
@@ -553,7 +517,6 @@ namespace Hogs.RPG.Services.TrailServices
                         cumulative += weight;
                         if (roll < cumulative)
                         {
-                            // Hard cap: only 1 legendary encounter per trail
                             if (evt.Type == TrailEventType.LegendaryEncounter && legendaryCount >= 1)
                                 break;
 
@@ -567,7 +530,6 @@ namespace Hogs.RPG.Services.TrailServices
                     }
                 }
 
-                // Fallback if legendary cap kept blocking — use ClearPath
                 rolled.Add(picked ?? AllTrailEvents.ClearPath);
             }
 
@@ -576,7 +538,6 @@ namespace Hogs.RPG.Services.TrailServices
 
         // =========================
         // POST TO RPG FEED
-        // Condensed summary for the community channel
         // =========================
         private async Task PostFeedAsync(TrailState state, Player player)
         {
@@ -605,12 +566,9 @@ namespace Hogs.RPG.Services.TrailServices
 
         // =========================
         // PURCHASE
-        // Called by shop buy buttons
         // =========================
         public async Task<string> PurchaseAsync(ulong userId, string itemId, string category)
         {
-            // Button IDs use dashes instead of underscores to avoid wildcard splitting
-            // Convert back to underscores here to match item registry IDs
             itemId = itemId.Replace("-", "_");
 
             using var scope = _scopeFactory.CreateScope();
@@ -619,7 +577,6 @@ namespace Hogs.RPG.Services.TrailServices
             var player = await playerRepo.GetByDiscordIdAsync(userId);
             if (player == null) return "❌ Player not found.";
 
-            // Resolve cost and quantity from category
             int cost;
             int quantity;
 
@@ -648,7 +605,7 @@ namespace Hogs.RPG.Services.TrailServices
                 case "snack":
                     cost = 8;
                     quantity = 1;
-                    itemId = "trail_pet_snack"; // internal ID
+                    itemId = "trail_pet_snack";
                     break;
 
                 default:
@@ -661,7 +618,6 @@ namespace Hogs.RPG.Services.TrailServices
             player.TrackerTokens -= cost;
             await playerRepo.UpdatePlayerAsync(player);
 
-            // For snack — give pet XP directly
             if (category == "snack")
             {
                 var petService = scope.ServiceProvider.GetRequiredService<PetServices.PetService>();
@@ -669,7 +625,6 @@ namespace Hogs.RPG.Services.TrailServices
 
                 if (pet == null)
                 {
-                    // Refund
                     player.TrackerTokens += cost;
                     await playerRepo.UpdatePlayerAsync(player);
                     return "❌ You don't have a pet equipped.";

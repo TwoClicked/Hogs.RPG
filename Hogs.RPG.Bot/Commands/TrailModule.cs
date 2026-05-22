@@ -179,6 +179,8 @@ namespace Hogs.RPG.Bot.Commands
 
         // =========================
         // DECISION HANDLER
+        // Applies the rebuilt message directly through the interaction —
+        // reliable in DMs where GetChannel can return null
         // =========================
         private async Task HandleDecision(string choice)
         {
@@ -186,17 +188,24 @@ namespace Hogs.RPG.Bot.Commands
 
             await component.DeferAsync();
 
-            if (!_trailService.HasActiveTrail(Context.User.Id))
+            var result = await _trailService.HandleDecisionAsync(Context.User.Id, choice);
+
+            if (result == null)
             {
                 await component.ModifyOriginalResponseAsync(msg =>
                 {
                     msg.Content = "❌ No active trail found. It may have expired — use `/trail run` to start a new one.";
+                    msg.Embed = null;
                     msg.Components = new ComponentBuilder().Build();
                 });
                 return;
             }
 
-            await _trailService.HandleDecisionAsync(Context.User.Id, choice);
+            await component.ModifyOriginalResponseAsync(msg =>
+            {
+                msg.Embed = result.Value.embed;
+                msg.Components = result.Value.components ?? new ComponentBuilder().Build();
+            });
         }
 
         // =========================
