@@ -270,15 +270,15 @@ namespace Hogs.RPG.Bot.Commands
 
             var items = new[]
             {
-                ("hunter-vest",      "Hunter's Vest",      130),
-                ("hunter-bow",       "Hunter's Bow",       130),
-                ("hunter-helm",      "Hunter's Helm",      110),
-                ("hunter-leggings",  "Hunter's Leggings",  110),
-                ("hunter-quiver",    "Hunter's Quiver",    110),
-                ("hunter-boots",     "Hunter's Boots",      80),
-                ("hunter-gloves",    "Hunter's Gloves",     80),
-                ("hunter-ring",      "Hunter's Ring",       80),
-                ("hunter-amulet",    "Hunter's Amulet",     80),
+                ("hunter-vest",      "Hunter's Vest",      200),
+                ("hunter-bow",       "Hunter's Bow",       200),
+                ("hunter-helm",      "Hunter's Helm",      150),
+                ("hunter-leggings",  "Hunter's Leggings",  150),
+                ("hunter-quiver",    "Hunter's Quiver",    150),
+                ("hunter-boots",     "Hunter's Boots",      100),
+                ("hunter-gloves",    "Hunter's Gloves",     100),
+                ("hunter-ring",      "Hunter's Ring",       75),
+                ("hunter-amulet",    "Hunter's Amulet",     75),
             };
 
             const int perPage = 4;
@@ -361,7 +361,7 @@ namespace Hogs.RPG.Bot.Commands
             for (int i = 0; i < pageItems.Count; i++)
             {
                 var (id, name, qty, cost) = pageItems[i];
-                components.WithButton($"Buy {qty}x {name} ({cost}🪙)", $"trail_buy_{id}_craft_{page}", ButtonStyle.Success, row: i);
+                components.WithButton($"Buy {qty}x {name} ({cost})", $"trail_buy_{id}_craft_{page}", ButtonStyle.Success, row: i);
             }
 
             if (totalPages > 1)
@@ -380,9 +380,6 @@ namespace Hogs.RPG.Bot.Commands
             var items = new[]
             {
                 ("wolf-trophy",     "Wolf Trophy"),
-                ("boar-tusk",       "Boar Tusk"),
-                ("stag-antler",     "Stag Antler"),
-                ("ancient-feather", "Ancient Feather"),
                 ("bear-heart",      "Bear Heart"),
                 ("alpha-fang",      "Alpha Fang"),
                 ("storm-talon",     "Storm Talon"),
