@@ -108,7 +108,8 @@ namespace Hogs.RPG.Services.GatheringServices
                 result.AppendLine($"+{item.Value} {itemName}");
             }
 
-            result.AppendLine($"\n⚡ Energy: {player.Energy}/100");
+            int energyMax = _energyService.GetMaxEnergy(player);
+            result.AppendLine($"\n⚡ Energy: {player.Energy}/{energyMax}");
 
             return result.ToString();
         }

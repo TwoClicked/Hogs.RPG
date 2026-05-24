@@ -39,6 +39,8 @@ public class GatherEnergyAutocompleteHandler : AutocompleteHandler
 
         var input = interaction.Data.Current.Value?.ToString() ?? "";
         int currentEnergy = player.Energy;
+        int maxEnergy = energyService.GetMaxEnergy(player);
+        bool boosted = maxEnergy > 100;
 
         var options = new List<string> { "10", "25", "50", "100", "Max" };
 
@@ -54,13 +56,17 @@ public class GatherEnergyAutocompleteHandler : AutocompleteHandler
             .Select(o =>
             {
                 if (o.Equals("Max", StringComparison.OrdinalIgnoreCase))
-                    return new AutocompleteResult($"⚡ Max ({currentEnergy})", currentEnergy.ToString());
-                return new AutocompleteResult($"⚡ {o} (Energy: {currentEnergy})", o);
+                    return new AutocompleteResult($"⚡ Max ({currentEnergy}/{maxEnergy}){(boosted ? " ⚡ Boosted" : "")}", currentEnergy.ToString());
+                return new AutocompleteResult($"⚡ {o} (Energy: {currentEnergy}/{maxEnergy})", o);
             })
             .ToList();
 
+        // Add 150 preset only if boost is active and player has enough energy
+        if (boosted && currentEnergy >= 150)
+            results.Add(new AutocompleteResult($"150 (100%) ⚡", "150"));
+
         if (results.Count == 0)
-            results.Add(new AutocompleteResult($"⚡ Current Energy: {currentEnergy}", currentEnergy.ToString()));
+            results.Add(new AutocompleteResult($"⚡ Current Energy: {currentEnergy}/{maxEnergy}", currentEnergy.ToString()));
 
         return AutocompletionResult.FromSuccess(results);
     }

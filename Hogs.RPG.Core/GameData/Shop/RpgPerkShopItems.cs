@@ -20,7 +20,7 @@ namespace Hogs.RPG.Core.GameData.Shop
         {
             Id = "rpg_stamina_boost",
             Name = "+50 Max Stamina — 7 days",
-            Description = "Your maximum stamina is increased by 50 for 7 days.",
+            Description = "Your maximum hunt stamina and gather energy are both increased by 50 for 7 days.",
             Icon = "⚡",
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,

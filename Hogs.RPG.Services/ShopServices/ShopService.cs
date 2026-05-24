@@ -6,6 +6,7 @@ using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.DungeonServices;
 using Hogs.RPG.Services.Game;
+using Hogs.RPG.Services.GatheringServices;
 using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -433,9 +434,11 @@ namespace Hogs.RPG.Services.ShopServices
                 // =========================
                 // ⚡ STAMINA BOOST — 7 days, cap raised to 150
                 // =========================
-                case "rpg_stamina_boost":
-                    player.StaminaBoostExpiry = DateTime.UtcNow.AddDays(7);
-                    player.HunterStamina = Math.Min(150, player.HunterStamina + 50);
+                case "rpg_energy_refill":
+                    var energyServiceForRefill = _scopeFactory.CreateScope().ServiceProvider
+                        .GetRequiredService<EnergyService>();
+                    player.Energy = energyServiceForRefill.GetMaxEnergy(player);
+                    player.LastEnergyUpdate = DateTimeOffset.UtcNow.ToString("o");
                     await playerRepo.UpdatePlayerAsync(player);
                     break;
 

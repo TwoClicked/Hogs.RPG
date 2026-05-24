@@ -9,12 +9,22 @@ namespace Hogs.RPG.Services.GatheringServices
     {
         private readonly PlayerRepository _playerRepository;
 
-        private const int MaxEnergy = 100;
+        private const int BaseMaxEnergy = 100;
+        private const int BoostedMaxEnergy = 150;
         private const int RegenMinutes = 1;
 
         public EnergyService(PlayerRepository playerRepository)
         {
             _playerRepository = playerRepository;
+        }
+
+        public int GetMaxEnergy(Player player)
+        {
+            if (player.StaminaBoostExpiry.HasValue &&
+                player.StaminaBoostExpiry.Value > DateTime.UtcNow)
+                return BoostedMaxEnergy;
+
+            return BaseMaxEnergy;
         }
 
         public void RegenerateEnergy(Player player)
@@ -36,8 +46,9 @@ namespace Hogs.RPG.Services.GatheringServices
             if (energyRecovered <= 0)
                 return;
 
-            player.Energy = Math.Min(MaxEnergy, player.Energy + energyRecovered);
+            int max = GetMaxEnergy(player);
 
+            player.Energy = Math.Min(max, player.Energy + energyRecovered);
 
             player.LastEnergyUpdate = lastUpdate
                 .AddMinutes(energyRecovered * RegenMinutes)
