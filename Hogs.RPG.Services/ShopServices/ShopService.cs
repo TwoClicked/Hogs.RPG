@@ -432,17 +432,6 @@ namespace Hogs.RPG.Services.ShopServices
                     break;
 
                 // =========================
-                // ⚡ STAMINA BOOST — 7 days, cap raised to 150
-                // =========================
-                case "rpg_energy_refill":
-                    var energyServiceForRefill = _scopeFactory.CreateScope().ServiceProvider
-                        .GetRequiredService<EnergyService>();
-                    player.Energy = energyServiceForRefill.GetMaxEnergy(player);
-                    player.LastEnergyUpdate = DateTimeOffset.UtcNow.ToString("o");
-                    await playerRepo.UpdatePlayerAsync(player);
-                    break;
-
-                // =========================
                 // 📦 LOOT CRATE — 20 random rare items
                 // =========================
                 case "rpg_loot_crate":
@@ -483,8 +472,18 @@ namespace Hogs.RPG.Services.ShopServices
                 // ⚗️ ENERGY REFILL
                 // =========================
                 case "rpg_energy_refill":
-                    player.Energy = 100;
+                    player.Energy = (player.StaminaBoostExpiry.HasValue && player.StaminaBoostExpiry.Value > DateTime.UtcNow) ? 150 : 100;
                     player.LastEnergyUpdate = DateTimeOffset.UtcNow.ToString("o");
+                    await playerRepo.UpdatePlayerAsync(player);
+                    break;
+
+                // =========================
+                // ⚡ STAMINA BOOST — 7 days, cap raised to 150
+                // =========================
+                case "rpg_stamina_boost":
+                    player.StaminaBoostExpiry = DateTime.UtcNow.AddDays(7);
+                    player.HunterStamina = Math.Min(150, player.HunterStamina + 50);
+                    player.Energy = Math.Min(150, player.Energy + 50);
                     await playerRepo.UpdatePlayerAsync(player);
                     break;
 
