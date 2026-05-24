@@ -130,7 +130,7 @@ namespace Hogs.RPG.Core.GameData.Shop
         {
             Id = "rpg_raid_reset",
             Name = "Raid Cooldown Reset",
-            Description = "Clear your raid cooldown and enter another raid immediately.",
+            Description = "Grants 1 additional raid attempt for today.",
             Icon = "⚔️",
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,

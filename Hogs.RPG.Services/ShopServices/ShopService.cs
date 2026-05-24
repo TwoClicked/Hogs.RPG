@@ -526,7 +526,7 @@ namespace Hogs.RPG.Services.ShopServices
                 // ⚔️ RAID COOLDOWN RESET
                 // =========================
                 case "rpg_raid_reset":
-                    player.LastRaidAt = null;
+                    player.RaidsToday = Math.Max(0, player.RaidsToday - 1);
                     await playerRepo.UpdatePlayerAsync(player);
                     break;
             }
