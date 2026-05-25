@@ -49,15 +49,20 @@ public class HuntAutocompleteHandler : AutocompleteHandler
             Enum.TryParse<HuntCategory>(categoryValue, true, out var parsed))
             selectedCategory = parsed;
 
-        // Tier label based on actual hunt tier bands (T1=1-9, T2=10-19, T3=20-29, T4=30-39, T5=40+)
+        // Tier label matched to actual RequiredLevel thresholds:
+        // T1 = 1  (ForestTargets)
+        // T2 = 10 (WildTargets)
+        // T3 = 15 (DeepTargets)
+        // T4 = 20 (StormTargets)
+        // T5 = 25 (MythicTargets)
         string GetTierLabel(int requiredLevel)
         {
             var tier = requiredLevel switch
             {
                 < 10 => "T1",
-                < 20 => "T2",
-                < 30 => "T3",
-                < 40 => "T4",
+                < 15 => "T2",
+                < 20 => "T3",
+                < 25 => "T4",
                 _ => "T5"
             };
             return $"[{tier}]";
