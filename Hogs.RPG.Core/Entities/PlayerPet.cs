@@ -1,4 +1,6 @@
-﻿namespace Hogs.RPG.Core.Entities
+﻿using Hogs.RPG.Core.Enums;
+
+namespace Hogs.RPG.Core.Entities
 {
     public class PlayerPet
     {
@@ -14,9 +16,9 @@
 
         public bool IsEquipped { get; set; } = false;
 
-        public int? Passive1 { get; set; }
+        public PetPassive? Passive1 { get; set; }
 
-        public int? Passive2 { get; set; }
+        public PetPassive? Passive2 { get; set; }
 
         public string? CustomName { get; set; }
 

@@ -41,6 +41,10 @@ namespace Hogs.RPG.Data.Repositories
 
             _context.Players.Update(player);
             await _context.SaveChangesAsync();
+
+            // Invalidate autocomplete cache so dungeon/hunt/equip handlers
+            // reflect updated level, slots, and buffs immediately.
+            AutocompleteCache<Player>.Invalidate(player.DiscordId);
         }
 
         // =========================
@@ -150,6 +154,5 @@ namespace Hogs.RPG.Data.Repositories
 
             return players;
         }
-
     }
 }

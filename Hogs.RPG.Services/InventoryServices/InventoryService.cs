@@ -35,6 +35,9 @@ namespace Hogs.RPG.Services.InventoryServices
             {
                 _lock.Release();
             }
+
+            // Inventory changed — autocomplete must reflect the new state immediately
+            AutocompleteCache<List<InventoryItem>>.Invalidate(discordId);
         }
 
         public async Task TakeItemAsync(ulong discordId, string itemId, int amount)
@@ -48,6 +51,9 @@ namespace Hogs.RPG.Services.InventoryServices
             {
                 _lock.Release();
             }
+
+            // Inventory changed — autocomplete must reflect the new state immediately
+            AutocompleteCache<List<InventoryItem>>.Invalidate(discordId);
         }
 
         public async Task<int> GetItemAmountAsync(ulong discordId, string itemId)

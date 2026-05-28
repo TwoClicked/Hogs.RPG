@@ -25,8 +25,6 @@ namespace Hogs.RPG.Bot.Commands
         [ComponentInteraction("raid_action:*:*:*")]
         public async Task HandleAction(string sessionIdStr, string roundStr, string action)
         {
-            // Keep ephemeral so error messages are private —
-            // the public status is posted via thread.SendMessageAsync below.
             await DeferAsync(ephemeral: true);
 
             int sessionId = int.Parse(sessionIdStr);
@@ -58,8 +56,8 @@ namespace Hogs.RPG.Bot.Commands
             {
                 // =========================
                 // WAITING FOR OTHER PLAYERS
-                // Post a PUBLIC status board to the thread so everyone can
-                // see who has acted — prevents the double-press lobby lock bug.
+                // Post a public status board so everyone can see who has acted —
+                // prevents the double-press lobby lock bug.
                 // =========================
                 var thread = Context.Channel as IThreadChannel;
                 if (thread != null)
@@ -98,29 +96,26 @@ namespace Hogs.RPG.Bot.Commands
                                 : $"{roleIcon} **{p.Role}** — ⏳ Waiting...";
                         });
 
-                        // PUBLIC post — all players in the thread can see who has acted
+                        // Public — all players in the thread can see who has acted
                         await thread.SendMessageAsync(
                             $"🎯 **<@{Context.User.Id}> chose an action!**\n\n" +
                             string.Join("\n", statusLines));
                     }
                 }
 
-                // Private ack — satisfies the interaction acknowledgement
                 await FollowupAsync("✅ Action locked in!", ephemeral: true);
                 return;
             }
 
-            // Round resolved — round result is already posted publicly by PostRoundResultAsync
+            // Round resolved — post results publicly
             await PostRoundResultAsync(roundResult, sessionId);
             await FollowupAsync("✅ Round resolved!", ephemeral: true);
         }
 
         // =========================
         // POST ROUND RESULT
-        // (unchanged — already posts publicly to thread)
         // =========================
-        private async Task PostRoundResultAsync(
-            RaidRoundResult result, int sessionId)
+        private async Task PostRoundResultAsync(RaidRoundResult result, int sessionId)
         {
             var thread = Context.Channel as IThreadChannel;
             if (thread == null) return;
@@ -131,6 +126,9 @@ namespace Hogs.RPG.Bot.Commands
                 return $"[{new string('█', filled)}{new string('░', barLength - filled)}] {current}/{max}";
             }
 
+            // =========================
+            // VICTORY
+            // =========================
             if (result.IsVictory)
             {
                 var sb = new StringBuilder();
@@ -138,7 +136,15 @@ namespace Hogs.RPG.Bot.Commands
 
                 foreach (var reward in result.Rewards)
                 {
-                    sb.AppendLine($"<@{reward.DiscordId}> ({reward.Role})");
+                    string roleIcon = reward.Role switch
+                    {
+                        RaidRole.Tank => "🛡️",
+                        RaidRole.Dps => "⚔️",
+                        RaidRole.Healer => "💚",
+                        _ => "❓"
+                    };
+
+                    sb.AppendLine($"{roleIcon} <@{reward.DiscordId}>");
                     sb.AppendLine($"  💰 +{reward.Gold} Gold | ⭐ +{reward.PlayerXp} XP | 🐾 +{reward.PetXp} Pet XP");
                     if (reward.ShardDropped)
                         sb.AppendLine($"  💎 Relic Shard (Tier {reward.ShardTier}) dropped!");
@@ -157,14 +163,22 @@ namespace Hogs.RPG.Bot.Commands
                     .Build();
 
                 await thread.SendMessageAsync(embed: victoryEmbed);
+
+                await PostRaidVictoryFeedAsync(result);
                 return;
             }
 
+            // =========================
+            // WIPE
+            // =========================
             if (result.IsWipe)
             {
                 var wipeEmbed = new EmbedBuilder()
                     .WithTitle("💀 Raid Wipe")
-                    .WithDescription("Your party was defeated. Better luck next time!")
+                    .WithDescription(
+                        string.IsNullOrEmpty(result.WipeReason)
+                            ? "Your party was defeated. Better luck next time!"
+                            : result.WipeReason)
                     .WithColor(Color.DarkRed)
                     .Build();
 
@@ -173,31 +187,46 @@ namespace Hogs.RPG.Bot.Commands
             }
 
             // =========================
-            // ONGOING ROUND — post result embed + new action buttons
+            // ONGOING ROUND — post result then fresh action buttons
             // =========================
             var session = result.Session;
             if (session == null) return;
 
             var roundRaidDef = RaidRegistry.GetByTier(session.Tier);
 
-            var roundSb = new StringBuilder();
-
-            foreach (var line in result.EventLog)
-                roundSb.AppendLine(line);
-
-            roundSb.AppendLine();
-            roundSb.AppendLine($"👹 **{roundRaidDef?.Name ?? "Boss"}** — {HpBar(result.BossHpAfter, result.BossMaxHp)}");
-
-            foreach (var p in session.Participants)
-                roundSb.AppendLine($"  {(p.Role == RaidRole.Tank ? "🛡️" : p.Role == RaidRole.Dps ? "⚔️" : "💚")} **{p.Role}** — {HpBar(p.CurrentHp, p.MaxHp)}");
-
             var roundEmbed = new EmbedBuilder()
-                .WithTitle($"⚔️ Round {session.CurrentRound - 1} Result")
-                .WithDescription(roundSb.ToString().Trim())
-                .WithColor(new Color(0xE67E22))
-                .Build();
+                .WithTitle($"⚔️ Round {result.Round} Result")
+                .WithColor(new Color(0xE67E22));
 
-            await thread.SendMessageAsync(embed: roundEmbed);
+            if (!string.IsNullOrEmpty(result.TankText))
+                roundEmbed.AddField("🛡️ Tank", result.TankText, inline: false);
+            if (!string.IsNullOrEmpty(result.DpsText))
+                roundEmbed.AddField("⚔️ DPS", result.DpsText, inline: false);
+            if (!string.IsNullOrEmpty(result.HealerText))
+                roundEmbed.AddField("💚 Healer", result.HealerText, inline: false);
+            if (!string.IsNullOrEmpty(result.BossText))
+                roundEmbed.AddField("👹 Boss", result.BossText, inline: false);
+
+            // HP status
+            roundEmbed.AddField(
+                "❤️ HP",
+                $"👹 **{roundRaidDef?.Name ?? "Boss"}** — {HpBar(session.BossCurrentHp, session.BossMaxHp)}\n" +
+                string.Join("\n", session.Participants.Select(p =>
+                {
+                    string icon = p.Role switch
+                    {
+                        RaidRole.Tank => "🛡️",
+                        RaidRole.Dps => "⚔️",
+                        RaidRole.Healer => "💚",
+                        _ => "❓"
+                    };
+                    return $"{icon} **{p.Role}** — {HpBar(p.CurrentHp, p.MaxHp)}";
+                })),
+                inline: false);
+
+            roundEmbed.WithFooter($"Round {session.CurrentRound} — Submit your actions below.");
+
+            await thread.SendMessageAsync(embed: roundEmbed.Build());
 
             // Post fresh action buttons per player for the new round
             var freshSession = await _raidService.GetSessionAsync(sessionId);
@@ -210,6 +239,48 @@ namespace Hogs.RPG.Bot.Commands
                     $"<@{participant.DiscordId}> — Round {freshSession.CurrentRound} actions ({participant.Role}):",
                     components: actionComponents);
             }
+        }
+
+        // =========================
+        // FEED: RAID VICTORY
+        // =========================
+        private async Task PostRaidVictoryFeedAsync(RaidRoundResult result)
+        {
+            var feedChannel = _client.GetChannel(1485357755433750549UL) as IMessageChannel;
+            if (feedChannel == null) return;
+
+            var session = result.Session;
+            var raidDef = RaidRegistry.GetByTier(session?.Tier ?? 0);
+            var bossName = raidDef?.Name ?? "Unknown Raid Boss";
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"The **{bossName}** has been defeated!\n");
+
+            foreach (var reward in result.Rewards)
+            {
+                string roleIcon = reward.Role switch
+                {
+                    RaidRole.Tank => "🛡️",
+                    RaidRole.Dps => "⚔️",
+                    RaidRole.Healer => "💚",
+                    _ => "❓"
+                };
+
+                sb.Append($"{roleIcon} <@{reward.DiscordId}> — 💰 +{reward.Gold} gold | 📈 +{reward.PlayerXp} XP");
+
+                if (reward.ShardDropped)
+                    sb.Append($"\n  💎 **Tier {reward.ShardTier} Relic Shard dropped!**");
+
+                sb.AppendLine();
+            }
+
+            var embed = new EmbedBuilder()
+                .WithTitle("⚔️ Raid Victory!")
+                .WithDescription(sb.ToString().Trim())
+                .WithColor(Color.Gold)
+                .Build();
+
+            await feedChannel.SendMessageAsync(embed: embed);
         }
 
         // =========================

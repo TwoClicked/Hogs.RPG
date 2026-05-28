@@ -2,6 +2,7 @@
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.InventoryServices;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Hogs.RPG.Services.GameplayServices
@@ -77,17 +78,13 @@ namespace Hogs.RPG.Services.GameplayServices
             string FormatDiff(int value, string label)
             {
                 if (value == 0) return null;
-                return value > 0
-                    ? $"⬆ +{value} {label}"
-                    : $"⬇ {value} {label}";
+                return value > 0 ? $"⬆ +{value} {label}" : $"⬇ {value} {label}";
             }
 
             var diffLines = new List<string>();
-
             var atk = FormatDiff(atkDiff, "ATK");
             var def = FormatDiff(defDiff, "DEF");
             var hp = FormatDiff(hpDiff, "HP");
-
             if (atk != null) diffLines.Add(atk);
             if (def != null) diffLines.Add(def);
             if (hp != null) diffLines.Add(hp);
@@ -119,12 +116,12 @@ namespace Hogs.RPG.Services.GameplayServices
             if (!string.IsNullOrEmpty(previousItem))
                 await _inventoryService.GiveItemAsync(userId, previousItem, 1);
 
-            // =========================
-            // CLAMP HEALTH
-            // =========================
             ClampHealth(player);
-
             await _playerRepository.UpdatePlayerAsync(player);
+
+            // Player slots changed — invalidate the player cache used by equip-by-slot autocomplete
+            AutocompleteCache<Player>.Invalidate(userId);
+            // Note: inventory cache is already invalidated inside GiveItemAsync / TakeItemAsync above
 
             return
                 $"⚔ Equipped **{item.Name}**\n\n" +
@@ -132,103 +129,20 @@ namespace Hogs.RPG.Services.GameplayServices
         }
 
         // =========================
-        // UNEQUIP
+        // GET EQUIP PREVIEW (used for the confirm/cancel flow)
         // =========================
-        public async Task<string> UnequipAsync(ulong userId, string slot)
+        public async Task<(string preview, string? validItemId)> GetEquipPreviewAsync(ulong userId, string itemId)
         {
             var player = await _playerRepository.GetByDiscordIdAsync(userId);
-
-            if (player == null)
-                return "You need to start your adventure first.";
-
-            string itemId = "";
-
-            switch (slot.ToLower())
-            {
-                case "mainhand":
-                    itemId = player.MainHand;
-                    player.MainHand = "";
-                    break;
-
-                case "offhand":
-                    itemId = player.OffHand;
-                    player.OffHand = "";
-                    break;
-
-                case "helmet":
-                    itemId = player.Helmet;
-                    player.Helmet = "";
-                    break;
-
-                case "body":
-                    itemId = player.Body;
-                    player.Body = "";
-                    break;
-
-                case "legs":
-                    itemId = player.Legs;
-                    player.Legs = "";
-                    break;
-
-                case "gloves":
-                    itemId = player.Gloves;
-                    player.Gloves = "";
-                    break;
-
-                case "boots":
-                    itemId = player.Boots;
-                    player.Boots = "";
-                    break;
-
-                case "ring":
-                    itemId = player.Ring;
-                    player.Ring = "";
-                    break;
-
-                case "amulet":
-                    itemId = player.Amulet;
-                    player.Amulet = "";
-                    break;
-
-                default:
-                    return "Invalid slot.";
-            }
-
-            if (string.IsNullOrEmpty(itemId))
-                return "Nothing is equipped in that slot.";
-
-            var item = _equipmentService.GetEquipment(itemId);
-
-            await _inventoryService.GiveItemAsync(userId, itemId, 1);
-
-            // =========================
-            // CLAMP HEALTH
-            // =========================
-            ClampHealth(player);
-
-            await _playerRepository.UpdatePlayerAsync(player);
-
-            return $"You unequipped **{item.Name}**.";
-        }
-
-        // =========================
-        // PREVIEW
-        // =========================
-        public async Task<(string previewText, string itemId)> GetEquipPreviewAsync(ulong userId, string itemId)
-        {
-            var player = await _playerRepository.GetByDiscordIdAsync(userId);
-
             if (player == null)
                 return ("You need to start your adventure first.", null);
 
             var item = _equipmentService.GetEquipment(itemId);
-
             if (item == null)
                 return ("That item cannot be equipped.", null);
 
             var inventory = await _inventoryService.GetInventoryAsync(userId);
             var ownedItem = inventory.Find(i => i.ItemId == itemId);
-
             if (ownedItem == null || ownedItem.Quantity <= 0)
                 return ("You do not have that item.", null);
 
@@ -257,28 +171,82 @@ namespace Hogs.RPG.Services.GameplayServices
             string FormatDiff(int value, string label)
             {
                 if (value == 0) return null;
-                return value > 0
-                    ? $"⬆ +{value} {label}"
-                    : $"⬇ {value} {label}";
+                return value > 0 ? $"⬆ +{value} {label}" : $"⬇ {value} {label}";
             }
 
-            var diffs = new List<string>();
+            var diffLines = new List<string>();
+            var atk = FormatDiff(atkDiff, "ATK");
+            var def = FormatDiff(defDiff, "DEF");
+            var hp = FormatDiff(hpDiff, "HP");
+            if (atk != null) diffLines.Add(atk);
+            if (def != null) diffLines.Add(def);
+            if (hp != null) diffLines.Add(hp);
 
-            if (FormatDiff(atkDiff, "ATK") != null) diffs.Add(FormatDiff(atkDiff, "ATK"));
-            if (FormatDiff(defDiff, "DEF") != null) diffs.Add(FormatDiff(defDiff, "DEF"));
-            if (FormatDiff(hpDiff, "HP") != null) diffs.Add(FormatDiff(hpDiff, "HP"));
+            string diffText = diffLines.Count > 0 ? string.Join("\n", diffLines) : "No stat change";
+            string currentName = currentItem != null ? $"**{currentItem.Name}**" : "*nothing*";
 
-            var diffText = diffs.Count > 0 ? string.Join("\n", diffs) : "No stat change";
-
-            var currentName = currentItem?.Name ?? "None";
-
-            var preview =
-                $"⚔ Equip **{item.Name}**?\n\n" +
-                $"Current: **{currentName}**\n" +
-                $"New: **{item.Name}**\n\n" +
-                $"📊 **Result**\n{diffText}";
+            string preview =
+                $"⚔ **Equip {item.Name}?**\n\n" +
+                $"Slot: **{item.Slot}**\n" +
+                $"Replacing: {currentName}\n\n" +
+                $"📊 **Stat Changes**\n{diffText}";
 
             return (preview, itemId);
+        }
+
+        // =========================
+        // UNEQUIP
+        // =========================
+        public async Task<string> UnequipAsync(ulong userId, string slot)
+        {
+            var player = await _playerRepository.GetByDiscordIdAsync(userId);
+
+            if (player == null)
+                return "You need to start your adventure first.";
+
+            string? currentItemId = slot switch
+            {
+                "MainHand" => player.MainHand,
+                "OffHand" => player.OffHand,
+                "Helmet" => player.Helmet,
+                "Body" => player.Body,
+                "Legs" => player.Legs,
+                "Gloves" => player.Gloves,
+                "Boots" => player.Boots,
+                "Ring" => player.Ring,
+                "Amulet" => player.Amulet,
+                _ => null
+            };
+
+            if (string.IsNullOrEmpty(currentItemId))
+                return $"❌ Nothing equipped in **{slot}**.";
+
+            var item = _equipmentService.GetEquipment(currentItemId);
+
+            switch (slot)
+            {
+                case "MainHand": player.MainHand = null; break;
+                case "OffHand": player.OffHand = null; break;
+                case "Helmet": player.Helmet = null; break;
+                case "Body": player.Body = null; break;
+                case "Legs": player.Legs = null; break;
+                case "Gloves": player.Gloves = null; break;
+                case "Boots": player.Boots = null; break;
+                case "Ring": player.Ring = null; break;
+                case "Amulet": player.Amulet = null; break;
+            }
+
+            await _inventoryService.GiveItemAsync(userId, currentItemId, 1);
+
+            ClampHealth(player);
+            await _playerRepository.UpdatePlayerAsync(player);
+
+            // Player slots changed — invalidate player cache
+            AutocompleteCache<Player>.Invalidate(userId);
+            // Inventory cache already invalidated inside GiveItemAsync
+
+            string itemName = item?.Name ?? currentItemId;
+            return $"✅ **{itemName}** unequipped and returned to your inventory.";
         }
 
         // =========================
@@ -287,7 +255,6 @@ namespace Hogs.RPG.Services.GameplayServices
         private void ClampHealth(Player player)
         {
             var (_, _, maxHealth) = _statService.CalculateStats(player);
-
             if (player.Health > maxHealth)
                 player.Health = maxHealth;
         }
