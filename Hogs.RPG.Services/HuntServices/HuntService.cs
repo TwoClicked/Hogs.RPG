@@ -136,6 +136,15 @@ namespace Hogs.RPG.Services.HuntServices
             if (fullSetBonus)
                 huntRareBonus += 0.05;
 
+            bool permanentSetBonus = player.HasHunterSetBonus;
+            if (permanentSetBonus)
+            {
+                huntXpBonus += 0.045; // equivalent of all 9 pieces
+                huntMaterialBonus += 0.045;
+                huntRareBonus += 0.05;  // full set rare bonus
+                fullSetBonus = true;  // used for display below
+            }
+
             // Hunting pet bonus
             if (player.HasHuntingPet)
             {
@@ -303,13 +312,20 @@ namespace Hogs.RPG.Services.HuntServices
             if (rareCount > 0)
                 sb.AppendLine($"✨ {rareCount} Rare drops!");
 
-            // Show active hunting bonuses
-            if (huntingGearCount > 0)
-                sb.AppendLine($"🏹 Hunter's Gear: {huntingGearCount}/9 pieces " +
-                    $"(+{huntXpBonus * 100:0.#}% XP, +{huntMaterialBonus * 100:0.#}% materials)");
+            if (permanentSetBonus)
+            {
+                // Player completed the set — show as a single permanent line
+                sb.AppendLine($"🌟 Hunter Set: Permanent! (+4.5% XP, +4.5% mats, +5% rare)");
+            }
+            else
+            {
+                if (huntingGearCount > 0)
+                    sb.AppendLine($"🏹 Hunter's Gear: {huntingGearCount}/9 pieces " +
+                        $"(+{huntXpBonus * 100:0.#}% XP, +{huntMaterialBonus * 100:0.#}% materials)");
 
-            if (fullSetBonus)
-                sb.AppendLine($"🌟 Full Set Bonus: +5% rare drop rate");
+                if (fullSetBonus)
+                    sb.AppendLine($"🌟 Full Set Bonus: +5% rare drop rate");
+            }
 
             if (player.HasHuntingPet)
                 sb.AppendLine($"🐾 Hunting Companion: +5% XP, +5% materials, +3% rare drop");

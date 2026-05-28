@@ -25,6 +25,8 @@ namespace Hogs.RPG.Bot.Commands
         [ComponentInteraction("raid_action:*:*:*")]
         public async Task HandleAction(string sessionIdStr, string roundStr, string action)
         {
+            // Keep ephemeral so error messages are private —
+            // the public status is posted via thread.SendMessageAsync below.
             await DeferAsync(ephemeral: true);
 
             int sessionId = int.Parse(sessionIdStr);
@@ -54,10 +56,15 @@ namespace Hogs.RPG.Bot.Commands
 
             if (roundResult == null)
             {
-                var statusThread = Context.Channel as IThreadChannel;
-                if (statusThread != null)
+                // =========================
+                // WAITING FOR OTHER PLAYERS
+                // Post a PUBLIC status board to the thread so everyone can
+                // see who has acted — prevents the double-press lobby lock bug.
+                // =========================
+                var thread = Context.Channel as IThreadChannel;
+                if (thread != null)
                 {
-                    var session = await _raidService.GetActiveByThreadAsync(statusThread.Id);
+                    var session = await _raidService.GetActiveByThreadAsync(thread.Id);
                     if (session != null)
                     {
                         var statusLines = session.Participants.Select(p =>
@@ -86,31 +93,31 @@ namespace Hogs.RPG.Bot.Commands
                                 _ => "..."
                             };
 
-                            string status = p.HasActedThisRound
+                            return p.HasActedThisRound
                                 ? $"{roleIcon} **{p.Role}** — {actionLabel} ✅"
                                 : $"{roleIcon} **{p.Role}** — ⏳ Waiting...";
-
-                            return status;
                         });
 
-                        await FollowupAsync(
-                            $"✅ Action registered!\n\n{string.Join("\n", statusLines)}",
-                            ephemeral: true);
-                        return;
+                        // PUBLIC post — all players in the thread can see who has acted
+                        await thread.SendMessageAsync(
+                            $"🎯 **<@{Context.User.Id}> chose an action!**\n\n" +
+                            string.Join("\n", statusLines));
                     }
                 }
 
-                await FollowupAsync("✅ Action registered!", ephemeral: true);
+                // Private ack — satisfies the interaction acknowledgement
+                await FollowupAsync("✅ Action locked in!", ephemeral: true);
                 return;
             }
 
-            // Round resolved — post results
+            // Round resolved — round result is already posted publicly by PostRoundResultAsync
             await PostRoundResultAsync(roundResult, sessionId);
             await FollowupAsync("✅ Round resolved!", ephemeral: true);
         }
 
         // =========================
         // POST ROUND RESULT
+        // (unchanged — already posts publicly to thread)
         // =========================
         private async Task PostRoundResultAsync(
             RaidRoundResult result, int sessionId)
@@ -143,166 +150,101 @@ namespace Hogs.RPG.Bot.Commands
                 var raidDef = RaidRegistry.GetByTier(result.Session?.Tier ?? 1);
                 string bossName = raidDef?.Name ?? "Boss";
 
-                var embed = new EmbedBuilder()
-                    .WithTitle($"⚔️ Raid Clear — {bossName}")
+                var victoryEmbed = new EmbedBuilder()
+                    .WithTitle($"🏆 {bossName} Defeated!")
+                    .WithDescription(sb.ToString().Trim())
                     .WithColor(Color.Gold)
-                    .WithDescription(sb.ToString())
-                    .WithFooter($"Tier {result.Session?.Tier} Raid")
                     .Build();
 
-                await thread.SendMessageAsync(embed: embed);
-                await PostRaidVictoryFeedAsync(result);
+                await thread.SendMessageAsync(embed: victoryEmbed);
                 return;
             }
 
             if (result.IsWipe)
             {
-                var embed = new EmbedBuilder()
-                    .WithTitle("💀 Raid Wiped")
+                var wipeEmbed = new EmbedBuilder()
+                    .WithTitle("💀 Raid Wipe")
+                    .WithDescription("Your party was defeated. Better luck next time!")
                     .WithColor(Color.DarkRed)
-                    .WithDescription(
-                        $"{result.WipeReason}\n\n" +
-                        $"The party has been defeated.\n" +
-                        $"Each player lost **1000 gold** and their raid key.")
                     .Build();
 
-                await thread.SendMessageAsync(embed: embed);
+                await thread.SendMessageAsync(embed: wipeEmbed);
                 return;
             }
 
+            // =========================
+            // ONGOING ROUND — post result embed + new action buttons
+            // =========================
             var session = result.Session;
             if (session == null) return;
 
+            var roundRaidDef = RaidRegistry.GetByTier(session.Tier);
+
+            var roundSb = new StringBuilder();
+
+            foreach (var line in result.EventLog)
+                roundSb.AppendLine(line);
+
+            roundSb.AppendLine();
+            roundSb.AppendLine($"👹 **{roundRaidDef?.Name ?? "Boss"}** — {HpBar(result.BossHpAfter, result.BossMaxHp)}");
+
+            foreach (var p in session.Participants)
+                roundSb.AppendLine($"  {(p.Role == RaidRole.Tank ? "🛡️" : p.Role == RaidRole.Dps ? "⚔️" : "💚")} **{p.Role}** — {HpBar(p.CurrentHp, p.MaxHp)}");
+
             var roundEmbed = new EmbedBuilder()
-                .WithTitle($"⚔️ Round {result.Round} Results")
-                .WithColor(new Color(0x5865F2))
-                .AddField("🛡️ Tank", result.TankText, inline: false)
-                .AddField("⚔️ DPS", result.DpsText, inline: false)
-                .AddField("💚 Healer", result.HealerText, inline: false)
-                .AddField("👹 Boss", result.BossText, inline: false)
-                .AddField("━━━━━━━━━━", "**HP Status**", inline: false)
-                .AddField("👹 Boss HP", HpBar(session.BossCurrentHp, session.BossMaxHp), inline: false);
+                .WithTitle($"⚔️ Round {session.CurrentRound - 1} Result")
+                .WithDescription(roundSb.ToString().Trim())
+                .WithColor(new Color(0xE67E22))
+                .Build();
 
-            foreach (var p in session.Participants)
+            await thread.SendMessageAsync(embed: roundEmbed);
+
+            // Post fresh action buttons per player for the new round
+            var freshSession = await _raidService.GetSessionAsync(sessionId);
+            if (freshSession == null) return;
+
+            foreach (var participant in freshSession.Participants)
             {
-                string roleIcon = p.Role switch
-                {
-                    RaidRole.Tank => "🛡️",
-                    RaidRole.Dps => "⚔️",
-                    RaidRole.Healer => "💚",
-                    _ => "❓"
-                };
-
-                bool hasAggro = session.AggroDiscordId == p.DiscordId;
-                string aggroTag = hasAggro ? " 🎯" : "";
-
-                roundEmbed.AddField(
-                    $"{roleIcon} {p.Role}{aggroTag}",
-                    HpBar(p.CurrentHp, p.MaxHp, 8),
-                    inline: true);
-            }
-
-            roundEmbed.WithFooter($"Round {session.CurrentRound} — Submit your actions below.");
-
-            var statusMsg = await thread.SendMessageAsync(embed: roundEmbed.Build());
-            await _raidService.UpdateRoundStatusMessageIdAsync(sessionId, statusMsg.Id);
-
-            foreach (var p in session.Participants)
-            {
-                var actionComponents = BuildActionButtonsForRole(sessionId, session.CurrentRound, p);
+                var actionComponents = BuildActionButtonsForRole(sessionId, freshSession.CurrentRound, participant);
                 await thread.SendMessageAsync(
-                    $"<@{p.DiscordId}> — Your actions ({p.Role}):",
+                    $"<@{participant.DiscordId}> — Round {freshSession.CurrentRound} actions ({participant.Role}):",
                     components: actionComponents);
             }
         }
 
         // =========================
-        // FEED: RAID VICTORY
-        // =========================
-        private async Task PostRaidVictoryFeedAsync(RaidRoundResult result)
-        {
-            var feedChannel = _client.GetChannel(1485357755433750549UL) as IMessageChannel;
-            if (feedChannel == null) return;
-
-            var session = result.Session;
-            var raidDef = RaidRegistry.GetByTier(session?.Tier ?? 0);
-            var bossName = raidDef?.Name ?? "Unknown Raid Boss";
-
-            var sb = new StringBuilder();
-            sb.AppendLine("🎉 **Raid Complete!**\n");
-
-            foreach (var reward in result.Rewards)
-            {
-                string roleIcon = reward.Role switch
-                {
-                    RaidRole.Tank => "🛡️",
-                    RaidRole.Dps => "⚔️",
-                    RaidRole.Healer => "💚",
-                    _ => "❓"
-                };
-
-                sb.AppendLine($"{roleIcon} <@{reward.DiscordId}> — 💰 +{reward.Gold} gold | 📈 +{reward.PlayerXp} XP | 🐾 +{reward.PetXp} Pet XP");
-
-                if (reward.ShardDropped)
-                    sb.AppendLine($"  💎 **Tier {reward.ShardTier} Relic Shard dropped!**");
-            }
-
-            var embed = new EmbedBuilder()
-                .WithTitle($"⚔️ Raid Clear — {bossName}")
-                .WithColor(Color.Gold)
-                .WithDescription(sb.ToString())
-                .WithFooter($"Tier {session?.Tier} Raid")
-                .Build();
-
-            await feedChannel.SendMessageAsync(embed: embed);
-        }
-
-        // =========================
-        // ACTION BUTTONS BUILDER — PER ROLE
+        // BUILD ACTION BUTTONS PER ROLE
         // =========================
         private MessageComponent BuildActionButtonsForRole(
-            int sessionId,
-            int round,
+            int sessionId, int round,
             Hogs.RPG.Core.Entities.RaidParticipant participant)
         {
             var builder = new ComponentBuilder();
+            string prefix = $"raid_action:{sessionId}:{round}";
 
             switch (participant.Role)
             {
                 case RaidRole.Dps:
-                    builder.WithButton("⚔️ Attack", $"raid_action:{sessionId}:{round}:attack",
-                        ButtonStyle.Danger, row: 0);
-                    builder.WithButton("💀 Reckless", $"raid_action:{sessionId}:{round}:reckless",
-                        ButtonStyle.Danger, row: 0,
-                        disabled: participant.RecklessCooldownRoundsRemaining > 0);
-                    builder.WithButton("🎯 Focus", $"raid_action:{sessionId}:{round}:focus",
-                        ButtonStyle.Danger, row: 0,
-                        disabled: participant.FocusCooldownRoundsRemaining > 0);
+                    builder
+                        .WithButton("⚔️ Attack", $"{prefix}:attack", ButtonStyle.Danger)
+                        .WithButton("💀 Reckless", $"{prefix}:reckless", ButtonStyle.Danger)
+                        .WithButton("🎯 Focus", $"{prefix}:focus", ButtonStyle.Primary);
                     break;
 
                 case RaidRole.Tank:
-                    builder.WithButton("🛡️ Hold", $"raid_action:{sessionId}:{round}:hold",
-                        ButtonStyle.Secondary, row: 0);
-                    builder.WithButton("📣 Taunt", $"raid_action:{sessionId}:{round}:taunt",
-                        ButtonStyle.Secondary, row: 0);
-                    builder.WithButton("💥 Shatter", $"raid_action:{sessionId}:{round}:shatter",
-                        ButtonStyle.Secondary, row: 0,
-                        disabled: participant.ShatterCooldownRoundsRemaining > 0);
+                    builder
+                        .WithButton("🛡️ Hold", $"{prefix}:hold", ButtonStyle.Primary)
+                        .WithButton("📣 Taunt", $"{prefix}:taunt", ButtonStyle.Primary)
+                        .WithButton("💥 Shatter", $"{prefix}:shatter", ButtonStyle.Danger);
                     break;
 
                 case RaidRole.Healer:
-                    builder.WithButton("💚 Heal", $"raid_action:{sessionId}:{round}:heal",
-                        ButtonStyle.Success, row: 0);
-                    builder.WithButton("🌿 Party Heal", $"raid_action:{sessionId}:{round}:party_heal",
-                        ButtonStyle.Success, row: 0);
-                    // Emergency Heal — single tap, auto-targets lowest HP member
-                    builder.WithButton("⚡ Emergency", $"raid_action:{sessionId}:{round}:emergency_heal",
-                        ButtonStyle.Success, row: 0,
-                        disabled: participant.EmergencyHealCooldownRoundsRemaining > 0);
-                    builder.WithButton("✨ Empower ATK", $"raid_action:{sessionId}:{round}:empower_attack",
-                        ButtonStyle.Success, row: 1);
-                    builder.WithButton("✨ Empower DEF", $"raid_action:{sessionId}:{round}:empower_defense",
-                        ButtonStyle.Success, row: 1);
+                    builder
+                        .WithButton("💚 Heal", $"{prefix}:heal", ButtonStyle.Success)
+                        .WithButton("🌿 Party Heal", $"{prefix}:party_heal", ButtonStyle.Success)
+                        .WithButton("⚡ Emergency Heal", $"{prefix}:emergency_heal", ButtonStyle.Danger)
+                        .WithButton("✨ Empower ATK", $"{prefix}:empower_attack", ButtonStyle.Primary, row: 1)
+                        .WithButton("✨ Empower DEF", $"{prefix}:empower_defense", ButtonStyle.Primary, row: 1);
                     break;
             }
 

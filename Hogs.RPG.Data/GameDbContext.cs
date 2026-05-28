@@ -1,11 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hogs.RPG.Data
 {
@@ -17,13 +11,14 @@ namespace Hogs.RPG.Data
         public DbSet<PlayerPet> PlayerPets { get; set; }
         public DbSet<ShopPurchase> ShopPurchases { get; set; }
         public DbSet<ActiveAuction> ActiveAuctions { get; set; }
-
         public DbSet<PlayerRelic> PlayerRelics { get; set; }
         public DbSet<PlayerRelicShard> PlayerRelicShards { get; set; }
         public DbSet<RaidSession> RaidSessions { get; set; }
         public DbSet<RaidParticipant> RaidParticipants { get; set; }
         public DbSet<GearSet> GearSets { get; set; }
 
+        // Player-to-player marketplace listings
+        public DbSet<PlayerAuctionListing> PlayerAuctionListings { get; set; }
 
         public GameDbContext(DbContextOptions<GameDbContext> options)
             : base(options)
@@ -48,7 +43,6 @@ namespace Hogs.RPG.Data
                 .WithMany()
                 .HasForeignKey(p => p.DiscordId)
                 .HasPrincipalKey(p => p.DiscordId);
-
 
             modelBuilder.Entity<PlayerRelic>()
                 .HasOne(r => r.Player)

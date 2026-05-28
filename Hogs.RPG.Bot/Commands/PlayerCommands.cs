@@ -173,27 +173,29 @@ namespace Hogs.RPG.Bot.Commands
             var embed = new EmbedBuilder()
                 .WithTitle($"⚔ {player.Username}'s Profile")
                 .WithColor(Color.DarkRed)
-
                 .AddField("Level", player.Level, true)
-                .AddField("Gold", $"💰 {player.Gold}", true)
-
+                .AddField("💰 Gold", player.Gold, true)
+                .AddField("🪙 Tracker Tokens", player.TrackerTokens, true)
                 .AddField("XP", $"{player.XP} / {xpRequired}", false)
                 .AddField("Progress", xpBar, false)
-
                 .AddField("Attack", $"🗡 {stats.attack} (+{bonusAttack})", true)
                 .AddField("Defense", $"🛡 {stats.defense} (+{bonusDefense})", true)
                 .AddField("Health", $"❤️ {player.Health}/{stats.health} (+{bonusHealth})", true)
-
                 .AddField("Energy", $"⚡ {player.Energy}", true)
                 .AddField("Hunter Stamina", $"🏹 {player.HunterStamina}/{staminaMax}", true)
-
                 .AddField("✨ Double XP", xpBoostText, true)
                 .AddField("⚡ Stamina Boost", staminaBoostText, true)
                 .AddField("\u200b", "\u200b", true)
-                .AddField("🐾 Hunting Companion", player.HasHuntingPet
-                    ? "✅ Active — +5% XP, +5% materials, +3% rare drop on all hunts"
-                    : "❌ Not found — discover it on the Ashwood Trail", false)
-
+                .AddField("🌟 Hunter Set",
+                    player.HasHunterSetBonus
+                        ? "✅ Complete — +4.5% XP, +4.5% materials, +5% rare drop on all hunts"
+                        : "❌ Incomplete — collect all 9 pieces and use `/hunter-setcomplete`",
+                    false)
+                .AddField("🐾 Hunting Companion",
+                    player.HasHuntingPet
+                        ? "✅ Active — +5% XP, +5% materials, +3% rare drop on all hunts"
+                        : "❌ Not found — discover it on the Ashwood Trail",
+                    false)
                 .AddField(
                     "⚒ Equipment",
                     $"Main Hand: {FormatItem(player.MainHand)}\n" +

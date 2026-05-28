@@ -82,6 +82,16 @@ namespace Hogs.RPG.Core.Entities
         public bool HasHuntingPet { get; set; } = false;
 
         // =========================
+        // HUNTER SET BONUS
+        // =========================
+
+        // Granted permanently via /hunter-setcomplete.
+        // Consumes all 9 Hunter gear pieces and applies an always-on
+        // +4.5% XP, +4.5% materials, +5% rare drop bonus to /hunt.
+        // Replaces the need to equip hunter gear when hunting.
+        public bool HasHunterSetBonus { get; set; } = false;
+
+        // =========================
         // 🔄 BUFF SERIALIZATION
         // =========================
         public void DeserializeBuffs()
