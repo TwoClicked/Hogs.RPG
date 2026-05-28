@@ -56,8 +56,7 @@ namespace Hogs.RPG.Bot.Commands
             {
                 // =========================
                 // WAITING FOR OTHER PLAYERS
-                // Post a public status board so everyone can see who has acted —
-                // prevents the double-press lobby lock bug.
+                // Post a public status board so everyone can see who has acted
                 // =========================
                 var thread = Context.Channel as IThreadChannel;
                 if (thread != null)
@@ -96,7 +95,6 @@ namespace Hogs.RPG.Bot.Commands
                                 : $"{roleIcon} **{p.Role}** — ⏳ Waiting...";
                         });
 
-                        // Public — all players in the thread can see who has acted
                         await thread.SendMessageAsync(
                             $"🎯 **<@{Context.User.Id}> chose an action!**\n\n" +
                             string.Join("\n", statusLines));
@@ -119,12 +117,6 @@ namespace Hogs.RPG.Bot.Commands
         {
             var thread = Context.Channel as IThreadChannel;
             if (thread == null) return;
-
-            string HpBar(int current, int max, int barLength = 10)
-            {
-                int filled = max > 0 ? (int)((double)current / max * barLength) : 0;
-                return $"[{new string('█', filled)}{new string('░', barLength - filled)}] {current}/{max}";
-            }
 
             // =========================
             // VICTORY
@@ -163,7 +155,6 @@ namespace Hogs.RPG.Bot.Commands
                     .Build();
 
                 await thread.SendMessageAsync(embed: victoryEmbed);
-
                 await PostRaidVictoryFeedAsync(result);
                 return;
             }
@@ -187,12 +178,13 @@ namespace Hogs.RPG.Bot.Commands
             }
 
             // =========================
-            // ONGOING ROUND — post result then fresh action buttons
+            // ONGOING ROUND
             // =========================
             var session = result.Session;
             if (session == null) return;
 
             var roundRaidDef = RaidRegistry.GetByTier(session.Tier);
+            string roundBossName = roundRaidDef?.Name ?? "Boss";
 
             var roundEmbed = new EmbedBuilder()
                 .WithTitle($"⚔️ Round {result.Round} Result")
@@ -207,28 +199,37 @@ namespace Hogs.RPG.Bot.Commands
             if (!string.IsNullOrEmpty(result.BossText))
                 roundEmbed.AddField("👹 Boss", result.BossText, inline: false);
 
-            // HP status
+            // ─── HP Status ───
+            // Boss full-width, players inline (matches original layout)
+            string HpBar(int current, int max, int barLength = 10)
+            {
+                int filled = max > 0 ? (int)((double)current / max * barLength) : 0;
+                return $"[{new string('█', filled)}{new string('░', barLength - filled)}] {current}/{max}";
+            }
+
             roundEmbed.AddField(
-                "❤️ HP",
-                $"👹 **{roundRaidDef?.Name ?? "Boss"}** — {HpBar(session.BossCurrentHp, session.BossMaxHp)}\n" +
-                string.Join("\n", session.Participants.Select(p =>
-                {
-                    string icon = p.Role switch
-                    {
-                        RaidRole.Tank => "🛡️",
-                        RaidRole.Dps => "⚔️",
-                        RaidRole.Healer => "💚",
-                        _ => "❓"
-                    };
-                    return $"{icon} **{p.Role}** — {HpBar(p.CurrentHp, p.MaxHp)}";
-                })),
+                "❤️ HP Status",
+                $"👹 **{roundBossName}** — {HpBar(session.BossCurrentHp, session.BossMaxHp)}",
                 inline: false);
+
+            foreach (var p in session.Participants)
+            {
+                string playerIcon = p.Role switch
+                {
+                    RaidRole.Tank => "🛡️ Tank",
+                    RaidRole.Dps => "⚔️ Dps",
+                    RaidRole.Healer => "💚 Healer",
+                    _ => p.Role.ToString()
+                };
+
+                roundEmbed.AddField(playerIcon, HpBar(p.CurrentHp, p.MaxHp), inline: true);
+            }
 
             roundEmbed.WithFooter($"Round {session.CurrentRound} — Submit your actions below.");
 
             await thread.SendMessageAsync(embed: roundEmbed.Build());
 
-            // Post fresh action buttons per player for the new round
+            // Post fresh action buttons per player
             var freshSession = await _raidService.GetSessionAsync(sessionId);
             if (freshSession == null) return;
 
@@ -284,7 +285,7 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
-        // BUILD ACTION BUTTONS PER ROLE
+        // BUILD ACTION BUTTONS PER ROLE — all Secondary (grey)
         // =========================
         private MessageComponent BuildActionButtonsForRole(
             int sessionId, int round,
@@ -299,23 +300,23 @@ namespace Hogs.RPG.Bot.Commands
                     builder
                         .WithButton("⚔️ Attack", $"{prefix}:attack", ButtonStyle.Danger)
                         .WithButton("💀 Reckless", $"{prefix}:reckless", ButtonStyle.Danger)
-                        .WithButton("🎯 Focus", $"{prefix}:focus", ButtonStyle.Primary);
+                        .WithButton("🎯 Focus", $"{prefix}:focus", ButtonStyle.Danger);
                     break;
 
                 case RaidRole.Tank:
                     builder
-                        .WithButton("🛡️ Hold", $"{prefix}:hold", ButtonStyle.Primary)
-                        .WithButton("📣 Taunt", $"{prefix}:taunt", ButtonStyle.Primary)
-                        .WithButton("💥 Shatter", $"{prefix}:shatter", ButtonStyle.Danger);
+                        .WithButton("🛡️ Hold", $"{prefix}:hold", ButtonStyle.Secondary)
+                        .WithButton("📣 Taunt", $"{prefix}:taunt", ButtonStyle.Secondary)
+                        .WithButton("💥 Shatter", $"{prefix}:shatter", ButtonStyle.Secondary);
                     break;
 
                 case RaidRole.Healer:
                     builder
                         .WithButton("💚 Heal", $"{prefix}:heal", ButtonStyle.Success)
                         .WithButton("🌿 Party Heal", $"{prefix}:party_heal", ButtonStyle.Success)
-                        .WithButton("⚡ Emergency Heal", $"{prefix}:emergency_heal", ButtonStyle.Danger)
-                        .WithButton("✨ Empower ATK", $"{prefix}:empower_attack", ButtonStyle.Primary, row: 1)
-                        .WithButton("✨ Empower DEF", $"{prefix}:empower_defense", ButtonStyle.Primary, row: 1);
+                        .WithButton("⚡ Emergency Heal", $"{prefix}:emergency_heal", ButtonStyle.Success)
+                        .WithButton("✨ Empower ATK", $"{prefix}:empower_attack", ButtonStyle.Success, row: 1)
+                        .WithButton("✨ Empower DEF", $"{prefix}:empower_defense", ButtonStyle.Success, row: 1);
                     break;
             }
 
