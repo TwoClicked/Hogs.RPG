@@ -170,22 +170,37 @@ namespace Hogs.RPG.Bot.Commands
             int bonusDefense = stats.defense - player.Defense;
             int bonusHealth = stats.health - player.MaxHealth;
 
+            // =========================
+            // EMBED — fields 1-17 (well under Discord's 25 limit after pet section below)
+            // =========================
             var embed = new EmbedBuilder()
                 .WithTitle($"⚔ {player.Username}'s Profile")
                 .WithColor(Color.DarkRed)
+
+                // Row 1 — economy
                 .AddField("Level", player.Level, true)
                 .AddField("💰 Gold", player.Gold, true)
                 .AddField("🪙 Tracker Tokens", player.TrackerTokens, true)
+
+                // XP
                 .AddField("XP", $"{player.XP} / {xpRequired}", false)
                 .AddField("Progress", xpBar, false)
+
+                // Row — combat stats
                 .AddField("Attack", $"🗡 {stats.attack} (+{bonusAttack})", true)
                 .AddField("Defense", $"🛡 {stats.defense} (+{bonusDefense})", true)
                 .AddField("Health", $"❤️ {player.Health}/{stats.health} (+{bonusHealth})", true)
+
+                // Row — resources
                 .AddField("Energy", $"⚡ {player.Energy}", true)
                 .AddField("Hunter Stamina", $"🏹 {player.HunterStamina}/{staminaMax}", true)
+
+                // Row — boosts (blank fills third slot so they sit correctly)
                 .AddField("✨ Double XP", xpBoostText, true)
                 .AddField("⚡ Stamina Boost", staminaBoostText, true)
                 .AddField("\u200b", "\u200b", true)
+
+                // Hunt bonuses
                 .AddField("🌟 Hunter Set",
                     player.HasHunterSetBonus
                         ? "✅ Complete — +4.5% XP, +4.5% materials, +5% rare drop on all hunts"
@@ -196,6 +211,8 @@ namespace Hogs.RPG.Bot.Commands
                         ? "✅ Active — +5% XP, +5% materials, +3% rare drop on all hunts"
                         : "❌ Not found — discover it on the Ashwood Trail",
                     false)
+
+                // Gear
                 .AddField(
                     "⚒ Equipment",
                     $"Main Hand: {FormatItem(player.MainHand)}\n" +
@@ -210,7 +227,7 @@ namespace Hogs.RPG.Bot.Commands
                     false);
 
             // =========================
-            // RELICS
+            // RELICS — field 18
             // =========================
             var equippedRelics = await _relicService.GetEquippedRelicsAsync(player.DiscordId);
 
@@ -230,7 +247,7 @@ namespace Hogs.RPG.Bot.Commands
                 false);
 
             // =========================
-            // PET
+            // PET — fields 19-21 (collapsed from 9 to 3 to stay under the 25-field limit)
             // =========================
             if (pet != null && PetRegistry.All.TryGetValue(pet.PetId, out var def))
             {
@@ -244,23 +261,26 @@ namespace Hogs.RPG.Bot.Commands
                 string displayName = pet.CustomName ?? def.Name;
 
                 embed
-                    .AddField("🐾 Pet", $"{def.Icon} {displayName}", false)
-                    .AddField("Level", $"Lv. {pet.Level}", true)
-                    .AddField("XP", $"{pet.XP} / {xpRequiredPet}", true)
-                    .AddField("Progress", petBar, false)
-                    .AddField("Attack", $"🗡 {atk}", true)
-                    .AddField("Defense", $"🛡 {defStat}", true)
-                    .AddField("Health", $"❤️ {hp}", true)
-                    .AddField("Passive 1", PetPassiveFormatter.Format(pet.Passive1), true)
-                    .AddField("Passive 2", PetPassiveFormatter.Format(pet.Passive2), true);
+                    .AddField("🐾 Pet",
+                        $"{def.Icon} **{displayName}** — Lv. {pet.Level}\n" +
+                        $"{petBar} ({pet.XP} / {xpRequiredPet} XP)",
+                        false)
+                    .AddField("Stats",
+                        $"🗡 {atk} ATK · 🛡 {defStat} DEF · ❤️ {hp} HP",
+                        false)
+                    .AddField("Passives",
+                        $"{PetPassiveFormatter.Format(pet.Passive1)} · {PetPassiveFormatter.Format(pet.Passive2)}",
+                        false);
             }
             else
             {
                 embed.AddField("🐾 Pet", "No pet equipped", false);
             }
 
+            // Total fields with pet: 21. Without pet: 19. Both safely under Discord's 25-field limit.
             await FollowupAsync(embed: embed.Build());
         }
+
 
         // =========================
         // FORMAT ITEM HELPER
