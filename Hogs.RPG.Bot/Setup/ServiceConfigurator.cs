@@ -90,6 +90,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<RaidService>();
             services.AddScoped<GearSetService>();
             services.AddSingleton<PlayerAuctionService>();
+            services.AddScoped<MaterialConversionService>();
 
             // =========================
             // 🏆 LEADERBOARDS
