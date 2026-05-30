@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Hogs.RPG.Bot.Autocomplete;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Raids;
 using Hogs.RPG.Data.Repositories;
@@ -9,6 +10,7 @@ using Hogs.RPG.Services.RaidServices;
 
 namespace Hogs.RPG.Bot.Commands
 {
+    [BossLock]
     public class ConvertModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly MaterialConversionService _conversionService;

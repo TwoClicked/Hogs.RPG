@@ -1,8 +1,10 @@
 ﻿using Discord.Interactions;
-using Hogs.RPG.Services.InventoryServices;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.InventoryServices;
 using System.Threading.Tasks;
 
+[BossLock]
 public class HealModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly HealService _healService;

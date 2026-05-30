@@ -3,6 +3,7 @@
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.GameData.Trails;
 using Hogs.RPG.Services.TrailServices;
 using System.Text;
@@ -10,6 +11,7 @@ using System.Text;
 namespace Hogs.RPG.Bot.Commands
 {
     [Group("trail", "The Ashwood Trail — hunt for tokens, gear and your companion")]
+    [BossLock]
     public class TrailModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly TrailService _trailService;

@@ -1,7 +1,9 @@
 ﻿using Discord.Interactions;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Services.GatheringServices;
 using System.Threading.Tasks;
 
+[BossLock]
 public class GatherModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly GatherService _gatherService;

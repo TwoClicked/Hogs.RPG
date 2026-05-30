@@ -1,10 +1,12 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Services.InventoryServices;
 using System.Text;
 
+[BossLock]
 public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly InventoryService _inventoryService;

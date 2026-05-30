@@ -1,13 +1,16 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Services.AuctionServices;
 using System.Text;
 
+
 namespace Hogs.RPG.Bot.Commands
 {
     [Group("market", "Player-to-player marketplace — list, bid and trade")]
+    [BossLock]
     public class MarketModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly PlayerAuctionService _marketService;

@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
@@ -16,6 +17,7 @@ using System.Threading.Tasks;
 
 namespace Hogs.RPG.Bot.Commands
 {
+    [BossLock]
     public class PlayerCommands : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly PlayerService _playerService;

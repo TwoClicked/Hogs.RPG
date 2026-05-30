@@ -1,13 +1,16 @@
 ﻿using Discord;
 using Discord.Interactions;
-using Hogs.RPG.Services.AlchemyServices;
-using Hogs.RPG.Services.InventoryServices;
+using Hogs.RPG.Bot.Preconditions;
+using Hogs.RPG.Core.GameData.Equipment;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Recipes;
-using Hogs.RPG.Core.GameData.Equipment;
+using Hogs.RPG.Services.AlchemyServices;
+using Hogs.RPG.Services.InventoryServices;
 using System.Text;
 
+
 [Group("alchemy", "Alchemy commands")]
+[BossLock]
 public class AlchemyModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly AlchemyService _alchemyService;

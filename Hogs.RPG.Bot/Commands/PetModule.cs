@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Services.PetServices;
 using System;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 
 namespace Hogs.RPG.Bot.Commands
 {
+    [BossLock]
     public class PetModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly PetService _petService;

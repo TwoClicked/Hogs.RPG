@@ -2,12 +2,14 @@
 
 using Discord;
 using Discord.Interactions;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Services.GameplayServices;
 using System.Text;
 
 namespace Hogs.RPG.Bot.Commands
 {
     [Group("gearset", "Manage your gear sets")]
+    [BossLock]
     public class GearSetModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly GearSetService _gearSetService;

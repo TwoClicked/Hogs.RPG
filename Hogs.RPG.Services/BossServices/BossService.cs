@@ -208,6 +208,11 @@ namespace Hogs.RPG.Services.Game
                    DateTime.UtcNow < _activeBosses[bossId].ExpireAt;
         }
 
+        public bool IsAnyBossActive()
+        {
+            return _activeBosses.Values.Any(b => !b.IsDead && DateTime.UtcNow < b.ExpireAt);
+        }
+
         public ActiveBoss GetActiveBoss(string bossId)
         {
             if (!_activeBosses.ContainsKey(bossId))

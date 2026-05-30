@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -8,6 +9,7 @@ using Hogs.RPG.Services.RaidServices;
 
 namespace Hogs.RPG.Bot.Commands
 {
+    [BossLock]
     public class RaidModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly RaidService _raidService;

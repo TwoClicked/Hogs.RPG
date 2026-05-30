@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.GameData.Equipment;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -7,6 +8,7 @@ using System.Text;
 
 namespace Hogs.RPG.Bot.Commands
 {
+    [BossLock]
     public class HunterModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly PlayerRepository _playerRepository;

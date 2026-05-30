@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -7,6 +8,7 @@ using Hogs.RPG.Services.RelicServices;
 
 namespace Hogs.RPG.Bot.Commands
 {
+    [BossLock]
     public class RelicModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly RelicService _relicService;

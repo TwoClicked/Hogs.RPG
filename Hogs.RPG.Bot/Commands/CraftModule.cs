@@ -1,16 +1,18 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Hogs.RPG.Bot.Preconditions;
+using Hogs.RPG.Core.GameData.Equipment;
+using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
-using Hogs.RPG.Core.GameData.InventoryItems;
-using Hogs.RPG.Core.GameData.Equipment;
-using System.Text;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Hogs.RPG.Bot.Commands
 {
+    [BossLock]
     public class CraftModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly CraftingService _craftingService;

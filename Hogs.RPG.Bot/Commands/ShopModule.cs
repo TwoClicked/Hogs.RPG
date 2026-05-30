@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.Shop;
@@ -10,6 +11,7 @@ using System.Text;
 
 namespace Hogs.RPG.Bot.Commands
 {
+    [BossLock]
     // =========================
     // PET RENAME MODAL
     // =========================
@@ -21,7 +23,7 @@ namespace Hogs.RPG.Bot.Commands
         [ModalTextInput("pet_name", placeholder: "Enter a name...", minLength: 1, maxLength: 32)]
         public string PetName { get; set; }
     }
-
+    [BossLock]
     public class ShopModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly ShopService _shopService;

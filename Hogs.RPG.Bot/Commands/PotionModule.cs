@@ -1,8 +1,10 @@
 ﻿using Discord.Interactions;
-using Hogs.RPG.Services.GameplayServices;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.GameplayServices;
 using System.Threading.Tasks;
 
+[BossLock]
 public class PotionModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly PotionService _potionService;

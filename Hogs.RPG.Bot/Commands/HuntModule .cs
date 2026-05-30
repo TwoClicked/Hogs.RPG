@@ -1,11 +1,13 @@
 ﻿using Discord.Interactions;
 using Hogs.RPG.Bot.Autocomplete;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Services.HuntServices;
 using System.Threading.Tasks;
 
 namespace Hogs.RPG.Bot.Commands
 {
+    [BossLock]
     public class HuntModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly HuntService _huntService;

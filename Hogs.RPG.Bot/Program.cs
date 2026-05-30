@@ -93,6 +93,7 @@ namespace Hogs.RPG.Bot
 
             _interactionService = _services.GetRequiredService<InteractionService>();
             _interactionService.Log += LogAsync;
+            _interactionService.SlashCommandExecuted += HandleSlashCommandExecuted;
 
             Console.WriteLine("[Init] Loading interaction modules...");
             await _interactionService.AddModulesAsync(typeof(Program).Assembly, _services);
@@ -180,6 +181,14 @@ namespace Hogs.RPG.Bot
             catch (Exception ex)
             {
                 Console.WriteLine($"[Interaction Error] {ex}");
+            }
+        }
+
+        private async Task HandleSlashCommandExecuted(SlashCommandInfo info, IInteractionContext context, IResult result)
+        {
+            if (!result.IsSuccess && result.Error == InteractionCommandError.UnmetPrecondition)
+            {
+                await context.Interaction.RespondAsync(result.ErrorReason, ephemeral: true);
             }
         }
 
