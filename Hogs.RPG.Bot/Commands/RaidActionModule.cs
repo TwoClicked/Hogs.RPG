@@ -295,15 +295,15 @@ namespace Hogs.RPG.Bot.Commands
                         .WithButton("⚔️ Attack", $"{prefix}:attack", ButtonStyle.Danger)
                         .WithButton("💀 Reckless", $"{prefix}:reckless", ButtonStyle.Danger,
                             disabled: participant.RecklessCooldownRoundsRemaining > 0)
-                        .WithButton("🎯 Focus", $"{prefix}:focus", ButtonStyle.Primary,
+                        .WithButton("🎯 Focus", $"{prefix}:focus", ButtonStyle.Danger,
                             disabled: participant.FocusStacks >= 2);
                     break;
 
                 case RaidRole.Tank:
                     builder
-                        .WithButton("🛡️ Hold", $"{prefix}:hold", ButtonStyle.Primary)
-                        .WithButton("📣 Taunt", $"{prefix}:taunt", ButtonStyle.Primary)
-                        .WithButton("💥 Shatter", $"{prefix}:shatter", ButtonStyle.Danger,
+                        .WithButton("🛡️ Hold", $"{prefix}:hold", ButtonStyle.Secondary)
+                        .WithButton("📣 Taunt", $"{prefix}:taunt", ButtonStyle.Secondary)
+                        .WithButton("💥 Shatter", $"{prefix}:shatter", ButtonStyle.Secondary,
                             disabled: participant.ShatterCooldownRoundsRemaining > 0);
                     break;
 
@@ -311,10 +311,10 @@ namespace Hogs.RPG.Bot.Commands
                     builder
                         .WithButton("💚 Heal", $"{prefix}:heal", ButtonStyle.Success)
                         .WithButton("🌿 Party Heal", $"{prefix}:party_heal", ButtonStyle.Success)
-                        .WithButton("⚡ Emergency Heal", $"{prefix}:emergency_heal", ButtonStyle.Danger,
+                        .WithButton("⚡ Emergency Heal", $"{prefix}:emergency_heal", ButtonStyle.Success,
                             disabled: participant.EmergencyHealCooldownRoundsRemaining > 0)
-                        .WithButton("✨ Empower ATK", $"{prefix}:empower_attack", ButtonStyle.Primary, row: 1)
-                        .WithButton("✨ Empower DEF", $"{prefix}:empower_defense", ButtonStyle.Primary, row: 1);
+                        .WithButton("✨ Empower ATK", $"{prefix}:empower_attack", ButtonStyle.Success, row: 1)
+                        .WithButton("✨ Empower DEF", $"{prefix}:empower_defense", ButtonStyle.Success, row: 1);
                     break;
             }
 
