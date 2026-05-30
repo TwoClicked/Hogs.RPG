@@ -65,6 +65,16 @@ namespace Hogs.RPG.Data.Repositories
         }
 
         // =========================
+        // GET ALL SLOT 1 SETS (for pre-boss auto-swap)
+        // =========================
+        public async Task<List<GearSet>> GetAllSlot1SetsAsync()
+        {
+            return await _context.GearSets
+                .Where(g => g.SetIndex == 1)
+                .ToListAsync();
+        }
+
+        // =========================
         // DELETE
         // =========================
         public async Task DeleteSetAsync(ulong discordId, int setIndex)

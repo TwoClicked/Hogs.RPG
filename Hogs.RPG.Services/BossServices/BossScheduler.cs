@@ -3,7 +3,9 @@ using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.PlayerServices;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 using static Hogs.RPG.Core.Entities.BossDefinition;
@@ -17,17 +19,17 @@ namespace Hogs.RPG.Services.Game
         private readonly PlayerService _playerService;
         private readonly PlayerRepository _playerRepository;
         private readonly BossStateRepository _bossStateRepository;
+        private readonly IServiceScopeFactory _scopeFactory;
 
         private readonly Random _random = new();
 
-        // Spawn hours (currently disabled logic below, but kept for later use)  
         private static readonly HashSet<int> SpawnHours = new() { 0, 3, 6, 9, 12, 15, 18, 21 };
 
         private readonly ulong _bossChannelId = 1485386835180916969;
         private readonly ulong _bossRoleId = 1485387222822948934;
 
-        // Prevent multiple spawns per day
         private HashSet<string> _spawnedToday = new();
+        private HashSet<string> _preWarnedToday = new();
 
         private DateTime _lastReset = DateTime.MinValue;
 
@@ -36,13 +38,15 @@ namespace Hogs.RPG.Services.Game
             DiscordSocketClient client,
             PlayerService playerService,
             PlayerRepository playerRepository,
-            BossStateRepository bossStateRepository)
+            BossStateRepository bossStateRepository,
+            IServiceScopeFactory scopeFactory)
         {
             _bossService = bossService;
             _client = client;
             _playerService = playerService;
             _playerRepository = playerRepository;
             _bossStateRepository = bossStateRepository;
+            _scopeFactory = scopeFactory;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -57,33 +61,30 @@ namespace Hogs.RPG.Services.Game
 
                 try
                 {
-                    // 🔥 Sync state from Google Sheets once per day (or first run)
+                    // Daily state reset
                     if (_lastReset.Date != now.Date)
                     {
-
                         try
                         {
                             await _bossStateRepository.ClearOldAsync(now);
                             _spawnedToday = await _bossStateRepository.LoadForDateAsync(now);
-
+                            _preWarnedToday = new HashSet<string>();
                             _lastReset = now.Date;
                         }
                         catch (Exception ex)
                         {
                             Console.WriteLine($"❌ Failed syncing boss state: {ex.Message}");
-
-                            // Fallback so system keeps working
                             _spawnedToday = new HashSet<string>();
+                            _preWarnedToday = new HashSet<string>();
                         }
                     }
 
-                    // 🔥 Run systems independently so one failure doesn't kill everything
+                    await HandlePreBossWarning(now);
                     await HandleDailyBosses(now);
                     await CleanupExpiredBosses();
                 }
                 catch (Exception ex)
                 {
-                    // 🔥 LAST LINE OF DEFENSE (should rarely hit now)
                     Console.WriteLine($"💥 Scheduler crash: {ex}");
                 }
 
@@ -92,22 +93,104 @@ namespace Hogs.RPG.Services.Game
         }
 
         // =========================
-        // DAILY
+        // PRE-BOSS WARNING + AUTO-SWAP
+        // Fires at minute 55 of the hour before each spawn hour.
+        // Sends one embed to the announce channel — no tags.
+        // =========================
+        private async Task HandlePreBossWarning(DateTime now)
+        {
+            int nextHour = (now.Hour + 1) % 24;
+
+            if (!SpawnHours.Contains(nextHour) || now.Minute < 55 || now.Minute > 56)
+                return;
+
+            var warnKey = $"prewarn_{now.Date:yyyyMMdd}_{nextHour}";
+            if (_preWarnedToday.Contains(warnKey))
+                return;
+
+            _preWarnedToday.Add(warnKey);
+
+            Console.WriteLine($"⚔️ Pre-boss warning for {nextHour:00}:00 — auto-swapping combat presets...");
+
+            var swappedNames = new List<string>();
+
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var gearSetRepo = scope.ServiceProvider.GetRequiredService<GearSetRepository>();
+                var gearSetService = scope.ServiceProvider.GetRequiredService<GearSetService>();
+                var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+
+                var presets = await gearSetRepo.GetAllSlot1SetsAsync();
+
+                Console.WriteLine($"   Found {presets.Count} player(s) with a combat preset.");
+
+                foreach (var preset in presets)
+                {
+                    try
+                    {
+                        await gearSetService.LoadSetAsync(preset.DiscordId, 1);
+
+                        var player = await playerRepo.GetByDiscordIdAsync(preset.DiscordId);
+                        swappedNames.Add(player?.Username ?? preset.DiscordId.ToString());
+
+                        Console.WriteLine($"   ✅ Swapped gear for {preset.DiscordId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"   ⚠️ Swap failed for {preset.DiscordId}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Pre-boss auto-swap failed: {ex.Message}");
+                return;
+            }
+
+            // Skip the announcement entirely if nobody had a preset saved
+            if (!swappedNames.Any())
+            {
+                Console.WriteLine("   No presets found — skipping pre-boss announcement.");
+                return;
+            }
+
+            var channel = _client.GetChannel(1485357755433750549) as IMessageChannel;
+            if (channel == null)
+            {
+                Console.WriteLine("❌ Announce channel not found for pre-boss warning.");
+                return;
+            }
+
+            var embed = new EmbedBuilder()
+                .WithTitle("⚔️ Boss incoming in 5 minutes!")
+                .WithColor(new Color(0xFF6600))
+                .AddField(
+                    "🛡️ Combat preset auto-equipped",
+                    string.Join(", ", swappedNames))
+                .AddField(
+                    "📋 Everyone else",
+                    "All other players' gear has been left untouched.")
+                .WithFooter("Save your fighter build to Gear Set 1 to be included next time.")
+                .Build();
+
+            await channel.SendMessageAsync(embed: embed);
+        }
+
+        // =========================
+        // DAILY BOSS SPAWN
         // =========================
         private async Task HandleDailyBosses(DateTime now)
         {
             Console.WriteLine("➡ Checking scheduled bosses...");
 
-            // ✅ Only allow spawn in first 2 minutes of valid hours (disabled for now)
-           if (!SpawnHours.Contains(now.Hour) || now.Minute >= 3)
-           {
-               Console.WriteLine($"   ❌ Outside spawn window ({now:HH:mm})");
-               return;
-           }
-           
-            // ✅ Prevent multiple spawns in same timeslot
-            var timeslotKey = $"timeslot_{now.Date:yyyyMMdd}_{now.Hour}";
+            if (!SpawnHours.Contains(now.Hour) || now.Minute >= 3)
+            {
+                Console.WriteLine($"   ❌ Outside spawn window ({now:HH:mm})");
+                return;
+            }
 
+            var timeslotKey = $"timeslot_{now.Date:yyyyMMdd}_{now.Hour}";
             if (_spawnedToday.Contains(timeslotKey))
             {
                 Console.WriteLine("   ❌ Already spawned this timeslot");
@@ -118,13 +201,12 @@ namespace Hogs.RPG.Services.Game
 
             try
             {
-
                 allDailyBosses = GlobalBossRegistry.GetByType(BossType.Daily);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Failed loading bosses: {ex.Message}");
-                return; // 🔥 DO NOT crash scheduler
+                return;
             }
 
             if (!allDailyBosses.Any())
@@ -133,7 +215,6 @@ namespace Hogs.RPG.Services.Game
                 return;
             }
 
-            // ✅ Filter out bosses already spawned today
             var availableBosses = allDailyBosses
                 .Where(b => !_spawnedToday.Contains(b.Id))
                 .ToList();
@@ -144,10 +225,8 @@ namespace Hogs.RPG.Services.Game
                 return;
             }
 
-            // 🎲 Random selection
             var selected = availableBosses[_random.Next(availableBosses.Count)];
 
-            // ✅ Safety check
             if (_bossService.IsBossActive(selected.Id))
             {
                 Console.WriteLine($"   ❌ Boss already active: {selected.Id}");
@@ -221,15 +300,10 @@ namespace Hogs.RPG.Services.Game
                     var message = await _bossService.HandleBossExpiryAsync(boss);
 
                     var channel = _client.GetChannel(boss.ChannelId) as IMessageChannel;
-
                     if (channel != null)
-                    {
                         await channel.SendMessageAsync(message);
-                    }
                     else
-                    {
                         Console.WriteLine($"⚠️ Missing channel for boss {boss.Definition.Name}");
-                    }
 
                     _bossService.RemoveBoss(boss.Definition.Id);
                 }
@@ -248,7 +322,6 @@ namespace Hogs.RPG.Services.Game
             Console.WriteLine($"📢 Announcing boss: {boss.Definition.Name}");
 
             var channel = _client.GetChannel(_bossChannelId) as IMessageChannel;
-
             if (channel == null)
             {
                 Console.WriteLine("❌ Announcement channel not found!");
@@ -256,7 +329,6 @@ namespace Hogs.RPG.Services.Game
             }
 
             var embed = _bossService.BuildBossEmbed(boss);
-
             var components = new ComponentBuilder()
                 .WithButton("⚔ Attack", $"boss_attack:{boss.Definition.Id}", ButtonStyle.Danger)
                 .Build();
@@ -264,8 +336,7 @@ namespace Hogs.RPG.Services.Game
             var msg = await channel.SendMessageAsync(
                 $"<@&{_bossRoleId}> **{boss.Definition.Name}** has appeared!\n{text}",
                 embed: embed,
-                components: components
-            );
+                components: components);
 
             boss.ChannelId = channel.Id;
             boss.MessageId = msg.Id;
