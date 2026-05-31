@@ -154,5 +154,63 @@ namespace Hogs.RPG.Data.Repositories
 
             return players;
         }
+
+
+        // =========================
+        // RANK QUERIES (position among all players)
+        // =========================
+
+        public async Task<int> GetRankByGoldAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p => p.Gold > player.Gold) + 1;
+        }
+
+        public async Task<int> GetRankByLevelAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p =>
+                p.Level > player.Level || (p.Level == player.Level && p.XP > player.XP)) + 1;
+        }
+
+        public async Task<int> GetRankByDungeonRunsAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p => p.DungeonRunsCompleted > player.DungeonRunsCompleted) + 1;
+        }
+
+        public async Task<int> GetRankByRaidsAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p => p.RaidsCompleted > player.RaidsCompleted) + 1;
+        }
+
+        public async Task<int> GetRankByBossDamageAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p => p.TotalBossDamage > player.TotalBossDamage) + 1;
+        }
+
+        public async Task<int> GetRankByDeathsAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p => p.Deaths > player.Deaths) + 1;
+        }
+
+        public async Task<int> GetRankByTrailsAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p => p.TrailsCompleted > player.TrailsCompleted) + 1;
+        }
+
+        public async Task<int> GetTotalPlayerCountAsync()
+            => await _context.Players.CountAsync();
     }
 }

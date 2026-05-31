@@ -6,6 +6,7 @@ using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.GatheringServices;
 using Hogs.RPG.Services.PetServices;
@@ -30,7 +31,7 @@ namespace Hogs.RPG.Bot.Commands
         private readonly DiscordSocketClient _client;
         private readonly PetService _petService;
         private readonly RelicService _relicService;
-
+        private readonly LeaderboardService _leaderboardService;
         public PlayerCommands(
             PlayerService playerService,
             PlayerRepository playerRepository,
@@ -41,7 +42,8 @@ namespace Hogs.RPG.Bot.Commands
             HunterStaminaService hungerStaminaService,
             DiscordSocketClient client,
             PetService petService,
-            RelicService relicService)
+            RelicService relicService,
+            LeaderboardService leaderboardService)
         {
             _playerService = playerService;
             _playerRepository = playerRepository;
@@ -53,6 +55,7 @@ namespace Hogs.RPG.Bot.Commands
             _client = client;
             _petService = petService;
             _relicService = relicService;
+            _leaderboardService = leaderboardService;
         }
 
         // =========================
@@ -281,6 +284,58 @@ namespace Hogs.RPG.Bot.Commands
 
             // Total fields with pet: 21. Without pet: 19. Both safely under Discord's 25-field limit.
             await FollowupAsync(embed: embed.Build());
+        }
+
+        // =========================
+        // MY STATS
+        // =========================
+        [SlashCommand("mystats", "See your stats and leaderboard rankings")]
+        public async Task MyStats()
+        {
+            await DeferAsync(ephemeral: true);
+
+            var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
+            if (player == null)
+            {
+                await ModifyOriginalResponseAsync(msg =>
+                    msg.Content = "⚠️ You haven't started your adventure yet. Use `/startadventure`.");
+                return;
+            }
+
+            var ranks = await _leaderboardService.GetPlayerRanksAsync(Context.User.Id);
+
+            string Rank(int r) => r <= 3
+                ? r switch { 1 => "👑 #1", 2 => "🥈 #2", 3 => "🥉 #3", _ => "" }
+                : $"#{r} / {ranks.TotalPlayers}";
+
+            var stats = _statService.CalculateStats(player);
+            int gearScore = stats.attack + stats.defense + stats.health;
+
+            var embed = new EmbedBuilder()
+                .WithTitle($"📊 {player.Username}'s Stats & Rankings")
+                .WithColor(new Color(0x5865F2))
+                .WithFooter("Only visible to you • Rankings update live")
+
+                // Row 1
+                .AddField("💰 Gold", $"{player.Gold:N0}\n{Rank(ranks.Gold)}", true)
+                .AddField("📈 Level", $"Lv. {player.Level}\n{Rank(ranks.Level)}", true)
+                .AddField("⚔️ Gear Score", $"{gearScore:N0}\n{Rank(ranks.GearScore)}", true)
+
+                // Row 2
+                .AddField("🏰 Dungeons", $"{player.DungeonRunsCompleted}\n{Rank(ranks.DungeonRuns)}", true)
+                .AddField("⚔️ Raids", $"{player.RaidsCompleted}\n{Rank(ranks.Raids)}", true)
+                .AddField("💥 Boss Damage", $"{player.TotalBossDamage:N0}\n{Rank(ranks.BossDamage)}", true)
+
+                // Row 3
+                .AddField("💀 Deaths", $"{player.Deaths}\n{Rank(ranks.Deaths)}", true)
+                .AddField("🏕️ Trails", $"{player.TrailsCompleted}\n{Rank(ranks.Trails)}", true)
+                .AddField("🐾 Pet Power", $"Rank: {Rank(ranks.PetGearScore)}", true);
+
+            await ModifyOriginalResponseAsync(msg =>
+            {
+                msg.Content = null;
+                msg.Embed = embed.Build();
+            });
         }
 
 

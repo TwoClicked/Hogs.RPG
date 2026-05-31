@@ -11,6 +11,20 @@ namespace Hogs.RPG.Services
 {
     public class LeaderboardService
     {
+
+        public record PlayerRanks(
+            int Gold,
+            int Level,
+            int GearScore,
+            int DungeonRuns,
+            int Raids,
+            int BossDamage,
+            int PetGearScore,
+            int Deaths,
+            int Trails,
+            int TotalPlayers
+        );
+
         private readonly PlayerRepository _playerRepository;
         private readonly PetRepository _petRepository;
         private readonly StatService _statService;
@@ -111,5 +125,40 @@ namespace Hogs.RPG.Services
         // =========================
         public async Task<List<Player>> GetTopTrails(int count = 5)
             => await _playerRepository.GetTopTrailsAsync(count);
+
+
+        //Player individual ranks across all categories
+        public async Task<PlayerRanks> GetPlayerRanksAsync(ulong discordId)
+        {
+            var total = await _playerRepository.GetTotalPlayerCountAsync();
+
+            var goldRank = await _playerRepository.GetRankByGoldAsync(discordId);
+            var levelRank = await _playerRepository.GetRankByLevelAsync(discordId);
+            var dungeonsRank = await _playerRepository.GetRankByDungeonRunsAsync(discordId);
+            var raidsRank = await _playerRepository.GetRankByRaidsAsync(discordId);
+            var bossDmgRank = await _playerRepository.GetRankByBossDamageAsync(discordId);
+            var deathsRank = await _playerRepository.GetRankByDeathsAsync(discordId);
+            var trailsRank = await _playerRepository.GetRankByTrailsAsync(discordId);
+
+            // Gear score rank — compute from buffered list (same as top-5 display)
+            var allForGear = await _playerRepository.GetTopForGearScoreAsync(1000);
+            var gearScores = allForGear
+                .Select(p => { var (atk, def, hp) = _statService.CalculateStats(p); return (p.DiscordId, score: atk + def + hp); })
+                .OrderByDescending(x => x.score)
+                .ToList();
+            var myGearScore = gearScores.FirstOrDefault(x => x.DiscordId == discordId);
+            int gearRank = myGearScore == default ? total : gearScores.IndexOf(myGearScore) + 1;
+
+            // Pet gear score rank
+            var allPets = await _petRepository.GetTopForPetGearScoreWithPlayerAsync(1000);
+            var petScores = allPets
+                .Select(p => (p.Player.DiscordId, score: _petService.GetPetGearScore(p)))
+                .OrderByDescending(x => x.score)
+                .ToList();
+            var myPet = petScores.FirstOrDefault(x => x.DiscordId == discordId);
+            int petRank = myPet == default ? total : petScores.IndexOf(myPet) + 1;
+
+            return new PlayerRanks(goldRank, levelRank, gearRank, dungeonsRank, raidsRank, bossDmgRank, petRank, deathsRank, trailsRank, total);
+        }
     }
 }
