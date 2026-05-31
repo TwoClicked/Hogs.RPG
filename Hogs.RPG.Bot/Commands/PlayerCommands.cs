@@ -311,6 +311,12 @@ namespace Hogs.RPG.Bot.Commands
             var stats = _statService.CalculateStats(player);
             int gearScore = stats.attack + stats.defense + stats.health;
 
+            // Pet score for display
+            var equippedPet = await _petService.GetEquippedPetAsync(Context.User.Id);
+            string petPowerValue = equippedPet != null
+                ? $"{_petService.GetPetGearScore(equippedPet):N0}\n{Rank(ranks.PetGearScore)}"
+                : $"No pet\n{Rank(ranks.PetGearScore)}";
+
             var embed = new EmbedBuilder()
                 .WithTitle($"📊 {player.Username}'s Stats & Rankings")
                 .WithColor(new Color(0x5865F2))
@@ -329,7 +335,7 @@ namespace Hogs.RPG.Bot.Commands
                 // Row 3
                 .AddField("💀 Deaths", $"{player.Deaths}\n{Rank(ranks.Deaths)}", true)
                 .AddField("🏕️ Trails", $"{player.TrailsCompleted}\n{Rank(ranks.Trails)}", true)
-                .AddField("🐾 Pet Power", $"Rank: {Rank(ranks.PetGearScore)}", true);
+                .AddField("🐾 Pet Power", petPowerValue, true);
 
             await ModifyOriginalResponseAsync(msg =>
             {
