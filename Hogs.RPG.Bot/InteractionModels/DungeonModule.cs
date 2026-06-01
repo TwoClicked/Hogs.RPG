@@ -1,11 +1,13 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Services.Game;
 using System.Threading.Tasks;
 
 namespace Hogs.RPG.Bot.InteractionModels
 {
+    [BossLock]
     public class DungeonModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly DungeonService _dungeonService;

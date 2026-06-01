@@ -1,12 +1,14 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Services.DungeonServices;
 using Hogs.RPG.Services.PetServices;
 
 namespace Hogs.RPG.Bot.InteractionModels
 {
+    [BossLock]
     public class PetDungeonModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly PetDungeonService _petDungeonService;
