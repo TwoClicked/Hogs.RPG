@@ -17,6 +17,7 @@ namespace Hogs.RPG.Services.RaidServices
         private readonly DiscordSocketClient _client;
 
         private const int RoundTimeoutMinutes = 5;
+        private DateTime _lastCleanupDate = DateTime.MinValue;
 
         public RaidTimerService(IServiceScopeFactory scopeFactory, DiscordSocketClient client)
         {
@@ -40,7 +41,73 @@ namespace Hogs.RPG.Services.RaidServices
                 {
                     Console.WriteLine($"❌ RaidTimerService error: {ex.Message}");
                 }
+
+                // Run thread cleanup once daily at 03:00 UTC
+                try
+                {
+                    var now = DateTime.UtcNow;
+                    if (now.Hour == 3 && _lastCleanupDate.Date != now.Date)
+                    {
+                        _lastCleanupDate = now;
+                        await CleanupCompletedRaidsAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ RaidTimerService cleanup error: {ex.Message}");
+                }
             }
+        }
+
+        // =========================
+        // 🧹 DAILY THREAD CLEANUP
+        // Runs at 03:00 UTC. Deletes Discord threads and DB records for all
+        // completed (Victory/Wiped) raid sessions.
+        // =========================
+        private async Task CleanupCompletedRaidsAsync()
+        {
+            Console.WriteLine("🧹 Running daily raid thread cleanup...");
+
+            using var scope = _scopeFactory.CreateScope();
+            var raidRepo = scope.ServiceProvider.GetRequiredService<RaidRepository>();
+
+            var completedSessions = await raidRepo.GetCompletedSessionsAsync();
+
+            int deleted = 0;
+            int failed = 0;
+
+            foreach (var session in completedSessions)
+            {
+                // Delete the Discord thread if it exists
+                if (session.ThreadId != 0)
+                {
+                    try
+                    {
+                        var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
+                        if (thread != null)
+                            await thread.DeleteAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"⚠️ Could not delete thread {session.ThreadId}: {ex.Message}");
+                        failed++;
+                    }
+                }
+
+                // Delete the session record from the DB
+                try
+                {
+                    await raidRepo.DeleteSessionAsync(session.Id);
+                    deleted++;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Could not delete session {session.Id}: {ex.Message}");
+                    failed++;
+                }
+            }
+
+            Console.WriteLine($"✅ Raid cleanup complete — {deleted} sessions removed, {failed} failed.");
         }
 
         private async Task CheckExpiredRoundsAsync()

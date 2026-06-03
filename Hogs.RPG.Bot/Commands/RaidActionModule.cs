@@ -43,8 +43,6 @@ namespace Hogs.RPG.Bot.Commands
                 return;
             }
 
-            // Read the player's stored action message ID BEFORE submitting,
-            // so we know which message to edit in place.
             var participant = currentSession.Participants.FirstOrDefault(p => p.DiscordId == Context.User.Id);
             if (participant == null)
             {
@@ -53,7 +51,6 @@ namespace Hogs.RPG.Bot.Commands
             }
 
             bool isReselect = participant.HasActedThisRound;
-            ulong existingMessageId = participant.ActionMessageId;
 
             var (success, message, roundResult) = await _raidService.SubmitActionAsync(
                 Context.User.Id, sessionId, action);
@@ -67,12 +64,11 @@ namespace Hogs.RPG.Bot.Commands
             if (roundResult == null)
             {
                 // =========================
-                // WAITING FOR OTHER PLAYERS
-                // Edit the player's own action message in place to show their
-                // current selection and who else has acted.
+                // POST STATUS TO BOTTOM OF CHAT
+                // Shows the current round state after each action or re-selection.
                 // =========================
                 var thread = Context.Channel as IThreadChannel;
-                if (thread != null && existingMessageId != 0)
+                if (thread != null)
                 {
                     var freshSession = await _raidService.GetSessionAsync(sessionId);
                     if (freshSession != null)
@@ -124,31 +120,11 @@ namespace Hogs.RPG.Bot.Commands
                                 : $"{roleIcon} **{p.Role}** — ⏳ Waiting...";
                         });
 
-                        var updatedParticipant = freshSession.Participants.First(p => p.DiscordId == Context.User.Id);
-                        var actionButtons = BuildActionButtonsForRole(sessionId, freshSession.CurrentRound, updatedParticipant);
+                        string prefix = isReselect ? "🔄 Action changed" : "✅ Action selected";
 
-                        string prefix = isReselect ? "🔄" : "✅";
-                        string newContent =
-                            $"<@{Context.User.Id}> — Round {freshSession.CurrentRound} actions ({updatedParticipant.Role}):\n" +
-                            $"{prefix} **Selected: {actionLabel}**\n\n" +
-                            string.Join("\n", statusLines);
-
-                        try
-                        {
-                            var existingMsg = await thread.GetMessageAsync(existingMessageId) as IUserMessage;
-                            if (existingMsg != null)
-                            {
-                                await existingMsg.ModifyAsync(m =>
-                                {
-                                    m.Content = newContent;
-                                    m.Components = actionButtons;
-                                });
-                            }
-                        }
-                        catch
-                        {
-                            // If edit fails (message deleted etc.), fall through silently
-                        }
+                        await thread.SendMessageAsync(
+                            $"{prefix} — <@{Context.User.Id}> chose **{actionLabel}**\n\n" +
+                            string.Join("\n", statusLines));
                     }
                 }
 
@@ -236,7 +212,6 @@ namespace Hogs.RPG.Bot.Commands
                     ? "Your party was defeated. Better luck next time!"
                     : result.WipeReason);
 
-                // Show potion costs settled on wipe too
                 bool anyPotionCosts = result.Rewards.Any(r => r.PotionsPaid > 0 || r.PotionDebt > 0);
                 if (anyPotionCosts)
                 {
@@ -308,7 +283,7 @@ namespace Hogs.RPG.Bot.Commands
             await thread.SendMessageAsync(embed: roundEmbed.Build());
 
             // Post fresh action buttons per player for the new round.
-            // Store the message ID so re-selection can edit it in place next round.
+            // Store the message ID so re-selection can still track the message.
             var freshSession = await _raidService.GetSessionAsync(sessionId);
             if (freshSession == null) return;
 

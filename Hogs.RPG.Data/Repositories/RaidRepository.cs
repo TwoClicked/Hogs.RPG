@@ -157,5 +157,18 @@ namespace Hogs.RPG.Data.Repositories
             await _context.Database.ExecuteSqlRawAsync(
             "SELECT pg_advisory_xact_lock({0})", sessionId);
         }
+
+        // =========================
+        // GET ALL COMPLETED SESSIONS
+        // Used by the daily thread cleanup job
+        // =========================
+        public async Task<List<RaidSession>> GetCompletedSessionsAsync()
+        {
+            return await _context.RaidSessions
+                .Include(s => s.Participants)
+                .Where(s => s.Status == RaidStatus.Victory || s.Status == RaidStatus.Wiped)
+                .ToListAsync();
+        }
+
     }
 }
