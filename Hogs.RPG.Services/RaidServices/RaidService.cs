@@ -33,6 +33,7 @@ namespace Hogs.RPG.Services.RaidServices
         private const int RaidPetXpReward = 100;
         private const int WipeGoldPenalty = 1000;
         private const float RelicShardDropChance = 0.03f;
+        private const int PotionGoldFallback = 500;
 
         public RaidService(
             RaidRepository raidRepo,
@@ -294,6 +295,8 @@ namespace Hogs.RPG.Services.RaidServices
 
         // =========================
         // ⚔️ SUBMIT ACTION
+        // Allows re-selection: if already acted this round, update PendingAction
+        // and re-check if all players have now acted (to handle unstuck scenarios).
         // =========================
         public async Task<(bool success, string message, RaidRoundResult? roundResult)> SubmitActionAsync(
             ulong discordId, int sessionId, string action)
@@ -311,11 +314,10 @@ namespace Hogs.RPG.Services.RaidServices
             if (participant == null)
                 return (false, "❌ You are not in this raid.", null);
 
-            if (participant.HasActedThisRound)
-                return (false, "⏳ You have already submitted your action this round.", null);
-
             if (!IsValidAction(participant.Role, action))
                 return (false, "❌ Invalid action for your role.", null);
+
+            bool isReselect = participant.HasActedThisRound;
 
             participant.HasActedThisRound = true;
             participant.PendingAction = action;
@@ -328,7 +330,11 @@ namespace Hogs.RPG.Services.RaidServices
                 return (true, "✅ Round resolved!", result);
             }
 
-            return (true, "✅ Action submitted! Waiting for other players.", null);
+            string feedback = isReselect
+                ? "🔄 Action updated! Waiting for other players."
+                : "✅ Action submitted! Waiting for other players.";
+
+            return (true, feedback, null);
         }
 
         // =========================
@@ -491,6 +497,8 @@ namespace Hogs.RPG.Services.RaidServices
 
             // =========================
             // PROCESS HEALER ACTION
+            // Potions are tracked on the session and settled at raid end —
+            // they are NOT deducted from the healer's inventory mid-raid.
             // =========================
             if (healer.PendingAction == "heal")
             {
@@ -511,7 +519,7 @@ namespace Hogs.RPG.Services.RaidServices
 
                     bool savedPotion = _random.NextDouble() < relicBonuses.ChanceToSavePotion;
                     if (!savedPotion)
-                        await _inventoryRepo.RemoveItemAsync(healer.DiscordId, "health_potion", 1);
+                        session.PotionsConsumedThisRaid += 1;
 
                     result.HealerText = savedPotion
                         ? $"💚 Healer restored **{healAmount} HP** to the {target.Role}! ✨ Potion saved!"
@@ -538,7 +546,7 @@ namespace Hogs.RPG.Services.RaidServices
                         p.CurrentHp = Math.Min(p.MaxHp, p.CurrentHp + healAmount);
                     }
 
-                    await _inventoryRepo.RemoveItemAsync(healer.DiscordId, "health_potion", 2);
+                    session.PotionsConsumedThisRaid += 2;
                     result.HealerText = $"🌿 Party Heal! All members restored **{(int)(session.Participants.Average(p => p.MaxHp) * healPercent)} HP** each. (2 potions used)";
                 }
                 else
@@ -563,7 +571,7 @@ namespace Hogs.RPG.Services.RaidServices
                         .First();
 
                     target.CurrentHp = target.MaxHp;
-                    await _inventoryRepo.RemoveItemAsync(healer.DiscordId, "health_potion", 3);
+                    session.PotionsConsumedThisRaid += 3;
                     healer.EmergencyHealCooldownRoundsRemaining = 10;
                     result.HealerText = $"⚡ Emergency Heal! **{target.Role}** fully restored to **{target.MaxHp} HP**! (3 potions used, 10 round cooldown)";
                 }
@@ -739,6 +747,7 @@ namespace Hogs.RPG.Services.RaidServices
             {
                 p.HasActedThisRound = false;
                 p.PendingAction = null;
+                p.ActionMessageId = 0;
             }
 
             // =========================
@@ -837,6 +846,70 @@ namespace Hogs.RPG.Services.RaidServices
         }
 
         // =========================
+        // 💊 SETTLE POTION COSTS
+        // Called at raid end (victory or wipe). Splits total potions used across party.
+        // Remainder assigned DPS-first, then Tank, then Healer.
+        // If a player has no potions they pay 500g per potion owed (can go negative).
+        // =========================
+        private async Task SettlePotionCostsAsync(RaidSession session, RaidRoundResult result)
+        {
+            int total = session.PotionsConsumedThisRaid;
+            if (total <= 0) return;
+
+            int perPlayer = total / 3;
+            int remainder = total % 3;
+
+            var dps = session.Participants.First(p => p.Role == RaidRole.Dps);
+            var tank = session.Participants.First(p => p.Role == RaidRole.Tank);
+            var healer = session.Participants.First(p => p.Role == RaidRole.Healer);
+
+            // DPS gets +1 if remainder >= 1, Tank gets +1 if remainder >= 2
+            var assignments = new[]
+            {
+                (dps,    perPlayer + (remainder >= 1 ? 1 : 0)),
+                (tank,   perPlayer + (remainder >= 2 ? 1 : 0)),
+                (healer, perPlayer)
+            };
+
+            foreach (var (participant, owed) in assignments)
+            {
+                if (owed <= 0) continue;
+
+                var inventory = await _inventoryRepo.GetInventoryAsync(participant.DiscordId);
+                var potion = inventory.FirstOrDefault(i => i.ItemId == "health_potion");
+                int available = potion?.Quantity ?? 0;
+
+                int potionsPaid = Math.Min(available, owed);
+                int shortfall = owed - potionsPaid;
+
+                if (potionsPaid > 0)
+                    await _inventoryRepo.RemoveItemAsync(participant.DiscordId, "health_potion", potionsPaid);
+
+                if (shortfall > 0)
+                {
+                    int goldCharge = shortfall * PotionGoldFallback;
+                    var player = await _playerRepo.GetByDiscordIdAsync(participant.DiscordId);
+                    if (player != null)
+                    {
+                        player.Gold -= goldCharge;
+                        await _playerRepo.UpdatePlayerAsync(player);
+                    }
+
+                    var reward = result.Rewards.FirstOrDefault(r => r.DiscordId == participant.DiscordId);
+                    if (reward != null)
+                    {
+                        reward.PotionDebt = shortfall;
+                        reward.GoldChargedForPotions = goldCharge;
+                    }
+                }
+
+                var rewardEntry = result.Rewards.FirstOrDefault(r => r.DiscordId == participant.DiscordId);
+                if (rewardEntry != null)
+                    rewardEntry.PotionsPaid = potionsPaid;
+            }
+        }
+
+        // =========================
         // 🏆 VICTORY
         // =========================
         private async Task HandleVictoryAsync(RaidSession session, RaidRoundResult result)
@@ -895,6 +968,9 @@ namespace Hogs.RPG.Services.RaidServices
                 });
             }
 
+            // Settle potion costs across the party now that Rewards list is populated
+            await SettlePotionCostsAsync(session, result);
+
             await _raidRepo.SaveSessionAsync(session);
         }
 
@@ -930,7 +1006,19 @@ namespace Hogs.RPG.Services.RaidServices
                 player.Health = maxHp;
 
                 await _playerRepo.UpdatePlayerAsync(player);
+
+                result.Rewards.Add(new RaidReward
+                {
+                    DiscordId = p.DiscordId,
+                    Role = p.Role,
+                    Gold = 0,
+                    PlayerXp = 0,
+                    PetXp = 0
+                });
             }
+
+            // Settle potion costs even on wipe — the healer used them
+            await SettlePotionCostsAsync(session, result);
 
             await _raidRepo.SaveSessionAsync(session);
         }
@@ -940,6 +1028,21 @@ namespace Hogs.RPG.Services.RaidServices
             var session = await _raidRepo.GetSessionAsync(sessionId);
             if (session == null) return;
             session.RoundStatusMessageId = messageId;
+            await _raidRepo.SaveSessionAsync(session);
+        }
+
+        // =========================
+        // 💬 UPDATE ACTION MESSAGE ID
+        // Stores the Discord message ID of a player's action button message
+        // so it can be edited in place when they change their action.
+        // =========================
+        public async Task UpdateParticipantActionMessageIdAsync(int sessionId, ulong discordId, ulong messageId)
+        {
+            var session = await _raidRepo.GetSessionAsync(sessionId);
+            if (session == null) return;
+            var participant = session.Participants.FirstOrDefault(p => p.DiscordId == discordId);
+            if (participant == null) return;
+            participant.ActionMessageId = messageId;
             await _raidRepo.SaveSessionAsync(session);
         }
 
@@ -973,6 +1076,11 @@ namespace Hogs.RPG.Services.RaidServices
         public async Task<RaidSession?> GetActiveByThreadAsync(ulong threadId)
         {
             return await _raidRepo.GetActiveByThreadAsync(threadId);
+        }
+
+        public async Task<RaidSession?> GetLobbyByChannelAsync(ulong channelId)
+        {
+            return await _raidRepo.GetLobbyByChannelAsync(channelId);
         }
 
         public async Task<RaidRoundResult> ForceResolveRoundAsync(int sessionId)

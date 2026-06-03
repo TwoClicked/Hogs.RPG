@@ -19,6 +19,10 @@ namespace Hogs.RPG.Core.Entities
         public bool HasActedThisRound { get; set; } = false;
         public string? PendingAction { get; set; } = null;
 
+        // The message ID of this player's action button message for the current round.
+        // Stored so we can edit it in-place when the player changes their action.
+        public ulong ActionMessageId { get; set; } = 0;
+
         public int ShatterCooldownRoundsRemaining { get; set; } = 0;
         public int RecklessCooldownRoundsRemaining { get; set; } = 0;
         public int FocusCooldownRoundsRemaining { get; set; } = 0;

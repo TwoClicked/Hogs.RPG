@@ -272,14 +272,16 @@ namespace Hogs.RPG.Bot.Commands
                     string.Join(" ", freshSession.Participants.Select(p => $"<@{p.DiscordId}>")),
                     embed: embed);
 
-                // Post individual action message per player in thread
+                // Post individual action message per player in thread.
+                // Store the message ID so re-selection can edit it in place.
                 foreach (var participant in freshSession.Participants)
                 {
                     var actionComponents = BuildActionButtonsForRole(sessionId, freshSession.CurrentRound, participant);
-
-                    await thread.SendMessageAsync(
+                    var msg = await thread.SendMessageAsync(
                         $"<@{participant.DiscordId}> — Your actions ({participant.Role}):",
                         components: actionComponents);
+
+                    await _raidService.UpdateParticipantActionMessageIdAsync(sessionId, participant.DiscordId, msg.Id);
                 }
             }
 

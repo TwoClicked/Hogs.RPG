@@ -23,6 +23,10 @@ namespace Hogs.RPG.Core.Entities
         public ulong RoundStatusMessageId { get; set; } = 0;
         public int LastAggroSwapRound { get; set; } = 0;
 
+        // Running total of potions consumed by the healer across the entire raid.
+        // Settled at raid end (victory or wipe) and split across the party.
+        public int PotionsConsumedThisRaid { get; set; } = 0;
+
         // Stored in DB as serialized string
         public string ActiveEffectsData { get; set; } = "";
 

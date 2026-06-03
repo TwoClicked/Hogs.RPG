@@ -1,9 +1,4 @@
 ﻿using Hogs.RPG.Core.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hogs.RPG.Services.RaidServices
 {
@@ -17,5 +12,10 @@ namespace Hogs.RPG.Services.RaidServices
         public bool ShardDropped { get; set; }
         public int ShardTier { get; set; }
         public string LevelUpMessage { get; set; } = "";
+
+        // Potion settlement at raid end
+        public int PotionsPaid { get; set; } = 0;
+        public int PotionDebt { get; set; } = 0;
+        public int GoldChargedForPotions { get; set; } = 0;
     }
 }

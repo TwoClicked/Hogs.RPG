@@ -43,6 +43,18 @@ namespace Hogs.RPG.Bot.Commands
                 return;
             }
 
+            // Read the player's stored action message ID BEFORE submitting,
+            // so we know which message to edit in place.
+            var participant = currentSession.Participants.FirstOrDefault(p => p.DiscordId == Context.User.Id);
+            if (participant == null)
+            {
+                await FollowupAsync("❌ You are not in this raid.", ephemeral: true);
+                return;
+            }
+
+            bool isReselect = participant.HasActedThisRound;
+            ulong existingMessageId = participant.ActionMessageId;
+
             var (success, message, roundResult) = await _raidService.SubmitActionAsync(
                 Context.User.Id, sessionId, action);
 
@@ -56,16 +68,32 @@ namespace Hogs.RPG.Bot.Commands
             {
                 // =========================
                 // WAITING FOR OTHER PLAYERS
-                // Post a public status board so everyone can see who has acted —
-                // prevents the double-press lobby lock bug.
+                // Edit the player's own action message in place to show their
+                // current selection and who else has acted.
                 // =========================
                 var thread = Context.Channel as IThreadChannel;
-                if (thread != null)
+                if (thread != null && existingMessageId != 0)
                 {
-                    var session = await _raidService.GetActiveByThreadAsync(thread.Id);
-                    if (session != null)
+                    var freshSession = await _raidService.GetSessionAsync(sessionId);
+                    if (freshSession != null)
                     {
-                        var statusLines = session.Participants.Select(p =>
+                        string actionLabel = action switch
+                        {
+                            "attack" => "⚔️ Attack",
+                            "reckless" => "💀 Reckless",
+                            "focus" => "🎯 Focus",
+                            "hold" => "🛡️ Hold",
+                            "taunt" => "📣 Taunt",
+                            "shatter" => "💥 Shatter",
+                            "heal" => "💚 Heal",
+                            "party_heal" => "🌿 Party Heal",
+                            "emergency_heal" => "⚡ Emergency Heal",
+                            "empower_attack" => "✨ Empower ATK",
+                            "empower_defense" => "✨ Empower DEF",
+                            _ => action
+                        };
+
+                        var statusLines = freshSession.Participants.Select(p =>
                         {
                             string roleIcon = p.Role switch
                             {
@@ -75,7 +103,7 @@ namespace Hogs.RPG.Bot.Commands
                                 _ => "❓"
                             };
 
-                            string actionLabel = p.PendingAction switch
+                            string pActionLabel = p.PendingAction switch
                             {
                                 "attack" => "⚔️ Attack",
                                 "reckless" => "💀 Reckless",
@@ -92,18 +120,39 @@ namespace Hogs.RPG.Bot.Commands
                             };
 
                             return p.HasActedThisRound
-                                ? $"{roleIcon} **{p.Role}** — {actionLabel} ✅"
+                                ? $"{roleIcon} **{p.Role}** — {pActionLabel} ✅"
                                 : $"{roleIcon} **{p.Role}** — ⏳ Waiting...";
                         });
 
-                        // Public — all players in the thread can see who has acted
-                        await thread.SendMessageAsync(
-                            $"🎯 **<@{Context.User.Id}> chose an action!**\n\n" +
-                            string.Join("\n", statusLines));
+                        var updatedParticipant = freshSession.Participants.First(p => p.DiscordId == Context.User.Id);
+                        var actionButtons = BuildActionButtonsForRole(sessionId, freshSession.CurrentRound, updatedParticipant);
+
+                        string prefix = isReselect ? "🔄" : "✅";
+                        string newContent =
+                            $"<@{Context.User.Id}> — Round {freshSession.CurrentRound} actions ({updatedParticipant.Role}):\n" +
+                            $"{prefix} **Selected: {actionLabel}**\n\n" +
+                            string.Join("\n", statusLines);
+
+                        try
+                        {
+                            var existingMsg = await thread.GetMessageAsync(existingMessageId) as IUserMessage;
+                            if (existingMsg != null)
+                            {
+                                await existingMsg.ModifyAsync(m =>
+                                {
+                                    m.Content = newContent;
+                                    m.Components = actionButtons;
+                                });
+                            }
+                        }
+                        catch
+                        {
+                            // If edit fails (message deleted etc.), fall through silently
+                        }
                     }
                 }
 
-                await FollowupAsync("✅ Action locked in!", ephemeral: true);
+                await FollowupAsync(message, ephemeral: true);
                 return;
             }
 
@@ -150,6 +199,15 @@ namespace Hogs.RPG.Bot.Commands
                         sb.AppendLine($"  💎 Relic Shard (Tier {reward.ShardTier}) dropped!");
                     if (!string.IsNullOrEmpty(reward.LevelUpMessage))
                         sb.AppendLine($"  🎊 {reward.LevelUpMessage}");
+
+                    // Potion settlement line
+                    if (reward.PotionsPaid > 0 && reward.PotionDebt > 0)
+                        sb.AppendLine($"  🧪 {reward.PotionsPaid} potion(s) contributed · {reward.PotionDebt} short → **-{reward.GoldChargedForPotions:N0}g**");
+                    else if (reward.PotionsPaid > 0)
+                        sb.AppendLine($"  🧪 {reward.PotionsPaid} potion(s) contributed");
+                    else if (reward.PotionDebt > 0)
+                        sb.AppendLine($"  🧪 No potions — **-{reward.GoldChargedForPotions:N0}g** ({reward.PotionDebt} owed)");
+
                     sb.AppendLine();
                 }
 
@@ -173,12 +231,38 @@ namespace Hogs.RPG.Bot.Commands
             // =========================
             if (result.IsWipe)
             {
+                var wipeDesc = new StringBuilder();
+                wipeDesc.AppendLine(string.IsNullOrEmpty(result.WipeReason)
+                    ? "Your party was defeated. Better luck next time!"
+                    : result.WipeReason);
+
+                // Show potion costs settled on wipe too
+                bool anyPotionCosts = result.Rewards.Any(r => r.PotionsPaid > 0 || r.PotionDebt > 0);
+                if (anyPotionCosts)
+                {
+                    wipeDesc.AppendLine("\n🧪 **Potion costs settled:**");
+                    foreach (var reward in result.Rewards)
+                    {
+                        string roleIcon = reward.Role switch
+                        {
+                            RaidRole.Tank => "🛡️",
+                            RaidRole.Dps => "⚔️",
+                            RaidRole.Healer => "💚",
+                            _ => "❓"
+                        };
+
+                        if (reward.PotionsPaid > 0 && reward.PotionDebt > 0)
+                            wipeDesc.AppendLine($"{roleIcon} <@{reward.DiscordId}>: {reward.PotionsPaid} potion(s) · {reward.PotionDebt} short → **-{reward.GoldChargedForPotions:N0}g**");
+                        else if (reward.PotionsPaid > 0)
+                            wipeDesc.AppendLine($"{roleIcon} <@{reward.DiscordId}>: {reward.PotionsPaid} potion(s)");
+                        else if (reward.PotionDebt > 0)
+                            wipeDesc.AppendLine($"{roleIcon} <@{reward.DiscordId}>: No potions — **-{reward.GoldChargedForPotions:N0}g**");
+                    }
+                }
+
                 var wipeEmbed = new EmbedBuilder()
                     .WithTitle("💀 Raid Wipe")
-                    .WithDescription(
-                        string.IsNullOrEmpty(result.WipeReason)
-                            ? "Your party was defeated. Better luck next time!"
-                            : result.WipeReason)
+                    .WithDescription(wipeDesc.ToString().Trim())
                     .WithColor(Color.DarkRed)
                     .Build();
 
@@ -223,16 +307,19 @@ namespace Hogs.RPG.Bot.Commands
 
             await thread.SendMessageAsync(embed: roundEmbed.Build());
 
-            // Post fresh action buttons per player for the new round
+            // Post fresh action buttons per player for the new round.
+            // Store the message ID so re-selection can edit it in place next round.
             var freshSession = await _raidService.GetSessionAsync(sessionId);
             if (freshSession == null) return;
 
             foreach (var participant in freshSession.Participants)
             {
                 var actionComponents = BuildActionButtonsForRole(sessionId, freshSession.CurrentRound, participant);
-                await thread.SendMessageAsync(
+                var msg = await thread.SendMessageAsync(
                     $"<@{participant.DiscordId}> — Round {freshSession.CurrentRound} actions ({participant.Role}):",
                     components: actionComponents);
+
+                await _raidService.UpdateParticipantActionMessageIdAsync(sessionId, participant.DiscordId, msg.Id);
             }
         }
 
@@ -311,7 +398,7 @@ namespace Hogs.RPG.Bot.Commands
                     builder
                         .WithButton("💚 Heal", $"{prefix}:heal", ButtonStyle.Success)
                         .WithButton("🌿 Party Heal", $"{prefix}:party_heal", ButtonStyle.Success)
-                        .WithButton("⚡ Emergency Heal", $"{prefix}:emergency_heal", ButtonStyle.Success,
+                        .WithButton("⚡ Emergency", $"{prefix}:emergency_heal", ButtonStyle.Success,
                             disabled: participant.EmergencyHealCooldownRoundsRemaining > 0)
                         .WithButton("✨ Empower ATK", $"{prefix}:empower_attack", ButtonStyle.Success, row: 1)
                         .WithButton("✨ Empower DEF", $"{prefix}:empower_defense", ButtonStyle.Success, row: 1);
