@@ -16,6 +16,7 @@ namespace Hogs.RPG.Data
         public DbSet<RaidSession> RaidSessions { get; set; }
         public DbSet<RaidParticipant> RaidParticipants { get; set; }
         public DbSet<GearSet> GearSets { get; set; }
+        public DbSet<SmithingShopListing> SmithingShopListings { get; set; }
 
         // Player-to-player marketplace listings
         public DbSet<PlayerAuctionListing> PlayerAuctionListings { get; set; }
@@ -66,6 +67,10 @@ namespace Hogs.RPG.Data
                 .WithMany()
                 .HasForeignKey(g => g.DiscordId)
                 .HasPrincipalKey(p => p.DiscordId);
+
+            modelBuilder.Entity<SmithingShopListing>()
+                .HasIndex(x => new { x.DiscordId, x.ItemId })
+                .IsUnique();
         }
     }
 }

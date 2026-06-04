@@ -92,6 +92,22 @@ namespace Hogs.RPG.Core.Entities
         public bool HasHunterSetBonus { get; set; } = false;
 
         // =========================
+        // BLACKSMITH
+        // =========================
+
+        // Smithing level — starts at 1, max 99
+        public int SmithingLevel { get; set; } = 1;
+
+        // Smithing XP — accumulates toward next level
+        public int SmithingXP { get; set; } = 0;
+
+        // Gold earned from NPC shop today — resets at 12 UTC
+        public int SmithingEarnedToday { get; set; } = 0;
+
+        // Date of last NPC shop reset — used to reset SmithingEarnedToday
+        public string? SmithingLastReset { get; set; }
+
+        // =========================
         // 🔄 BUFF SERIALIZATION
         // =========================
         public void DeserializeBuffs()

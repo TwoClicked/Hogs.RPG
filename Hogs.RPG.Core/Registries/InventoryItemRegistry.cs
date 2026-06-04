@@ -1,5 +1,6 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.Equipment;
+using Hogs.RPG.Core.GameData.Smithing;
 using System.Collections.Generic;
 
 namespace Hogs.RPG.Core.GameData.InventoryItems
@@ -158,6 +159,23 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             { RaidKeyItems.FortressKey.Id, RaidKeyItems.FortressKey },
             { RaidKeyItems.CitadelKey.Id, RaidKeyItems.CitadelKey },
             { RaidKeyItems.WorldBossKey.Id, RaidKeyItems.WorldBossKey },
+
+                        // ===== Smithing Ores =====
+            { OreItems.BronzeOre.Id,      OreItems.BronzeOre      },
+            { OreItems.IronOre.Id,        OreItems.IronOre        },
+            { OreItems.Coal.Id,           OreItems.Coal           },
+            { OreItems.MithrilOre.Id,     OreItems.MithrilOre     },
+            { OreItems.AdamantiteOre.Id,  OreItems.AdamantiteOre  },
+            { OreItems.RuniteOre.Id,      OreItems.RuniteOre      },
+            { OreItems.DragonCrystal.Id,  OreItems.DragonCrystal  },
+            
+            // ===== Smithing Bars =====
+            { OreItems.BronzeBar.Id,   OreItems.BronzeBar   },
+            { OreItems.IronBar.Id,     OreItems.IronBar     },
+            { OreItems.SteelBar.Id,    OreItems.SteelBar    },
+            { OreItems.MithrilBar.Id,  OreItems.MithrilBar  },
+            { OreItems.AdamantBar.Id,  OreItems.AdamantBar  },
+            { OreItems.RuniteBar.Id,   OreItems.RuniteBar   },
         };
     }
 }

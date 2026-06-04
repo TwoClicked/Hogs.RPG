@@ -5,6 +5,7 @@ using Hogs.RPG.Bot.Setup;
 using Hogs.RPG.Data;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.RaidServices;
+using Hogs.RPG.Services.SmithingServices;
 using Hogs.RPG.Services.TradeServices;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -127,6 +128,10 @@ namespace Hogs.RPG.Bot
 
                 var raidTimer = _services.GetRequiredService<RaidTimerService>();
                 _ = raidTimer.StartAsync(CancellationToken.None);
+
+                Console.WriteLine("🚀 Starting NpcShopService...");
+                var npcShop = _services.GetRequiredService<NpcShopService>();
+                _ = npcShop.StartAsync(CancellationToken.None);
 
                 _schedulerStarted = true;
             }

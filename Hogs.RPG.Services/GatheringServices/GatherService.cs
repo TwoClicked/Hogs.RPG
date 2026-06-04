@@ -41,9 +41,7 @@ namespace Hogs.RPG.Services.GatheringServices
                 return "Unknown gathering area.";
 
             if (energy == -1)
-            {
                 energy = player.Energy;
-            }
 
             // =========================
             // VALIDATION
@@ -88,6 +86,25 @@ namespace Hogs.RPG.Services.GatheringServices
             }
 
             // =========================
+            // 🔮 DRAGON CRYSTAL — special drop
+            // Only rolls when mining at Smithing level 99
+            // 0.03% chance per energy spent
+            // =========================
+            int crystalsFound = 0;
+
+            if (areaId.ToLower() == "mine" && player.SmithingLevel >= 99)
+            {
+                for (int i = 0; i < energy; i++)
+                {
+                    if (_random.NextDouble() < 0.0003)
+                        crystalsFound++;
+                }
+
+                if (crystalsFound > 0)
+                    await _inventoryService.GiveItemAsync(userId, "dragon_crystal", crystalsFound);
+            }
+
+            // =========================
             // SPEND ENERGY
             // =========================
             await _energyService.SpendEnergy(player, energy);
@@ -97,7 +114,8 @@ namespace Hogs.RPG.Services.GatheringServices
             // =========================
             var result = new StringBuilder();
 
-            result.AppendLine($"🌿 You gather in the {area.Name}...\n");
+            bool isMine = areaId.ToLower() == "mine";
+            result.AppendLine($"{(isMine ? "⛏️" : "🌿")} You {(isMine ? "mine" : "gather")} in the {area.Name}...\n");
 
             foreach (var item in gathered)
             {
@@ -107,6 +125,9 @@ namespace Hogs.RPG.Services.GatheringServices
 
                 result.AppendLine($"+{item.Value} {itemName}");
             }
+
+            if (crystalsFound > 0)
+                result.AppendLine($"\n🔮 **DRAGON CRYSTAL FOUND x{crystalsFound}!** The forge awaits.");
 
             int energyMax = _energyService.GetMaxEnergy(player);
             result.AppendLine($"\n⚡ Energy: {player.Energy}/{energyMax}");

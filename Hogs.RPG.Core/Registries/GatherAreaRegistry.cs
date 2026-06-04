@@ -16,6 +16,24 @@ namespace Hogs.RPG.GameData.Gathering
                     ["red_mushroom"] = 0.3,
                     ["crystal_leaf"] = 0.2
                 }
+
+            },
+
+            ["mine"] = new GatherArea
+            {
+                Id = "mine",
+                Name = "Mine",
+                Drops = new Dictionary<string, double>
+                {
+                    ["bronze_ore"] = 0.40,
+                    ["iron_ore"] = 0.28,
+                    ["coal"] = 0.20,
+                    ["mithril_ore"] = 0.07,
+                    ["adamantite_ore"] = 0.03,
+                    ["runite_ore"] = 0.02
+                    // dragon_crystal is NOT in the drop table here
+                    // it is rolled separately in SmithingService at lv99 only
+                }
             }
         };
     }

@@ -15,6 +15,7 @@ using Hogs.RPG.Services.PlayerServices;
 using Hogs.RPG.Services.RaidServices;
 using Hogs.RPG.Services.RelicServices;
 using Hogs.RPG.Services.ShopServices;
+using Hogs.RPG.Services.SmithingServices;
 using Hogs.RPG.Services.TradeServices;
 using Hogs.RPG.Services.TrailServices;
 using Microsoft.EntityFrameworkCore;
@@ -91,6 +92,8 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<GearSetService>();
             services.AddSingleton<PlayerAuctionService>();
             services.AddScoped<MaterialConversionService>();
+            services.AddScoped<SmithingService>();
+            services.AddScoped<SmithingShopRepository>();
 
             // =========================
             // 🏆 LEADERBOARDS
