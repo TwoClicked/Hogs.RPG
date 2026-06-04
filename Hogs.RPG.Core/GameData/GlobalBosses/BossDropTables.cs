@@ -75,7 +75,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             new BossLoot
             {
-                ItemId = "thorlak_boots",
+                ItemId = "thorlak_leggings",
                 DropChance = 1,
                 MinAmount = 1,
                 MaxAmount = 1
