@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.GlobalBossObjects;
 using Hogs.RPG.Data;
 using Microsoft.EntityFrameworkCore;
 
