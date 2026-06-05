@@ -94,6 +94,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<MaterialConversionService>();
             services.AddScoped<SmithingService>();
             services.AddScoped<SmithingShopRepository>();
+            services.AddScoped<GameEventService>();
 
             // =========================
             // 🏆 LEADERBOARDS
@@ -112,7 +113,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddSingleton<TradeCleanupService>();
             services.AddSingleton<RaidTimerService>();
             services.AddSingleton<TrailService>();
-
+            services.AddSingleton<NpcShopService>();
 
             // DungeonService keeps in-memory state → must stay singleton
             services.AddSingleton<DungeonService>();
