@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Hogs.RPG.Core.Entities.JobObjects;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Microsoft.Extensions.DependencyInjection;
@@ -94,7 +95,7 @@ namespace Hogs.RPG.Services.SmithingServices
         // =========================
         private async Task ProcessPlayerShopAsync(
             ulong discordId,
-            List<Hogs.RPG.Core.Entities.SmithingShopListing> listings,
+            List<SmithingShopListing> listings,
             SmithingShopRepository shopRepo,
             PlayerRepository playerRepo)
         {

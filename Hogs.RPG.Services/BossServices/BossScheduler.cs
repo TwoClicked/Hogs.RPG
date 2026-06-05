@@ -1,6 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.GlobalBossObjects;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.GameplayServices;
@@ -8,7 +8,7 @@ using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-using static Hogs.RPG.Core.Entities.BossDefinition;
+using static Hogs.RPG.Core.Entities.GlobalBossObjects.BossDefinition;
 
 namespace Hogs.RPG.Services.Game
 {

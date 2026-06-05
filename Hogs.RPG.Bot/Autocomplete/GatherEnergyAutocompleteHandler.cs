@@ -1,6 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
-using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.GatheringServices;
 using System;

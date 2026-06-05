@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.TrailObjects;
 using Hogs.RPG.Core.GameData.Trails;
 
 public static class AllTrailZones

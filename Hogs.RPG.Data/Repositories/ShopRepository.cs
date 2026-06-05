@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.TradeObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace Hogs.RPG.Data.Repositories

@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.PlayerObjects;
 
 namespace Hogs.RPG.Services.GameplayServices
 {

@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.DungeonObjects;
 using System.Runtime.InteropServices;
 
 namespace Hogs.RPG.Core.GameData.DungeonBosses

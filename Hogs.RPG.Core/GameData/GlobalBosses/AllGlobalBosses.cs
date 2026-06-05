@@ -1,5 +1,5 @@
-﻿using Hogs.RPG.Core.Entities;
-using static Hogs.RPG.Core.Entities.BossDefinition;
+﻿using Hogs.RPG.Core.Entities.GlobalBossObjects;
+using static Hogs.RPG.Core.Entities.GlobalBossObjects.BossDefinition;
 
 namespace Hogs.RPG.Core.GameData.GlobalBosses
 {

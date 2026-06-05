@@ -1,6 +1,6 @@
 ﻿// Hogs.RPG.Core/Registries/TrailZoneRegistry.cs
 
-using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.TrailObjects;
 using Hogs.RPG.Core.GameData.Trails;
 
 namespace Hogs.RPG.Core.GameData.Registries

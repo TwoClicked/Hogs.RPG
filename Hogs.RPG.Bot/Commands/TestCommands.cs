@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -14,7 +13,7 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static Hogs.RPG.Core.Entities.BossDefinition;
+using static Hogs.RPG.Core.Entities.GlobalBossObjects.BossDefinition;
 
 namespace Hogs.RPG.Bot.Commands
 {

@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.RecipeObjects;
 
 namespace Hogs.RPG.Core.GameData.Recipes
 {

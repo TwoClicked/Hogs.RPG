@@ -1,6 +1,8 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.JobObjects;
+using Hogs.RPG.Core.Entities.TradeObjects;
 using Hogs.RPG.Core.GameData.Shop;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;

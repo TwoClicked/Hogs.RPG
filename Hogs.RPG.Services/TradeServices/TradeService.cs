@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.TradeObjects;
 using Hogs.RPG.Core.Enums;
 using System;
 using System.Collections.Generic;

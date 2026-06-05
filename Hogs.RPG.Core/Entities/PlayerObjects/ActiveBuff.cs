@@ -1,0 +1,18 @@
+﻿using Hogs.RPG.Core.Enums;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Hogs.RPG.Core.Entities.PlayerObjects
+{
+    public class ActiveBuff
+    {
+        public BuffType Type { get; set; }
+
+        public double Value { get; set; }
+
+        public int RemainingUses { get; set; }
+    }
+}

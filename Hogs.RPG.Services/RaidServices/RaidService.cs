@@ -1,6 +1,8 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.PetObjects;
+using Hogs.RPG.Core.Entities.RaidObjects;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;

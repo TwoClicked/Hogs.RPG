@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
@@ -17,7 +16,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static Hogs.RPG.Core.Entities.BossDefinition;
+using static Hogs.RPG.Core.Entities.GlobalBossObjects.BossDefinition;
+using Hogs.RPG.Core.Entities.GlobalBossObjects;
+using Hogs.RPG.Core.Entities.DungeonObjects;
+using Hogs.RPG.Core.Entities.PetObjects;
 
 namespace Hogs.RPG.Services.Game
 {

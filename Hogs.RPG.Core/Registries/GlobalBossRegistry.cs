@@ -1,6 +1,6 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.GlobalBossObjects;
 using Hogs.RPG.Core.GameData.GlobalBosses;
-using static Hogs.RPG.Core.Entities.BossDefinition;
+using static Hogs.RPG.Core.Entities.GlobalBossObjects.BossDefinition;
 
 namespace Hogs.RPG.Core.Registries
 {

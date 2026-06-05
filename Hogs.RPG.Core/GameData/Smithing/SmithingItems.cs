@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
-using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.JobObjects;
 
 namespace Hogs.RPG.Core.GameData.Smithing
 {

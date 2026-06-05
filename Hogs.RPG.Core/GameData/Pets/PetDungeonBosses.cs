@@ -1,4 +1,5 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.DungeonObjects;
+using Hogs.RPG.Core.Entities.PetObjects;
 
 namespace Hogs.RPG.Core.GameData.DungeonBosses
 {

@@ -2,6 +2,7 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Bot.Preconditions;
+using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Services.AuctionServices;
 using System.Text;
@@ -235,7 +236,7 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         // HELPER — post listing to market channel
         // =========================
-        private async Task PostListingToChannelAsync(Core.Entities.PlayerAuctionListing listing)
+        private async Task PostListingToChannelAsync(PlayerAuctionListing listing)
         {
             var channel = _client.GetChannel(MarketChannelId) as ITextChannel;
             if (channel == null) return;

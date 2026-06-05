@@ -2,6 +2,7 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Bot.Preconditions;
+using Hogs.RPG.Core.Entities.RaidObjects;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -365,7 +366,7 @@ namespace Hogs.RPG.Bot.Commands
         // HELPERS — Embed builders
         // =========================
         private Embed BuildLobbyEmbed(
-            Hogs.RPG.Core.Entities.RaidSession session,
+            RaidSession session,
             string raidName, int tier)
         {
             var participants = session.Participants;
@@ -388,7 +389,7 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         private Embed BuildRaidEmbed(
-            Hogs.RPG.Core.Entities.RaidSession session,
+            RaidSession session,
             Hogs.RPG.Core.Entities.RaidDefinition raidDef,
             string description)
         {

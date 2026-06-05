@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.EquipmentObjects;
 using Hogs.RPG.Core.GameData.Equipment;
 using System.Collections.Generic;
 

@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Hogs.RPG.Core.Entities.PlayerObjects;
+using Hogs.RPG.Core.Entities.PetObjects;
 
 public class LeaderboardUpdater
 {
@@ -135,75 +137,75 @@ public class LeaderboardUpdater
         };
     }
 
-    private string FormatGold(List<Hogs.RPG.Core.Entities.Player> players)
+    private string FormatGold(List<Player> players)
     {
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.Gold:N0}**"));
     }
 
-    private string FormatXP(List<Hogs.RPG.Core.Entities.Player> players)
+    private string FormatXP(List<Player> players)
     {
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **Lv.{p.Level}**"));
     }
 
-    private string FormatGear(List<(Hogs.RPG.Core.Entities.Player player, int score)> data)
+    private string FormatGear(List<(Player player, int score)> data)
     {
         if (!data.Any()) return "*No data yet*";
         return string.Join("\n", data.Select((x, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(x.player.DiscordId, x.player.Username)} — **{x.score:N0}**"));
     }
 
-    private string FormatSmithing(List<Hogs.RPG.Core.Entities.Player> players)
+    private string FormatSmithing(List<Player> players)
     {
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **Lv. {p.SmithingLevel}**"));
     }
 
-    private string FormatDungeons(List<Hogs.RPG.Core.Entities.Player> players)
+    private string FormatDungeons(List<Player> players)
     {
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.DungeonRunsCompleted}**"));
     }
 
-    private string FormatRaids(List<Hogs.RPG.Core.Entities.Player> players)
+    private string FormatRaids(List<Player> players)
     {
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.RaidsCompleted}**"));
     }
 
-    private string FormatBossDmg(List<Hogs.RPG.Core.Entities.Player> players)
+    private string FormatBossDmg(List<Player> players)
     {
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.TotalBossDamage:N0}**"));
     }
 
-    private string FormatPetGear(List<(Hogs.RPG.Core.Entities.Player player, Hogs.RPG.Core.Entities.PlayerPet pet, int score)> data)
+    private string FormatPetGear(List<(Player player, Hogs.RPG.Core.Entities.PlayerPet pet, int score)> data)
     {
         if (!data.Any()) return "*No data yet*";
         return string.Join("\n", data.Select((x, i) =>
         {
-            Hogs.RPG.Core.Entities.PetDefinition petDef = null;
+            PetDefinition petDef = null;
             Hogs.RPG.Core.GameData.Registries.PetRegistry.All.TryGetValue(x.pet.PetId, out petDef);
             var petName = x.pet.CustomName ?? petDef?.Name ?? "Unknown";
             return $"{GetMedal(i + 1)} {GetDisplayName(x.player.DiscordId, x.player.Username)} ({petName}) — **{x.score}**";
         }));
     }
 
-    private string FormatDeaths(List<Hogs.RPG.Core.Entities.Player> players)
+    private string FormatDeaths(List<Player> players)
     {
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.Deaths}**"));
     }
 
-    private string FormatTrails(List<Hogs.RPG.Core.Entities.Player> players)
+    private string FormatTrails(List<Player> players)
     {
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>

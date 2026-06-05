@@ -1,6 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
-using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.EquipmentObjects;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Services.InventoryServices;
 using System;

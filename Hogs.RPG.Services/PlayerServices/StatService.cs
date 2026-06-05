@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;

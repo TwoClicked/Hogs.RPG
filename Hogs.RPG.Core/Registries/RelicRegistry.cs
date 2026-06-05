@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.RaidObjects;
 using Hogs.RPG.Core.GameData.Relics;
 
 namespace Hogs.RPG.Core.GameData.Registries

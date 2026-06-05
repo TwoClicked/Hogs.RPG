@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.RaidObjects;
 using Hogs.RPG.Core.Enums;
 
 namespace Hogs.RPG.Core.GameData.Raids

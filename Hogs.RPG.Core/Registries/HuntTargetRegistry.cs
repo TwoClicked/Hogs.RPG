@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.GameLoopObjects;
 
 namespace Hogs.RPG.GameData.Hunts;
 

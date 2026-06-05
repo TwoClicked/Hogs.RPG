@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.PlayerObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace Hogs.RPG.Data.Repositories

@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.EquipmentObjects;
 namespace Hogs.RPG.Core.GameData.InventoryItems
 {
     public static class HuntRareDrops

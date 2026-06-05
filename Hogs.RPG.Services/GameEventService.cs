@@ -1,6 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.PlayerObjects;
 using System.Threading.Tasks;
 
 namespace Hogs.RPG.Services.Game

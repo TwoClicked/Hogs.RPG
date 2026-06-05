@@ -1,6 +1,7 @@
 ﻿// Hogs.RPG.Services/GameplayServices/GearSetService.cs
 
-using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.EquipmentObjects;
+using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.InventoryServices;
 

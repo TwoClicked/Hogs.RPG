@@ -2,7 +2,7 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Bot.Preconditions;
-using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.TradeObjects;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;

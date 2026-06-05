@@ -1,6 +1,6 @@
 ﻿namespace Hogs.RPG.GameData.Hunts;
 
-using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.GameLoopObjects;
 using Hogs.RPG.Core.Enums;
 
 public static class StormTargets

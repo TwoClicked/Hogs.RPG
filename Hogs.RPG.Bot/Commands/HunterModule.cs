@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Hogs.RPG.Bot.Preconditions;
+using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Core.GameData.Equipment;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -15,7 +16,7 @@ namespace Hogs.RPG.Bot.Commands
         private readonly InventoryRepository _inventoryRepository;
 
         // All 9 hunter gear pieces: itemId → (display name, player slot getter, player slot setter)
-        private static readonly (string Id, string Name, Func<Core.Entities.Player, string?> GetSlot, Action<Core.Entities.Player> ClearSlot)[] HunterPieces =
+        private static readonly (string Id, string Name, Func<Player, string?> GetSlot, Action<Player> ClearSlot)[] HunterPieces =
         {
             ("hunter_helm",     "Hunter's Helm",     p => p.Helmet,   p => p.Helmet   = null),
             ("hunter_vest",     "Hunter's Vest",     p => p.Body,     p => p.Body     = null),

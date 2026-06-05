@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Entities;
+﻿using Hogs.RPG.Core.Entities.RecipeObjects;
 
 public static class Tier4ChampionRecipes
 {

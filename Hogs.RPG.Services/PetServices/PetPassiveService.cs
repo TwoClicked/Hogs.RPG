@@ -1,4 +1,6 @@
 ﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.PetObjects;
+using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Core.Enums;
 
 public class PetPassiveService

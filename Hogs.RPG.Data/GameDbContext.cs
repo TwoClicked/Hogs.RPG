@@ -1,4 +1,10 @@
 ﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.EquipmentObjects;
+using Hogs.RPG.Core.Entities.GlobalBossObjects;
+using Hogs.RPG.Core.Entities.JobObjects;
+using Hogs.RPG.Core.Entities.PlayerObjects;
+using Hogs.RPG.Core.Entities.RaidObjects;
+using Hogs.RPG.Core.Entities.TradeObjects;
 using Microsoft.EntityFrameworkCore;
 
 namespace Hogs.RPG.Data
