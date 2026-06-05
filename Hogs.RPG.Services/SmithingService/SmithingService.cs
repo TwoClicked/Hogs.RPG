@@ -44,6 +44,27 @@ namespace Hogs.RPG.Services.SmithingServices
                 return $"❌ You need Smithing level **{recipe.RequiredSmithingLevel}** to smelt {recipe.BarName}.";
 
             // =========================
+            // HANDLE MAX QUANTITY
+            // =========================
+            if (quantity == -1)
+            {
+                var invForMax = await _inventoryService.GetInventoryAsync(userId);
+                var invMaxLookup = invForMax.ToDictionary(i => i.ItemId, i => i.Quantity);
+
+                int maxCanMake = int.MaxValue;
+                foreach (var (oreId, orePerSmelt) in recipe.OreRequirements)
+                {
+                    invMaxLookup.TryGetValue(oreId, out int owned);
+                    maxCanMake = Math.Min(maxCanMake, owned / orePerSmelt);
+                }
+
+                quantity = maxCanMake == int.MaxValue ? 0 : maxCanMake;
+
+                if (quantity <= 0)
+                    return $"❌ You don't have enough ore to smelt any {recipe.BarName}.";
+            }
+
+            // =========================
             // CHECK ORE REQUIREMENTS
             // =========================
             var inventory = await _inventoryService.GetInventoryAsync(userId);
@@ -96,6 +117,27 @@ namespace Hogs.RPG.Services.SmithingServices
 
             if (player.SmithingLevel < itemDef.RequiredSmithingLevel)
                 return $"❌ You need Smithing level **{itemDef.RequiredSmithingLevel}** to forge **{itemDef.Name}**.";
+
+            // =========================
+            // HANDLE MAX QUANTITY
+            // =========================
+            if (quantity == -1)
+            {
+                var invForMax = await _inventoryService.GetInventoryAsync(userId);
+                var invMaxLookup = invForMax.ToDictionary(i => i.ItemId, i => i.Quantity);
+
+                int maxCanForge = int.MaxValue;
+                foreach (var (matId, matPerCraft) in itemDef.BarRequirements)
+                {
+                    invMaxLookup.TryGetValue(matId, out int owned);
+                    maxCanForge = Math.Min(maxCanForge, owned / matPerCraft);
+                }
+
+                quantity = maxCanForge == int.MaxValue ? 0 : maxCanForge;
+
+                if (quantity <= 0)
+                    return $"❌ You don't have enough materials to forge any {itemDef.Name}.";
+            }
 
             // =========================
             // CHECK MATERIAL REQUIREMENTS

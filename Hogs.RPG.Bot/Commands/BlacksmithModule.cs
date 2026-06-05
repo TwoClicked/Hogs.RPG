@@ -1,8 +1,10 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Hogs.RPG.Bot.Preconditions;
+using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.SmithingServices;
 using System.Text;
 
@@ -15,15 +17,18 @@ namespace Hogs.RPG.Bot.Commands
         private readonly SmithingService _smithingService;
         private readonly SmithingShopRepository _shopRepository;
         private readonly PlayerRepository _playerRepository;
+        private readonly InventoryService _inventoryService;
 
         public BlacksmithModule(
             SmithingService smithingService,
             SmithingShopRepository shopRepository,
-            PlayerRepository playerRepository)
+            PlayerRepository playerRepository,
+            InventoryService inventoryService)
         {
             _smithingService = smithingService;
             _shopRepository = shopRepository;
             _playerRepository = playerRepository;
+            _inventoryService = inventoryService;
         }
 
         // =========================
@@ -36,7 +41,11 @@ namespace Hogs.RPG.Bot.Commands
         {
             await DeferAsync(ephemeral: true);
 
-            if (!int.TryParse(quantity, out int qty) || qty <= 0)
+            int qty;
+
+            if (quantity.ToLower() == "max")
+                qty = -1;
+            else if (!int.TryParse(quantity, out qty) || qty <= 0)
             {
                 await FollowupAsync("❌ Invalid quantity.", ephemeral: true);
                 return;
@@ -46,9 +55,6 @@ namespace Hogs.RPG.Bot.Commands
             await FollowupAsync(result, ephemeral: true);
         }
 
-        // =========================
-        // /blacksmith craft
-        // =========================
         [SlashCommand("craft", "Forge bars into weapons — auto-lists in your NPC shop")]
         public async Task Craft(
             [Autocomplete(typeof(SmithCraftAutocompleteHandler))] string item,
@@ -56,7 +62,11 @@ namespace Hogs.RPG.Bot.Commands
         {
             await DeferAsync(ephemeral: true);
 
-            if (!int.TryParse(quantity, out int qty) || qty <= 0)
+            int qty;
+
+            if (quantity.ToLower() == "max")
+                qty = -1;
+            else if (!int.TryParse(quantity, out qty) || qty <= 0)
             {
                 await FollowupAsync("❌ Invalid quantity.", ephemeral: true);
                 return;
@@ -64,6 +74,56 @@ namespace Hogs.RPG.Bot.Commands
 
             var result = await _smithingService.CraftAsync(Context.User.Id, item.Trim().ToLower(), qty);
             await FollowupAsync(result, ephemeral: true);
+        }
+
+        // =========================
+        // /blacksmith ore-bag
+        // =========================
+        [SlashCommand("ore-bag", "View all your ores and bars")]
+        public async Task OreBag()
+        {
+            await DeferAsync(ephemeral: true);
+
+            var inventory = await _inventoryService.GetInventoryAsync(Context.User.Id);
+            var invLookup = inventory.ToDictionary(i => i.ItemId, i => i.Quantity);
+
+            var oreIds = new[]
+            {
+        "bronze_ore", "iron_ore", "coal",
+        "mithril_ore", "adamantite_ore", "runite_ore", "dragon_crystal"
+    };
+
+            var barIds = new[]
+            {
+        "bronze_bar", "iron_bar", "steel_bar",
+        "mithril_bar", "adamant_bar", "runite_bar"
+    };
+
+            var oreSb = new StringBuilder();
+            foreach (var id in oreIds)
+            {
+                invLookup.TryGetValue(id, out int qty);
+                if (!InventoryItemDefinitions.All.TryGetValue(id, out var def)) continue;
+                oreSb.AppendLine($"{def.Icon} **{def.Name}** — {qty:N0}");
+            }
+
+            var barSb = new StringBuilder();
+            foreach (var id in barIds)
+            {
+                invLookup.TryGetValue(id, out int qty);
+                if (!InventoryItemDefinitions.All.TryGetValue(id, out var def)) continue;
+                barSb.AppendLine($"{def.Icon} **{def.Name}** — {qty:N0}");
+            }
+
+            var embed = new EmbedBuilder()
+                .WithTitle("⛏️ Ore Bag")
+                .WithColor(new Color(0xB87333))
+                .AddField("🪨 Ores", oreSb.Length > 0 ? oreSb.ToString().Trim() : "*None*", true)
+                .AddField("🔩 Bars", barSb.Length > 0 ? barSb.ToString().Trim() : "*None*", true)
+                .WithFooter("Use /blacksmith smelt to turn ore into bars")
+                .Build();
+
+            await FollowupAsync(embed: embed, ephemeral: true);
         }
 
         // =========================
