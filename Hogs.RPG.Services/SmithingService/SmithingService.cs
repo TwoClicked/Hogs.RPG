@@ -2,6 +2,7 @@
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.InventoryServices;
 using System.Text;
 
@@ -12,15 +13,18 @@ namespace Hogs.RPG.Services.SmithingServices
         private readonly PlayerRepository _playerRepository;
         private readonly InventoryService _inventoryService;
         private readonly SmithingShopRepository _shopRepository;
+        private readonly GameEventService _gameEventService;
 
         public SmithingService(
             PlayerRepository playerRepository,
             InventoryService inventoryService,
-            SmithingShopRepository shopRepository)
+            SmithingShopRepository shopRepository,
+            GameEventService gameEventService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
             _shopRepository = shopRepository;
+            _gameEventService = gameEventService;
         }
 
         // =========================
@@ -137,6 +141,9 @@ namespace Hogs.RPG.Services.SmithingServices
             // SAVE PLAYER
             // =========================
             await _playerRepository.UpdatePlayerAsync(player);
+
+            if (levelUps > 0)
+                await _gameEventService.SendSmithingLevelUpAsync(player);
 
             // =========================
             // BUILD RESPONSE

@@ -216,6 +216,7 @@ namespace Hogs.RPG.Bot.Commands
                         ? "✅ Active — +5% XP, +5% materials, +3% rare drop on all hunts"
                         : "❌ Not found — discover it on the Ashwood Trail",
                     false)
+                .AddField("⚒️ Smithing Level", $"Level **{player.SmithingLevel}** — {player.SmithingXP:N0} XP", true)
 
                 // Gear
                 .AddField(
@@ -335,7 +336,14 @@ namespace Hogs.RPG.Bot.Commands
                 // Row 3
                 .AddField("💀 Deaths", $"{player.Deaths}\n{Rank(ranks.Deaths)}", true)
                 .AddField("🏕️ Trails", $"{player.TrailsCompleted}\n{Rank(ranks.Trails)}", true)
-                .AddField("🐾 Pet Power", petPowerValue, true);
+                .AddField("🐾 Pet Power", petPowerValue, true)
+
+                // Row 4
+                .AddField("⚒️ Smithing", $"Lv. {player.SmithingLevel}\n{Rank(ranks.SmithingLevel)}", true)
+                .AddField("\u200b", "\u200b", true)
+                .AddField("\u200b", "\u200b", true);
+
+
 
             await ModifyOriginalResponseAsync(msg =>
             {

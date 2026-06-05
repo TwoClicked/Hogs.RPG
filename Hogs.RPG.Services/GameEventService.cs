@@ -30,5 +30,32 @@ namespace Hogs.RPG.Services.Game
 
             await channel.SendMessageAsync(embed: embed);
         }
+
+        public async Task SendSmithingLevelUpAsync(Player player)
+        {
+            var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
+            if (channel == null) return;
+
+            string milestone = player.SmithingLevel switch
+            {
+                99 => "⚒️ **MAX LEVEL!** The forge bows to no one.",
+                >= 85 => "🔵 Rune tier unlocked.",
+                >= 70 => "🟢 Adamant tier unlocked.",
+                >= 50 => "💠 Mithril tier unlocked.",
+                >= 30 => "🩶 Steel tier unlocked.",
+                >= 15 => "⬛ Iron tier unlocked.",
+                _ => ""
+            };
+
+            var embed = new EmbedBuilder()
+                .WithTitle("⚒️ Smithing Level Up!")
+                .WithDescription(
+                    $"<@{player.DiscordId}> reached **Smithing Level {player.SmithingLevel}**!" +
+                    (string.IsNullOrEmpty(milestone) ? "" : $"\n{milestone}"))
+                .WithColor(new Color(0xB87333))
+                .Build();
+
+            await channel.SendMessageAsync(embed: embed);
+        }
     }
 }

@@ -203,6 +203,29 @@ namespace Hogs.RPG.Data.Repositories
             return await _context.Players.CountAsync(p => p.Deaths > player.Deaths) + 1;
         }
 
+        public async Task<List<Player>> GetTopSmithingLevelAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.SmithingLevel)
+                .ThenByDescending(p => p.SmithingXP)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players)
+                p.DeserializeBuffs();
+
+            return players;
+        }
+
+        public async Task<int> GetRankBySmithingLevelAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p =>
+                p.SmithingLevel > player.SmithingLevel ||
+                (p.SmithingLevel == player.SmithingLevel && p.SmithingXP > player.SmithingXP)) + 1;
+        }
+
         public async Task<int> GetRankByTrailsAsync(ulong discordId)
         {
             var player = await GetByDiscordIdAsync(discordId);

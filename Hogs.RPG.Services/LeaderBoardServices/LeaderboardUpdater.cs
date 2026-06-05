@@ -89,6 +89,7 @@ public class LeaderboardUpdater
         var petGear = await service.GetTopPetGearScore(5);
         var deaths = await service.GetTopDeaths(5);
         var trails = await service.GetTopTrails(5);
+        var smithing = await service.GetTopSmithingLevel(5);
 
         var embed = new EmbedBuilder()
             .WithTitle("🏆 HOGS RPG — LEADERBOARDS")
@@ -110,6 +111,11 @@ public class LeaderboardUpdater
         embed.AddField("🐾 Pet Power", FormatPetGear(petGear), true);
         embed.AddField("💀 Deaths", FormatDeaths(deaths), true);
         embed.AddField("🏕️ Trails", FormatTrails(trails), true);
+
+        // Row 4
+        embed.AddField("⚒️ Smithing Level", FormatSmithing(smithing), true);
+        embed.AddField("\u200b", "\u200b", true);
+        embed.AddField("\u200b", "\u200b", true);
 
         _mainMsgId = await SendOrUpdate(channel, embed.Build(), _mainMsgId);
     }
@@ -148,6 +154,13 @@ public class LeaderboardUpdater
         if (!data.Any()) return "*No data yet*";
         return string.Join("\n", data.Select((x, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(x.player.DiscordId, x.player.Username)} — **{x.score:N0}**"));
+    }
+
+    private string FormatSmithing(List<Hogs.RPG.Core.Entities.Player> players)
+    {
+        if (!players.Any()) return "*No data yet*";
+        return string.Join("\n", players.Select((p, i) =>
+            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **Lv. {p.SmithingLevel}**"));
     }
 
     private string FormatDungeons(List<Hogs.RPG.Core.Entities.Player> players)
