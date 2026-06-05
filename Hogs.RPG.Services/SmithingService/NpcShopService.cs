@@ -137,7 +137,7 @@ namespace Hogs.RPG.Services.SmithingServices
                 if (potentialEarnings > remainingCap)
                 {
                     unitsSold = remainingCap / itemDef.NpcGoldPrice;
-                    if (unitsSold <= 0) break;
+                    if (unitsSold <= 0) continue;
                     potentialEarnings = unitsSold * itemDef.NpcGoldPrice;
                 }
 
