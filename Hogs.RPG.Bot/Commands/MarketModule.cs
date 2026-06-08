@@ -63,7 +63,7 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         [SlashCommand("list-pet", "List a pet for sale")]
         public async Task ListPet(
-            [Summary("pet_id", "Pet DB ID (check /pets for IDs)")] int petId,
+            [Summary("pet_id", "Select a pet to list"), Autocomplete(typeof(MarketListPetAutocompleteHandler))] int petId,
             [Summary("base_price", "Minimum bid price in gold")] int basePrice,
             [Summary("buyout_price", "Optional instant-buy price (leave 0 for none)")] int buyoutPrice = 0)
         {
