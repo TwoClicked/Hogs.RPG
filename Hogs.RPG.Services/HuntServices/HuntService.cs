@@ -6,6 +6,7 @@ using Hogs.RPG.Core.Entities.GameLoopObjects;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
+using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.GameData.Hunts;
 using Hogs.RPG.Services.GameplayServices;
@@ -104,9 +105,6 @@ namespace Hogs.RPG.Services.HuntServices
 
             // =========================
             // 🏹 HUNTING GEAR BONUSES
-            // Sum bonuses from all equipped hunting gear pieces.
-            // Full 9-piece set adds +5% rare drop rate.
-            // Hunting pet adds +5% XP, +5% materials, +3% rare drop.
             // =========================
             var equippedSlots = new[]
             {
@@ -139,10 +137,10 @@ namespace Hogs.RPG.Services.HuntServices
             bool permanentSetBonus = player.HasHunterSetBonus;
             if (permanentSetBonus)
             {
-                huntXpBonus += 0.045; // equivalent of all 9 pieces
+                huntXpBonus += 0.045;
                 huntMaterialBonus += 0.045;
-                huntRareBonus += 0.05;  // full set rare bonus
-                fullSetBonus = true;  // used for display below
+                huntRareBonus += 0.05;
+                fullSetBonus = true;
             }
 
             // Hunting pet bonus
@@ -151,6 +149,51 @@ namespace Hogs.RPG.Services.HuntServices
                 huntXpBonus += 0.05;
                 huntMaterialBonus += 0.05;
                 huntRareBonus += 0.03;
+            }
+
+            // =========================
+            // 🧪 ALCHEMIST POTION BUFFS
+            // Check active utility buff for loot and XP boosts
+            // =========================
+            bool potionLootActive = false;
+            bool potionXpActive = false;
+            double potionLootBonus = 0;
+            double potionXpBonus = 0;
+            string potionBuffName = "";
+
+            if (player.ActiveUtilityBuffId != null &&
+                player.ActiveUtilityBuffExpiry.HasValue &&
+                player.ActiveUtilityBuffExpiry.Value > DateTime.UtcNow)
+            {
+                if (AlchemyPotionRegistry.All.TryGetValue(player.ActiveUtilityBuffId, out var utilPotion))
+                {
+                    if (utilPotion.EffectId == "loot_boost")
+                    {
+                        potionLootActive = true;
+                        potionLootBonus = utilPotion.EffectValue / 100.0;
+                        huntRareBonus += potionLootBonus;
+                        potionBuffName = utilPotion.Name;
+                    }
+                    else if (utilPotion.EffectId == "xp_boost")
+                    {
+                        potionXpActive = true;
+                        potionXpBonus = utilPotion.EffectValue / 100.0;
+                        potionBuffName = utilPotion.Name;
+                    }
+
+                    // Void Tincture — both loot and XP
+                    if (utilPotion.SecondaryEffectId == "loot_boost")
+                    {
+                        potionLootActive = true;
+                        potionLootBonus = utilPotion.SecondaryEffectValue / 100.0;
+                        huntRareBonus += potionLootBonus;
+                    }
+                    else if (utilPotion.SecondaryEffectId == "xp_boost")
+                    {
+                        potionXpActive = true;
+                        potionXpBonus = utilPotion.SecondaryEffectValue / 100.0;
+                    }
+                }
             }
 
             int totalXp = 0;
@@ -169,10 +212,7 @@ namespace Hogs.RPG.Services.HuntServices
                 int dropAmount = _random.Next(target.MinDrop, target.MaxDrop + 1);
 
                 double roll = _random.NextDouble();
-
                 bool elite = roll < 0.16;
-
-                // Base 4% rare drop rate + hunting gear/pet bonuses
                 bool rareDrop = roll < (0.04 + huntRareBonus);
 
                 if (elite)
@@ -196,7 +236,6 @@ namespace Hogs.RPG.Services.HuntServices
 
             // =========================
             // 🏹 APPLY GEAR & PET BONUSES TO TOTALS
-            // Applied after the loop so the multipliers stack cleanly
             // =========================
             if (huntXpBonus > 0)
                 totalXp = (int)(totalXp * (1 + huntXpBonus));
@@ -205,7 +244,14 @@ namespace Hogs.RPG.Services.HuntServices
                 totalDrops = (int)(totalDrops * (1 + huntMaterialBonus));
 
             // =========================
-            // 🧪 XP POTION (applied directly, no buff stacking)
+            // 🧪 APPLY POTION XP BONUS
+            // Applied after gear bonuses, before shop double XP
+            // =========================
+            if (potionXpActive && potionXpBonus > 0)
+                totalXp = (int)(totalXp * (1 + potionXpBonus));
+
+            // =========================
+            // 🧪 XP POTION (auto-use)
             // =========================
             bool xpBoostActive = player.XpBoostExpiry.HasValue && player.XpBoostExpiry.Value > DateTime.UtcNow;
 
@@ -269,27 +315,14 @@ namespace Hogs.RPG.Services.HuntServices
             // =========================
             await _inventoryService.GiveItemAsync(userId, target.DropItem, totalDrops);
 
-            await _playerRepository.UpdatePlayerAsync(player);
-
-            // =========================
-            // 🎉 PLAYER LEVEL UP FEED
-            // =========================
-            if (levelsGained > 0)
-            {
-                var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
-
-                if (channel != null)
-                    await channel.SendMessageAsync($"🎉 <@{player.DiscordId}> reached **Level {player.Level}**!");
-            }
-
             // =========================
             // 🧪 ALCHEMY XP — granted when hunting alchemy category monsters
+            // IMPORTANT: must be before UpdatePlayerAsync to persist correctly
             // =========================
             if (target.AlchemyXpReward > 0)
             {
                 player.AlchemistXP += target.AlchemyXpReward;
 
-                // Level up check
                 while (player.AlchemistLevel < 99)
                 {
                     int xpNeeded = player.AlchemistLevel * player.AlchemistLevel * 50;
@@ -301,10 +334,25 @@ namespace Hogs.RPG.Services.HuntServices
             }
 
             // =========================
+            // 💾 SAVE PLAYER
+            // All player field changes (XP, alchemy XP, stamina) saved in one call
+            // =========================
+            await _playerRepository.UpdatePlayerAsync(player);
+
+            // =========================
+            // 🎉 PLAYER LEVEL UP FEED
+            // =========================
+            if (levelsGained > 0)
+            {
+                var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
+                if (channel != null)
+                    await channel.SendMessageAsync($"🎉 <@{player.DiscordId}> reached **Level {player.Level}**!");
+            }
+
+            // =========================
             // 🧾 RESULT
             // =========================
             var sb = new StringBuilder();
-
             var label = usedMax ? "ALL stamina" : $"{stamina} stamina";
 
             sb.AppendLine($"{target.Icon} You hunted {target.Name} using {label}!\n");
@@ -324,6 +372,12 @@ namespace Hogs.RPG.Services.HuntServices
             if (xpMultiplier > 1)
                 sb.AppendLine($"✨ XP Multiplier Active ({xpMultiplier}x)");
 
+            if (potionLootActive)
+                sb.AppendLine($"🧪 {potionBuffName}: +{potionLootBonus * 100:0.#}% rare drop chance");
+
+            if (potionXpActive)
+                sb.AppendLine($"🧪 {potionBuffName}: +{potionXpBonus * 100:0.#}% XP boost");
+
             if (eliteCount > 0)
                 sb.AppendLine($"🔥 {eliteCount} Elite encounters!");
 
@@ -331,10 +385,7 @@ namespace Hogs.RPG.Services.HuntServices
                 sb.AppendLine($"✨ {rareCount} Rare drops!");
 
             if (permanentSetBonus)
-            {
-                // Player completed the set — show as a single permanent line
                 sb.AppendLine($"🌟 Hunter Set: Permanent! (+4.5% XP, +4.5% mats, +5% rare)");
-            }
             else
             {
                 if (huntingGearCount > 0)
@@ -349,8 +400,7 @@ namespace Hogs.RPG.Services.HuntServices
                 sb.AppendLine($"🐾 Hunting Companion: +5% XP, +5% materials, +3% rare drop");
 
             int displayMax = player.StaminaBoostExpiry.HasValue && player.StaminaBoostExpiry.Value > DateTime.UtcNow
-                ? 150
-                : 100;
+                ? 150 : 100;
 
             sb.AppendLine($"\n🏹 Stamina: {player.HunterStamina}/{displayMax}");
             sb.AppendLine(levelMessage);

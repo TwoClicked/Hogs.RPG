@@ -64,6 +64,90 @@ namespace Hogs.RPG.Bot.Commands
             await FollowupAsync(result, ephemeral: true);
         }
 
+
+        // =========================
+        // /alchemist recipes
+        // =========================
+        [SlashCommand("recipes", "View all potion recipes available at your Alchemist level")]
+        public async Task Recipes()
+        {
+            await DeferAsync(ephemeral: true);
+
+            var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
+            if (player == null)
+            {
+                await FollowupAsync("❌ You need to start your adventure first.", ephemeral: true);
+                return;
+            }
+
+            var inventory = await _inventoryService.GetInventoryAsync(Context.User.Id);
+            var invLookup = inventory.ToDictionary(i => i.ItemId, i => i.Quantity);
+
+            var unlocked = AlchemyPotionRegistry.All.Values
+                .Where(p => player.AlchemistLevel >= p.RequiredAlchemistLevel)
+                .OrderBy(p => p.RequiredAlchemistLevel)
+                .ToList();
+
+            var locked = AlchemyPotionRegistry.All.Values
+                .Where(p => player.AlchemistLevel < p.RequiredAlchemistLevel)
+                .OrderBy(p => p.RequiredAlchemistLevel)
+                .Take(3)
+                .ToList();
+
+            var embed = new EmbedBuilder()
+                .WithTitle("🧪 Alchemist Recipes")
+                .WithColor(new Color(0x9B59B6))
+                .WithFooter($"Alchemist Level {player.AlchemistLevel} · Showing unlocked + next 3 locked");
+
+            if (unlocked.Count > 0)
+            {
+                var sb = new StringBuilder();
+                foreach (var p in unlocked)
+                {
+                    // Calculate how many can be brewed
+                    int canBrew = int.MaxValue;
+                    foreach (var (ingId, needed) in p.IngredientRequirements)
+                    {
+                        invLookup.TryGetValue(ingId, out int owned);
+                        canBrew = Math.Min(canBrew, owned / needed);
+                    }
+                    if (canBrew == int.MaxValue) canBrew = 0;
+
+                    var ings = string.Join(", ", p.IngredientRequirements
+                        .Select(r =>
+                        {
+                            var name = InventoryItemDefinitions.All.TryGetValue(r.Key, out var def)
+                                ? def.Name : r.Key;
+                            return $"{r.Value}x {name}";
+                        }));
+
+                    string brewStatus = canBrew > 0 ? $"✅ can brew {canBrew}" : "❌ not enough ingredients";
+                    sb.AppendLine($"{p.Icon} **{p.Name}** — {ings}");
+                    sb.AppendLine($"  *{p.Description}* — {brewStatus}");
+                }
+                embed.AddField("✅ Unlocked", sb.ToString().Trim(), inline: false);
+            }
+
+            if (locked.Count > 0)
+            {
+                var sb = new StringBuilder();
+                foreach (var p in locked)
+                {
+                    var ings = string.Join(", ", p.IngredientRequirements
+                        .Select(r =>
+                        {
+                            var name = InventoryItemDefinitions.All.TryGetValue(r.Key, out var def)
+                                ? def.Name : r.Key;
+                            return $"{r.Value}x {name}";
+                        }));
+                    sb.AppendLine($"🔒 **{p.Name}** *(Lv {p.RequiredAlchemistLevel})* — {ings}");
+                }
+                embed.AddField("🔒 Coming Up", sb.ToString().Trim(), inline: false);
+            }
+
+            await FollowupAsync(embed: embed.Build(), ephemeral: true);
+        }
+
         // =========================
         // /alchemist potions
         // =========================
