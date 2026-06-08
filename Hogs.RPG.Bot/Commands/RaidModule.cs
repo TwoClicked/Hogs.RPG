@@ -95,7 +95,7 @@ namespace Hogs.RPG.Bot.Commands
                 embed.AddField(label, $"`{qty}x`", inline: true);
             }
 
-            embed.WithFooter("Craft keys with /craft using hunt materials.");
+            embed.WithFooter("Craft keys with /raidkey craft using hunt materials.");
 
             await FollowupAsync(embed: embed.Build(), ephemeral: true);
         }

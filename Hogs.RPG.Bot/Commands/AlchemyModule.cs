@@ -66,7 +66,7 @@ public class AlchemyModule : InteractionModuleBase<SocketInteractionContext>
         var recipes = RecipeRegistry.All.Values;
 
         var potionRecipes = recipes
-            .Where(r => !EquipmentRegistry.All.ContainsKey(r.ResultItem))
+            .Where(r => r.ResultItem == "xp_potion" || r.ResultItem == "health_potion")
             .ToList();
 
         var inventory = await _inventoryService.GetInventoryAsync(Context.User.Id);
