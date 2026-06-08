@@ -48,5 +48,16 @@
         // Star Iron Madness (Gritch — Lv 27)
         // Triggers at 50% HP, permanently doubles boss defense (applied in GetEnemyDefense)
         public bool StarIronMadnessTriggered { get; set; }
+
+        // =========================
+        // 🧪 ALCHEMIST POTION BUFFS
+        // Populated at dungeon start from player's active utility buff
+        // =========================
+        public double DmgReductionPercent { get; set; } = 0;       // Antivenom
+        public double DodgeChanceBonus { get; set; } = 0;           // Swiftfoot Brew
+        public double FirstStrikeReductionPercent { get; set; } = 0; // Shadow Salve
+        public bool HasRevival { get; set; } = false;               // Revival Draught
+        public double GoldBoostPercent { get; set; } = 0;           // Gold Rush Flask
+        public bool FirstStrikeUsed { get; set; } = false;          // Track if first strike reduction consumed
     }
 }

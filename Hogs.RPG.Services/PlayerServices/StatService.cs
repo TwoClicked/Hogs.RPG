@@ -2,6 +2,7 @@
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;
+using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.RelicServices;
 
@@ -83,6 +84,36 @@ namespace Hogs.RPG.Services.GameplayServices
             attack = (int)(attack * (1f + relicBonuses.AttackPercent));
             defense = (int)(defense * (1f + relicBonuses.DefensePercent));
             health = (int)(health * (1f + relicBonuses.MaxHpPercent));
+
+            // =========================
+            // 🧪 ACTIVE STAT BUFF (Alchemist potions)
+            // Applied last so percentage is on top of all gear + pet + relic
+            // =========================
+            if (player.ActiveStatBuffId != null &&
+                player.ActiveStatBuffExpiry.HasValue &&
+                player.ActiveStatBuffExpiry.Value > DateTime.UtcNow)
+            {
+                if (AlchemyPotionRegistry.All.TryGetValue(player.ActiveStatBuffId, out var statPotion))
+                {
+                    // Primary effect
+                    if (statPotion.EffectId == "atk_boost")
+                        attack = (int)(attack * (1 + statPotion.EffectValue / 100.0));
+                    else if (statPotion.EffectId == "def_boost")
+                        defense = (int)(defense * (1 + statPotion.EffectValue / 100.0));
+
+                    // Secondary effect
+                    if (statPotion.SecondaryEffectId == "def_penalty")
+                        defense = (int)(defense * (1 - statPotion.SecondaryEffectValue / 100.0));
+                    else if (statPotion.SecondaryEffectId == "atk_penalty")
+                        attack = (int)(attack * (1 - statPotion.SecondaryEffectValue / 100.0));
+                    else if (statPotion.SecondaryEffectId == "hp_penalty")
+                        health = (int)(health * (1 - statPotion.SecondaryEffectValue / 100.0));
+                    else if (statPotion.SecondaryEffectId == "def_boost")
+                        defense = (int)(defense * (1 + statPotion.SecondaryEffectValue / 100.0));
+                    else if (statPotion.SecondaryEffectId == "atk_boost")
+                        attack = (int)(attack * (1 + statPotion.SecondaryEffectValue / 100.0));
+                }
+            }
 
             return (attack, defense, health);
         }

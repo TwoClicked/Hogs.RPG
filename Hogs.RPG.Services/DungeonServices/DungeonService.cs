@@ -4,6 +4,7 @@ using Hogs.RPG.Core.Entities.DungeonObjects;
 using Hogs.RPG.Core.Entities.PetObjects;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
+using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
@@ -96,6 +97,37 @@ namespace Hogs.RPG.Services.Game
                 IsBoss = false,
                 CurrentImageUrl = null
             };
+
+            // =========================
+            // 🧪 CACHE UTILITY BUFF INTO SESSION
+            // Dungeon-scoped effects loaded once at start — no DB calls during combat
+            // =========================
+            if (player.ActiveUtilityBuffId != null &&
+                player.ActiveUtilityBuffExpiry.HasValue &&
+                player.ActiveUtilityBuffExpiry.Value > DateTime.UtcNow)
+            {
+                if (AlchemyPotionRegistry.All.TryGetValue(player.ActiveUtilityBuffId, out var utilPotion))
+                {
+                    switch (utilPotion.EffectId)
+                    {
+                        case "dungeon_dmg_reduction":
+                            session.DmgReductionPercent = utilPotion.EffectValue / 100.0;
+                            break;
+                        case "dodge_boost":
+                            session.DodgeChanceBonus = utilPotion.EffectValue / 100.0;
+                            break;
+                        case "first_strike_reduction":
+                            session.FirstStrikeReductionPercent = utilPotion.EffectValue / 100.0;
+                            break;
+                        case "revival":
+                            session.HasRevival = true;
+                            break;
+                        case "gold_boost":
+                            session.GoldBoostPercent = utilPotion.EffectValue / 100.0;
+                            break;
+                    }
+                }
+            }
 
             _active[userId] = session;
             _lastDungeonRun[userId] = DateTime.UtcNow;
@@ -210,10 +242,36 @@ namespace Hogs.RPG.Services.Game
             // 👹 ENEMY ATTACK
             // =========================
             int enemyAttack = GetEnemyAttack(session, dungeon);
+
             int enemyDamage = (int)(enemyAttack * (100.0 / (100 + session.Defense)));
             enemyDamage = Math.Max(5, enemyDamage);
 
             enemyDamage = petPassiveService.ModifyIncomingDamage(enemyDamage, pet);
+
+            // =========================
+            // 🧪 DODGE — Swiftfoot Brew
+            // =========================
+            if (session.DodgeChanceBonus > 0 && _random.NextDouble() < session.DodgeChanceBonus)
+            {
+                text += $"\n💨 **You dodged the attack!** (Swiftfoot Brew)";
+                enemyDamage = 0;
+            }
+
+            // =========================
+            // 🧪 FIRST STRIKE REDUCTION — Shadow Salve
+            // =========================
+            if (!session.FirstStrikeUsed && session.FirstStrikeReductionPercent > 0)
+            {
+                enemyDamage = (int)(enemyDamage * (1 - session.FirstStrikeReductionPercent));
+                session.FirstStrikeUsed = true;
+                text += $"\n🛡️ **Shadow Salve reduced first strike damage!**";
+            }
+
+            // =========================
+            // 🧪 DAMAGE REDUCTION — Antivenom
+            // =========================
+            if (session.DmgReductionPercent > 0)
+                enemyDamage = (int)(enemyDamage * (1 - session.DmgReductionPercent));
 
             string behaviorText = null;
 
@@ -248,6 +306,18 @@ namespace Hogs.RPG.Services.Game
 
             if (session.PlayerHealth <= 0)
             {
+                // =========================
+                // 🧪 REVIVAL DRAUGHT — survive killing blow
+                // =========================
+                if (session.HasRevival)
+                {
+                    session.HasRevival = false;
+                    session.PlayerHealth = (int)(session.MaxHealth * 0.15);
+                    _lastAction[userId] = DateTime.UtcNow;
+                    text += $"\n✨ **Revival Draught activates! You cling to life!**";
+                    return Wrap(BuildEmbed(session, text, session.CurrentImageUrl));
+                }
+
                 _lastAction[userId] = DateTime.UtcNow;
                 return await HandleDeath(userId);
             }
@@ -430,6 +500,14 @@ namespace Hogs.RPG.Services.Game
             int gold = (int)(250 * (1f + relicBonuses.BonusGoldPercent));
             int xp = (int)(1000 * (1f + relicBonuses.BonusPlayerXpPercent));
             int petXp = (int)(50 * (1f + relicBonuses.BonusPetXpPercent));
+
+
+            // =========================
+            // 🧪 GOLD BOOST — Gold Rush Flask
+            // =========================
+            if (session.GoldBoostPercent > 0)
+                gold = (int)(gold * (1 + session.GoldBoostPercent));
+
 
             player.Gold += gold;
             player.XP += xp;
