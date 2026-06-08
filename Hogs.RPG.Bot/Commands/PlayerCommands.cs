@@ -218,6 +218,7 @@ namespace Hogs.RPG.Bot.Commands
                         : "❌ Not found — discover it on the Ashwood Trail",
                     false)
                 .AddField("⚒️ Smithing Level", $"Level **{player.SmithingLevel}** — {player.SmithingXP:N0} XP", true)
+                .AddField("🧪 Alchemist Level", $"Level **{player.AlchemistLevel}** — {player.AlchemistXP:N0} XP", true)
 
                 // Gear
                 .AddField(

@@ -86,6 +86,26 @@ namespace Hogs.RPG.Services.GatheringServices
             }
 
             // =========================
+            // 🧪 ALCHEMY XP — 2 XP per energy spent in swamp
+            // =========================
+            if (areaId.ToLower() == "swamp")
+            {
+                player.AlchemistXP += energy * 2;
+
+                // Level up check
+                while (player.AlchemistLevel < 99)
+                {
+                    int xpNeeded = player.AlchemistLevel * player.AlchemistLevel * 50;
+                    if (player.AlchemistXP >= xpNeeded)
+                        player.AlchemistLevel++;
+                    else
+                        break;
+                }
+
+                await _playerRepository.UpdatePlayerAsync(player);
+            }
+
+            // =========================
             // 🔮 DRAGON CRYSTAL — special drop
             // Only rolls when mining at Smithing level 99
             // 0.03% chance per energy spent
@@ -115,7 +135,12 @@ namespace Hogs.RPG.Services.GatheringServices
             var result = new StringBuilder();
 
             bool isMine = areaId.ToLower() == "mine";
-            result.AppendLine($"{(isMine ? "⛏️" : "🌿")} You {(isMine ? "mine" : "gather")} in the {area.Name}...\n");
+            bool isSwamp = areaId.ToLower() == "swamp";
+
+            string gatherIcon = isMine ? "⛏️" : isSwamp ? "🌿" : "🌿";
+            string gatherVerb = isMine ? "mine" : isSwamp ? "forage" : "gather";
+
+            result.AppendLine($"{gatherIcon} You {gatherVerb} in the {area.Name}...\n");
 
             foreach (var item in gathered)
             {

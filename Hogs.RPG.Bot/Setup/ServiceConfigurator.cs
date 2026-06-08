@@ -95,6 +95,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<SmithingService>();
             services.AddScoped<SmithingShopRepository>();
             services.AddScoped<GameEventService>();
+            services.AddScoped<AlchemyBrewService>();
 
             // =========================
             // 🏆 LEADERBOARDS

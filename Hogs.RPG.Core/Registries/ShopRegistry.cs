@@ -42,6 +42,7 @@ namespace Hogs.RPG.Core.Registries
             { RpgPerkShopItems.DungeonReset.Id,     RpgPerkShopItems.DungeonReset    },
             { RpgPerkShopItems.PetDungeonReset.Id,  RpgPerkShopItems.PetDungeonReset },
             { RpgPerkShopItems.RaidReset.Id,        RpgPerkShopItems.RaidReset },
+            { RpgPerkShopItems.TrailReset.Id,       RpgPerkShopItems.TrailReset },
         };
 
         // Helper to get all items in a given category

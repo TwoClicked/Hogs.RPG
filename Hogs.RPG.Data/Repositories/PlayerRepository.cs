@@ -217,6 +217,29 @@ namespace Hogs.RPG.Data.Repositories
             return players;
         }
 
+        public async Task<List<Player>> GetTopAlchemistLevelAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.AlchemistLevel)
+                .ThenByDescending(p => p.AlchemistXP)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players)
+                p.DeserializeBuffs();
+
+            return players;
+        }
+
+        public async Task<int> GetRankByAlchemistLevelAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p =>
+                p.AlchemistLevel > player.AlchemistLevel ||
+                (p.AlchemistLevel == player.AlchemistLevel && p.AlchemistXP > player.AlchemistXP)) + 1;
+        }
+
         public async Task<int> GetRankBySmithingLevelAsync(ulong discordId)
         {
             var player = await GetByDiscordIdAsync(discordId);

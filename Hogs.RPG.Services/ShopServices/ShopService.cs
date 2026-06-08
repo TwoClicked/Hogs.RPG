@@ -56,6 +56,17 @@ namespace Hogs.RPG.Services.ShopServices
             if (player.Gold < item.Price)
                 return (false, $"❌ You need **{item.Price:N0} gold** but only have **{player.Gold:N0}**.");
 
+            // Trail reset — enforce once per day before charging gold
+            if (itemId == "rpg_trail_reset")
+            {
+                var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+                if (player.TrailResetUsedDate == today)
+                    return (false, "❌ You have already reset your trails today. Come back tomorrow.");
+
+                if (player.TrailsToday == 0)
+                    return (false, "❌ You haven't used any trails today — no need to reset.");
+            }
+
             player.Gold -= item.Price;
             await playerRepo.UpdatePlayerAsync(player);
 
@@ -529,6 +540,26 @@ namespace Hogs.RPG.Services.ShopServices
                 // =========================
                 case "rpg_raid_reset":
                     player.RaidsToday = Math.Max(0, player.RaidsToday - 1);
+                    await playerRepo.UpdatePlayerAsync(player);
+                    break;
+
+                // =========================
+                // 🏃 TRAIL RESET — once per day
+                // =========================
+                case "rpg_trail_reset":
+                    var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+
+                    if (player.TrailResetUsedDate == today)
+                    {
+                        // Refund the gold — purchase already deducted above
+                        player.Gold += 5_000;
+                        await playerRepo.UpdatePlayerAsync(player);
+                        break;
+                    }
+
+                    player.TrailsToday = 0;
+                    player.LastTrailDate = today;
+                    player.TrailResetUsedDate = today;
                     await playerRepo.UpdatePlayerAsync(player);
                     break;
             }

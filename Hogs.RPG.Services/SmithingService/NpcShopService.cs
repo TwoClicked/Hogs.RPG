@@ -126,7 +126,14 @@ namespace Hogs.RPG.Services.SmithingServices
                 if (listing.Quantity <= 0) continue;
 
                 // Roll NPC demand — random between 0 and MaxNpcBuysPerDay
-                int npcDemand = _random.Next(0, itemDef.MaxNpcBuysPerDay + 1);
+                // If player drank Blacksmith's Elixir yesterday, NPCs always buy the max
+                var yesterday = DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd");
+                bool elixirActive = player.BlacksmithElixirActiveDate == yesterday;
+
+                int npcDemand = elixirActive
+                    ? itemDef.MaxNpcBuysPerDay
+                    : _random.Next(0, itemDef.MaxNpcBuysPerDay + 1);
+
                 if (npcDemand == 0) continue;
 
                 // Can't buy more than what's listed

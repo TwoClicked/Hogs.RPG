@@ -136,5 +136,16 @@ namespace Hogs.RPG.Core.GameData.Shop
             Type = ShopItemType.FixedPrice,
             Price = 6_000
         };
+
+        public static readonly ShopItemDefinition TrailReset = new()
+        {
+            Id = "rpg_trail_reset",
+            Name = "Trail Reset",
+            Description = "Reset your 3 daily trails instantly. Once per day.",
+            Icon = "🏃",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 5_000
+        };
     }
 }

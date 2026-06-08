@@ -283,6 +283,24 @@ namespace Hogs.RPG.Services.HuntServices
             }
 
             // =========================
+            // 🧪 ALCHEMY XP — granted when hunting alchemy category monsters
+            // =========================
+            if (target.AlchemyXpReward > 0)
+            {
+                player.AlchemistXP += target.AlchemyXpReward;
+
+                // Level up check
+                while (player.AlchemistLevel < 99)
+                {
+                    int xpNeeded = player.AlchemistLevel * player.AlchemistLevel * 50;
+                    if (player.AlchemistXP >= xpNeeded)
+                        player.AlchemistLevel++;
+                    else
+                        break;
+                }
+            }
+
+            // =========================
             // 🧾 RESULT
             // =========================
             var sb = new StringBuilder();

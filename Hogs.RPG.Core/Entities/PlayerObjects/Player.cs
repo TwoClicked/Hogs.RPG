@@ -81,6 +81,9 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
         // Whether the player owns the hunting companion pet
         public bool HasHuntingPet { get; set; } = false;
 
+        // Date string of the last trail reset purchase — enforces once-per-day limit
+        public string? TrailResetUsedDate { get; set; }
+
         // =========================
         // HUNTER SET BONUS
         // =========================
@@ -106,6 +109,26 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
 
         // Date of last NPC shop reset — used to reset SmithingEarnedToday
         public string? SmithingLastReset { get; set; }
+
+        // =========================
+        // ALCHEMIST
+        // =========================
+
+        public int AlchemistLevel { get; set; } = 1;
+        public int AlchemistXP { get; set; } = 0;
+
+        // Active buff slots — one stat, one utility running simultaneously
+        public string? ActiveStatBuffId { get; set; }
+        public DateTime? ActiveStatBuffExpiry { get; set; }
+        public string? ActiveUtilityBuffId { get; set; }
+        public DateTime? ActiveUtilityBuffExpiry { get; set; }
+
+        // Daily potion use cap — 5 per day
+        public int PotionsDrankToday { get; set; } = 0;
+        public string? LastPotionDrankDate { get; set; }
+
+        // Blacksmith's Elixir — date player drank it (NpcShopService checks yesterday's date)
+        public string? BlacksmithElixirActiveDate { get; set; }
 
         // =========================
         // 🔄 BUFF SERIALIZATION

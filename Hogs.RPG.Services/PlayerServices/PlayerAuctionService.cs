@@ -225,9 +225,14 @@ namespace Hogs.RPG.Services.AuctionServices
                 return (false, $"❌ You need **{bidAmount:N0} gold** but only have **{bidder.Gold:N0}**.");
 
             // Refund the previous bidder (if there is one and they're not the seller)
+            ulong? previousBidderId = null;
+            int previousBidAmount = listing.CurrentBid;
+
             if (listing.CurrentBidderDiscordId.HasValue &&
                 listing.CurrentBidderDiscordId.Value != listing.SellerDiscordId)
             {
+                previousBidderId = listing.CurrentBidderDiscordId.Value;
+
                 var prevBidder = await playerRepo.GetByDiscordIdAsync(listing.CurrentBidderDiscordId.Value);
                 if (prevBidder != null)
                 {
@@ -249,7 +254,41 @@ namespace Hogs.RPG.Services.AuctionServices
 
             await PostBidFeedAsync(bidderId, listing, bidAmount);
 
+            if (previousBidderId.HasValue)
+                await SendOutbidDmAsync(previousBidderId.Value, listing, previousBidAmount, bidAmount);
+
             return (true, $"✅ Bid of **{bidAmount:N0} gold** placed on **{listing.ListingName}**!");
+        }
+
+        // Notify the previous highest bidder that they've been outbid.
+        private async Task SendOutbidDmAsync(
+         ulong previousBidderId,
+         PlayerAuctionListing listing,
+         int theirBid,
+         int newBid)
+        {
+            try
+            {
+                var user = await _client.GetUserAsync(previousBidderId);
+                if (user == null) return;
+
+                var embed = new EmbedBuilder()
+                    .WithTitle("🔨 You've Been Outbid!")
+                    .WithDescription(
+                        $"Someone placed a higher bid on **{listing.ListingName}**.\n\n" +
+                        $"Your bid: **{theirBid:N0} gold** *(refunded to your balance)*\n" +
+                        $"New bid: **{newBid:N0} gold**\n\n" +
+                        $"Use `/market bid {listing.Id} <amount>` to bid again.")
+                    .WithColor(new Color(0xE67E22))
+                    .WithFooter($"Listing #{listing.Id}")
+                    .Build();
+
+                await user.SendMessageAsync(embed: embed);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Failed to DM outbid notice to {previousBidderId}: {ex.Message}");
+            }
         }
 
         // =========================

@@ -31,5 +31,8 @@ namespace Hogs.RPG.Core.Entities.GameLoopObjects
         public HuntCategory Category { get; set; } = HuntCategory.Normal;
 
         public string? RareDropItem { get; set; }
+
+        // Alchemy XP granted when this target is hunted (0 for non-alchemy targets)
+        public int AlchemyXpReward { get; set; } = 0;
     }
 }

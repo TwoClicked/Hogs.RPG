@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.EquipmentObjects;
+using Hogs.RPG.Core.GameData.Alchemy;
 using Hogs.RPG.Core.GameData.Equipment;
 using Hogs.RPG.Core.GameData.Smithing;
 using System.Collections.Generic;
@@ -176,6 +177,44 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             { OreItems.MithrilBar.Id,  OreItems.MithrilBar  },
             { OreItems.AdamantBar.Id,  OreItems.AdamantBar  },
             { OreItems.RuniteBar.Id,   OreItems.RuniteBar   },
+
+            // ===== Alchemy Ingredients =====
+            { AlchemyIngredients.Moonpetal.Id,          AlchemyIngredients.Moonpetal          },
+            { AlchemyIngredients.Glowshroom.Id,         AlchemyIngredients.Glowshroom         },
+            { AlchemyIngredients.SwampRoot.Id,          AlchemyIngredients.SwampRoot          },
+            { AlchemyIngredients.VenomGland.Id,         AlchemyIngredients.VenomGland         },
+            { AlchemyIngredients.Dreamleaf.Id,          AlchemyIngredients.Dreamleaf          },
+            { AlchemyIngredients.PhoenixAsh.Id,         AlchemyIngredients.PhoenixAsh         },
+            { AlchemyIngredients.SerpentVenom.Id,       AlchemyIngredients.SerpentVenom       },
+            { AlchemyIngredients.AlchemicalCore.Id,     AlchemyIngredients.AlchemicalCore     },
+            { AlchemyIngredients.EtherealDust.Id,       AlchemyIngredients.EtherealDust       },
+            { AlchemyIngredients.PhilosophersStone.Id,  AlchemyIngredients.PhilosophersStone  },
+            
+            // ===== Alchemist Potions =====
+            { AlchemyPotionItems.WeakStaminaVial.Id,     AlchemyPotionItems.WeakStaminaVial     },
+            { AlchemyPotionItems.ApprenticesBrew.Id,     AlchemyPotionItems.ApprenticesBrew     },
+            { AlchemyPotionItems.WeakHuntersDraft.Id,    AlchemyPotionItems.WeakHuntersDraft    },
+            { AlchemyPotionItems.StaminaVial.Id,         AlchemyPotionItems.StaminaVial         },
+            { AlchemyPotionItems.TrailTonic.Id,          AlchemyPotionItems.TrailTonic          },
+            { AlchemyPotionItems.HuntersDraft.Id,        AlchemyPotionItems.HuntersDraft        },
+            { AlchemyPotionItems.XpSerum.Id,             AlchemyPotionItems.XpSerum             },
+            { AlchemyPotionItems.WeakBerserkerBrew.Id,   AlchemyPotionItems.WeakBerserkerBrew   },
+            { AlchemyPotionItems.WeakIronbloodTonic.Id,  AlchemyPotionItems.WeakIronbloodTonic  },
+            { AlchemyPotionItems.GoldRushFlask.Id,       AlchemyPotionItems.GoldRushFlask       },
+            { AlchemyPotionItems.BerserkerBrew.Id,       AlchemyPotionItems.BerserkerBrew       },
+            { AlchemyPotionItems.IronbloodTonic.Id,      AlchemyPotionItems.IronbloodTonic      },
+            { AlchemyPotionItems.Antivenom.Id,           AlchemyPotionItems.Antivenom           },
+            { AlchemyPotionItems.BlacksmithsElixir.Id,   AlchemyPotionItems.BlacksmithsElixir   },
+            { AlchemyPotionItems.SwiftfootBrew.Id,       AlchemyPotionItems.SwiftfootBrew       },
+            { AlchemyPotionItems.RaidElixir.Id,          AlchemyPotionItems.RaidElixir          },
+            { AlchemyPotionItems.BloodPactPotion.Id,     AlchemyPotionItems.BloodPactPotion     },
+            { AlchemyPotionItems.GreaterStaminaVial.Id,  AlchemyPotionItems.GreaterStaminaVial  },
+            { AlchemyPotionItems.RevivalDraught.Id,      AlchemyPotionItems.RevivalDraught      },
+            { AlchemyPotionItems.GreaterHuntersDraft.Id, AlchemyPotionItems.GreaterHuntersDraft },
+            { AlchemyPotionItems.GreaterXpSerum.Id,      AlchemyPotionItems.GreaterXpSerum      },
+            { AlchemyPotionItems.ShadowSalve.Id,         AlchemyPotionItems.ShadowSalve         },
+            { AlchemyPotionItems.VoidTincture.Id,        AlchemyPotionItems.VoidTincture        },
+            { AlchemyPotionItems.DragonBlood.Id,         AlchemyPotionItems.DragonBlood         },
         };
     }
 }

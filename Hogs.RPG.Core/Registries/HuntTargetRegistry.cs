@@ -42,5 +42,11 @@ public static class HuntTargetRegistry
         { MythicTargets.AbyssStalker.Id, MythicTargets.AbyssStalker },
         { MythicTargets.ColossusElk.Id, MythicTargets.ColossusElk },
         { MythicTargets.DeathRaven.Id, MythicTargets.DeathRaven },
+
+        // ===== ALCHEMY HUNTS =====
+        { AlchemyTargets.SwampSerpent.Id,    AlchemyTargets.SwampSerpent    },
+        { AlchemyTargets.CorruptedGolem.Id,  AlchemyTargets.CorruptedGolem  },
+        { AlchemyTargets.ShadowWraith.Id,    AlchemyTargets.ShadowWraith    },
+        { AlchemyTargets.ElderAlchemist.Id,  AlchemyTargets.ElderAlchemist  },
     };
 }

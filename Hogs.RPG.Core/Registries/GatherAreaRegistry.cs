@@ -34,6 +34,23 @@ namespace Hogs.RPG.GameData.Gathering
                     // dragon_crystal is NOT in the drop table here
                     // it is rolled separately in SmithingService at lv99 only
                 }
+            },
+
+            ["swamp"] = new GatherArea
+            {
+                Id = "swamp",
+                Name = "Swamp",
+                Drops = new Dictionary<string, double>
+                {
+                    ["moonpetal"] = 0.38,
+                    ["glowshroom"] = 0.25,
+                    ["swamp_root"] = 0.20,
+                    ["venom_gland"] = 0.10,
+                    ["dreamleaf"] = 0.05,
+                    ["phoenix_ash"] = 0.02
+                    // Monster drops (serpent_venom, alchemical_core, ethereal_dust, philosophers_stone)
+                    // are NOT in this table — they drop from hunting only
+                }
             }
         };
     }
