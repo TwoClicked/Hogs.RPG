@@ -157,7 +157,11 @@ namespace Hogs.RPG.Services.AchievementServices
 
                     if (newCount > 0)
                     {
-                        // Update count and title silently — no gold, no feed
+                        // Award gold for retroactive achievements
+                        int goldAwarted = newCount * 250; // Flat 250 gold per achievement for retroactive awards
+                        player.Gold += goldAwarted;
+
+                        // Update achievement count and title
                         player.AchievementCount = earnedIds.Count;
                         var bonus = AchievementMilestones.GetBonus(player.AchievementCount);
                         if (bonus.Title != null)
@@ -165,7 +169,9 @@ namespace Hogs.RPG.Services.AchievementServices
 
                         await _playerRepository.UpdatePlayerAsync(player);
 
-                        Console.WriteLine($"[Retroactive] {player.Username} — awarded {newCount} achievements (total: {player.AchievementCount})");
+                        // post to feed 
+
+                        await _gameEventService.SendRetroactiveMigrationAsync(player, newCount, goldAwarted);
                     }
                 }
                 catch (Exception ex)

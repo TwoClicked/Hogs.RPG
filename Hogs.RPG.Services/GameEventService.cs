@@ -88,6 +88,24 @@ namespace Hogs.RPG.Services.Game
             await channel.SendMessageAsync(embed: embed);
         }
 
+        public async Task SendRetroactiveMigrationAsync(Player player, int achievementCount, int goldAwarded)
+        {
+            var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
+            if (channel == null) return;
+
+            var embed = new EmbedBuilder()
+                .WithTitle("🏆 Achievements Unlocked!")
+                .WithDescription(
+                    $"<@{player.DiscordId}> had **{achievementCount} achievement{(achievementCount == 1 ? "" : "s")}** unlocked from previous progress.\n" +
+                    $"💰 **+{goldAwarded:N0} gold** rewarded.\n" +
+                    $"📊 Total achievements: **{player.AchievementCount}**" +
+                    (player.Title != null ? $"\n🎖️ Title unlocked: **{player.Title}**" : ""))
+                .WithColor(new Color(0xF1C40F))
+                .Build();
+
+            await channel.SendMessageAsync(embed: embed);
+        }
+
         public async Task SendAchievementAsync(Player player, AchievementDefinition def, int goldRewarded)
         {
             var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
