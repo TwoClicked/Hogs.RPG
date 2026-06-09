@@ -362,7 +362,6 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         [SlashCommand("migrate-achievements", "Run the retroactive achievement migration for all players")]
-        [RequireRole("Admin")]
         public async Task MigrateAchievements()
         {
             await DeferAsync(ephemeral: true);
