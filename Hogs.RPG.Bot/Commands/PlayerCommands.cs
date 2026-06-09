@@ -8,7 +8,6 @@ using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services;
-using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.GatheringServices;
 using Hogs.RPG.Services.PetServices;
@@ -34,7 +33,7 @@ namespace Hogs.RPG.Bot.Commands
         private readonly PetService _petService;
         private readonly RelicService _relicService;
         private readonly LeaderboardService _leaderboardService;
-        private readonly AchievementService _achievementService;
+
         public PlayerCommands(
             PlayerService playerService,
             PlayerRepository playerRepository,
@@ -46,8 +45,7 @@ namespace Hogs.RPG.Bot.Commands
             DiscordSocketClient client,
             PetService petService,
             RelicService relicService,
-            LeaderboardService leaderboardService,
-            AchievementService achievementService)
+            LeaderboardService leaderboardService)
         {
             _playerService = playerService;
             _playerRepository = playerRepository;
@@ -60,7 +58,6 @@ namespace Hogs.RPG.Bot.Commands
             _petService = petService;
             _relicService = relicService;
             _leaderboardService = leaderboardService;
-            _achievementService = achievementService;
         }
 
         // =========================
@@ -180,9 +177,6 @@ namespace Hogs.RPG.Bot.Commands
             int bonusDefense = stats.defense - player.Defense;
             int bonusHealth = stats.health - player.MaxHealth;
 
-            // =========================
-            // EMBED — fields 1-17 (well under Discord's 25 limit after pet section below)
-            // =========================
             var embed = new EmbedBuilder()
                 .WithTitle($"⚔ {player.Username}'s Profile")
                 .WithColor(Color.DarkRed)
@@ -205,7 +199,7 @@ namespace Hogs.RPG.Bot.Commands
                 .AddField("Energy", $"⚡ {player.Energy}", true)
                 .AddField("Hunter Stamina", $"🏹 {player.HunterStamina}/{staminaMax}", true)
 
-                // Row — boosts (blank fills third slot so they sit correctly)
+                // Row — boosts
                 .AddField("✨ Double XP", xpBoostText, true)
                 .AddField("⚡ Stamina Boost", staminaBoostText, true)
                 .AddField("\u200b", "\u200b", true)
@@ -223,7 +217,7 @@ namespace Hogs.RPG.Bot.Commands
                     false)
                 .AddField("⚒️ Smithing Level", $"Level **{player.SmithingLevel}** — {player.SmithingXP:N0} XP", true)
                 .AddField("🧪 Alchemist Level", $"Level **{player.AlchemistLevel}** — {player.AlchemistXP:N0} XP", true)
-                .AddField("🏆 Achievements", $"**{player.AchievementCount}** earned", true)
+                .AddField("🏆 Achievements", $"**{player.AchievementCount}** earned" + (string.IsNullOrEmpty(player.Title) ? "" : $" · {player.Title}"), true)
 
                 // Gear
                 .AddField(
@@ -239,10 +233,8 @@ namespace Hogs.RPG.Bot.Commands
                     $"Amulet:    {FormatItem(player.Amulet)}",
                     false);
 
-
-
             // =========================
-            // RELICS — field 18
+            // RELICS
             // =========================
             var equippedRelics = await _relicService.GetEquippedRelicsAsync(player.DiscordId);
 
@@ -262,7 +254,7 @@ namespace Hogs.RPG.Bot.Commands
                 false);
 
             // =========================
-            // PET — fields 19-21 (collapsed from 9 to 3 to stay under the 25-field limit)
+            // PET
             // =========================
             if (pet != null && PetRegistry.All.TryGetValue(pet.PetId, out var def))
             {
@@ -292,7 +284,6 @@ namespace Hogs.RPG.Bot.Commands
                 embed.AddField("🐾 Pet", "No pet equipped", false);
             }
 
-            // Total fields with pet: 21. Without pet: 19. Both safely under Discord's 25-field limit.
             await FollowupAsync(embed: embed.Build());
         }
 
@@ -321,7 +312,6 @@ namespace Hogs.RPG.Bot.Commands
             var stats = _statService.CalculateStats(player);
             int gearScore = stats.attack + stats.defense + stats.health;
 
-            // Pet score for display
             var equippedPet = await _petService.GetEquippedPetAsync(Context.User.Id);
             string petPowerValue = equippedPet != null
                 ? $"{_petService.GetPetGearScore(equippedPet):N0}\n{Rank(ranks.PetGearScore)}"
@@ -352,28 +342,12 @@ namespace Hogs.RPG.Bot.Commands
                 .AddField("🏆 Achievements", $"{player.AchievementCount}\n{Rank(ranks.AchievementCount)}", true)
                 .AddField("\u200b", "\u200b", true);
 
-
-
             await ModifyOriginalResponseAsync(msg =>
             {
                 msg.Content = null;
                 msg.Embed = embed.Build();
             });
         }
-
-        [SlashCommand("migrate-achievements", "Run the retroactive achievement migration for all players")]
-        public async Task MigrateAchievements()
-        {
-            await DeferAsync(ephemeral: true);
-
-            await FollowupAsync("⏳ Starting retroactive migration... check Railway logs for progress.", ephemeral: true);
-
-            _ = Task.Run(async () =>
-            {
-                await _achievementService.RunRetroactiveMigrationAsync();
-            });
-        }
-
 
         // =========================
         // FORMAT ITEM HELPER

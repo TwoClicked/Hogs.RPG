@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
@@ -27,6 +28,7 @@ namespace Hogs.RPG.Bot.Commands
         private readonly InventoryService _inventoryService;
         private readonly PetService _petService;
         private readonly RelicService _relicService;
+        private readonly AchievementService _achievementService;
 
         public TestCommands(
             BossService bossService,
@@ -34,7 +36,8 @@ namespace Hogs.RPG.Bot.Commands
             PlayerRepository playerRepository,
             InventoryService inventoryService,
             PetService petService,
-            RelicService relicService)
+            RelicService relicService,
+            AchievementService achievementService)
         {
             _bossService = bossService;
             _playerService = playerService;
@@ -42,6 +45,7 @@ namespace Hogs.RPG.Bot.Commands
             _inventoryService = inventoryService;
             _petService = petService;
             _relicService = relicService;
+            _achievementService = achievementService;
         }
 
         // =========================
@@ -209,39 +213,21 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
-        // EMBED
+        // MIGRATE ACHIEVEMENTS
         // =========================
-        private Embed BuildBossEmbed(ActiveBoss boss)
+        [SlashCommand("migrate-achievements", "Run the retroactive achievement migration (Admin Only)")]
+        public async Task MigrateAchievements()
         {
-            var def = boss.Definition;
+            if (!await EnsureAdminAsync()) return;
 
-            string typeLabel = def.Type.ToString() == "Weekly"
-                ? "👑 Weekly Boss"
-                : "⚔ Daily Boss";
+            await DeferAsync(ephemeral: true);
 
-            return new EmbedBuilder()
-                .WithTitle($"🔥 {def.Name} has appeared!")
-                .WithDescription($"{typeLabel}\n\n{def.Description}")
-                .AddField("❤️ Health",
-                    $"{GetHealthBar(boss.CurrentHealth, def.MaxHealth)}\n{boss.CurrentHealth}/{def.MaxHealth}",
-                    true)
-                .AddField("🛡 Defense", def.Defense, true)
-                .AddField("💰 Reward", $"{def.RewardGold} Gold", true)
-                .AddField("⚔ Abilities",
-                    string.IsNullOrWhiteSpace(def.AbilitiesText) ? "Unknown..." : def.AbilitiesText)
-                .WithImageUrl(def.ImageUrl)
-                .WithColor(def.Type.ToString() == "Weekly" ? Color.Gold : Color.DarkRed)
-                .WithFooter("⏳ Defeat the boss before it escapes!")
-                .WithCurrentTimestamp()
-                .Build();
-        }
+            await FollowupAsync("⏳ Starting retroactive migration... check Railway logs for progress.", ephemeral: true);
 
-        private string GetHealthBar(int current, int max)
-        {
-            int bars = 10;
-            double percent = (double)current / max;
-            int filled = (int)(percent * bars);
-            return new string('█', filled) + new string('░', bars - filled);
+            _ = Task.Run(async () =>
+            {
+                await _achievementService.RunRetroactiveMigrationAsync();
+            });
         }
     }
 }
