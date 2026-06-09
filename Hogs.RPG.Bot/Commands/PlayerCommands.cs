@@ -379,6 +379,8 @@ namespace Hogs.RPG.Bot.Commands
             return $"{icon}{name}{statText}";
         }
 
+
+
         // =========================
         // EQUIP
         // =========================

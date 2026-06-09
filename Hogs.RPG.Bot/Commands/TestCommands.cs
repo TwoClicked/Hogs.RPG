@@ -132,6 +132,34 @@ namespace Hogs.RPG.Bot.Commands
             }
         }
 
+
+        [SlashCommand("backfill-pets", "Backfill pet counters for all players (Admin Only)")]
+        public async Task BackfillPets()
+        {
+            if (!await EnsureAdminAsync()) return;
+
+            await DeferAsync(ephemeral: true);
+
+            var players = await _playerRepository.GetAllPlayersAsync();
+            int updated = 0;
+
+            foreach (var player in players)
+            {
+                var pets = await _petService.GetPetsAsync(player.DiscordId);
+
+                if (pets.Count == 0) continue;
+
+                player.TotalPetsOwned = pets.Count;
+                player.HighestPetLevel = pets.Max(p => p.Level);
+                player.HuntingCompanionUnlocked = player.HasHuntingPet;
+
+                await _playerRepository.UpdatePlayerAsync(player);
+                updated++;
+            }
+
+            await FollowupAsync($"✅ Backfilled pet data for **{updated}** players.", ephemeral: true);
+        }
+
         // =========================
         // GIVE ITEM
         // =========================

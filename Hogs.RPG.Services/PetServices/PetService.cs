@@ -111,6 +111,14 @@ namespace Hogs.RPG.Services.PetServices
                 pet.Level++;
                 leveledUp = true;
 
+                // After pet level up is confirmed, update the player counter
+                var player = await _playerRepo.GetByDiscordIdAsync(userId);
+                if (player != null && pet.Level > player.HighestPetLevel)
+                {
+                    player.HighestPetLevel = pet.Level;
+                    await _playerRepo.UpdatePlayerAsync(player);
+                }
+
                 // 🎯 LEVEL 15 → FIRST PASSIVE
                 if (pet.Level == 15 && pet.Passive1 == null)
                 {
