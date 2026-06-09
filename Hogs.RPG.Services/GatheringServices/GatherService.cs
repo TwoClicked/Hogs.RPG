@@ -1,6 +1,7 @@
 ﻿using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.GameData.Gathering;
+using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
 using System;
@@ -15,17 +16,20 @@ namespace Hogs.RPG.Services.GatheringServices
         private readonly PlayerRepository _playerRepository;
         private readonly InventoryService _inventoryService;
         private readonly EnergyService _energyService;
+        private readonly GameEventService _gameEventService;
 
         private readonly Random _random = new();
 
         public GatherService(
             PlayerRepository playerRepository,
             InventoryService inventoryService,
-            EnergyService energyService)
+            EnergyService energyService,
+            GameEventService gameEventService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
             _energyService = energyService;
+            _gameEventService = gameEventService;
         }
 
         public async Task<string> GatherAsync(ulong userId, string areaId, int energy)
@@ -92,17 +96,22 @@ namespace Hogs.RPG.Services.GatheringServices
             {
                 player.AlchemistXP += energy * 2;
 
-                // Level up check
+                int alchemyLevelUps = 0;
                 while (player.AlchemistLevel < 99)
                 {
                     int xpNeeded = player.AlchemistLevel * player.AlchemistLevel * 50;
                     if (player.AlchemistXP >= xpNeeded)
+                    {
                         player.AlchemistLevel++;
-                    else
-                        break;
+                        alchemyLevelUps++;
+                    }
+                    else break;
                 }
 
                 await _playerRepository.UpdatePlayerAsync(player);
+
+                if (alchemyLevelUps > 0)
+                    await _gameEventService.SendAlchemistLevelUpAsync(player);
             }
 
             // =========================

@@ -9,6 +9,7 @@ using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.GameData.Hunts;
+using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
@@ -29,6 +30,7 @@ namespace Hogs.RPG.Services.HuntServices
         private readonly HunterStaminaService _staminaService;
         private readonly DiscordSocketClient _client;
         private readonly PetService _petService;
+        private readonly GameEventService _gameEventService;
 
         private readonly ulong _feedChannelId = 1485357755433750549;
         private readonly Random _random = new();
@@ -40,7 +42,8 @@ namespace Hogs.RPG.Services.HuntServices
             BuffService buffService,
             HunterStaminaService staminaService,
             DiscordSocketClient client,
-            PetService petService)
+            PetService petService,
+            GameEventService gameEventService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
@@ -49,6 +52,7 @@ namespace Hogs.RPG.Services.HuntServices
             _staminaService = staminaService;
             _client = client;
             _petService = petService;
+            _gameEventService = gameEventService;
         }
 
         public async Task<string> HuntAsync(ulong userId, string targetId = null, int stamina = 10)
@@ -323,14 +327,20 @@ namespace Hogs.RPG.Services.HuntServices
             {
                 player.AlchemistXP += target.AlchemyXpReward;
 
+                int alchemyLevelUps = 0;
                 while (player.AlchemistLevel < 99)
                 {
                     int xpNeeded = player.AlchemistLevel * player.AlchemistLevel * 50;
                     if (player.AlchemistXP >= xpNeeded)
+                    {
                         player.AlchemistLevel++;
-                    else
-                        break;
+                        alchemyLevelUps++;
+                    }
+                    else break;
                 }
+
+                if (alchemyLevelUps > 0)
+                    await _gameEventService.SendAlchemistLevelUpAsync(player);
             }
 
             // =========================

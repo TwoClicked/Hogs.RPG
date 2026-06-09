@@ -94,7 +94,6 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<MaterialConversionService>();
             services.AddScoped<SmithingService>();
             services.AddScoped<SmithingShopRepository>();
-            services.AddScoped<GameEventService>();
             services.AddScoped<AlchemyBrewService>();
 
             // =========================
@@ -115,6 +114,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddSingleton<RaidTimerService>();
             services.AddSingleton<TrailService>();
             services.AddSingleton<NpcShopService>();
+            services.AddSingleton<GameEventService>();
 
             // DungeonService keeps in-memory state → must stay singleton
             services.AddSingleton<DungeonService>();
