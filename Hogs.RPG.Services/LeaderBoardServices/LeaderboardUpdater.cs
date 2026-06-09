@@ -145,7 +145,7 @@ public class LeaderboardUpdater
     {
         if (!entries.Any()) return "*No data yet*";
         return string.Join("\n", entries.Select((e, i) =>
-            $"{GetMedal(i + 1)} {GetDisplayName(e.DiscordId, "Unknown")} — **{e.Count}** achievements"));
+            $"{GetMedal(i + 1)} {GetDisplayName(e.DiscordId, "Unknown")} — **{e.Count}**"));
     }
     private string FormatAlchemist(List<Hogs.RPG.Core.Entities.PlayerObjects.Player> players)
     {
