@@ -39,11 +39,14 @@ namespace Hogs.RPG.Data.Repositories
         {
             player.SerializeBuffs();
 
+            player.XpBoostExpiry = ToUtc(player.XpBoostExpiry);
+            player.StaminaBoostExpiry = ToUtc(player.StaminaBoostExpiry);
+            player.ActiveStatBuffExpiry = ToUtc(player.ActiveStatBuffExpiry);
+            player.ActiveUtilityBuffExpiry = ToUtc(player.ActiveUtilityBuffExpiry);
+
             _context.Players.Update(player);
             await _context.SaveChangesAsync();
 
-            // Invalidate autocomplete cache so dungeon/hunt/equip handlers
-            // reflect updated level, slots, and buffs immediately.
             AutocompleteCache<Player>.Invalidate(player.DiscordId);
         }
 
@@ -216,6 +219,9 @@ namespace Hogs.RPG.Data.Repositories
 
             return players;
         }
+
+        private static DateTime? ToUtc(DateTime? dt)
+    => dt.HasValue ? DateTime.SpecifyKind(dt.Value, DateTimeKind.Utc) : null;
 
         public async Task<List<Player>> GetTopAlchemistLevelAsync(int count)
         {
