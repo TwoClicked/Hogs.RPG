@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Hogs.RPG.Core.Entities.AchievementObjects;
 using Hogs.RPG.Core.Entities.PlayerObjects;
 using System.Threading.Tasks;
 
@@ -82,6 +83,39 @@ namespace Hogs.RPG.Services.Game
                     $"<@{player.DiscordId}> reached **Smithing Level {player.SmithingLevel}**!" +
                     (string.IsNullOrEmpty(milestone) ? "" : $"\n{milestone}"))
                 .WithColor(new Color(0xB87333))
+                .Build();
+
+            await channel.SendMessageAsync(embed: embed);
+        }
+
+        public async Task SendAchievementAsync(Player player, AchievementDefinition def, int goldRewarded)
+        {
+            var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
+            if (channel == null) return;
+
+            var embed = new EmbedBuilder()
+                .WithTitle("🏆 Achievement Unlocked!")
+                .WithDescription(
+                    $"<@{player.DiscordId}> earned **{def.Icon} {def.Name}**\n" +
+                    $"*{def.Description}*\n\n" +
+                    $"💰 +{goldRewarded} gold rewarded")
+                .WithColor(new Color(0xF1C40F))
+                .Build();
+
+            await channel.SendMessageAsync(embed: embed);
+        }
+
+        public async Task SendMilestoneTitleAsync(Player player, int milestone, string title)
+        {
+            var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
+            if (channel == null) return;
+
+            var embed = new EmbedBuilder()
+                .WithTitle("🌟 Title Unlocked!")
+                .WithDescription(
+                    $"<@{player.DiscordId}> is now a {title}\n" +
+                    $"*Earned at {milestone} achievements completed*")
+                .WithColor(new Color(0x9B59B6))
                 .Build();
 
             await channel.SendMessageAsync(embed: embed);

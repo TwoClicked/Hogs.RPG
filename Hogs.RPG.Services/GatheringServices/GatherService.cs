@@ -1,6 +1,7 @@
 ﻿using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.GameData.Gathering;
+using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
@@ -17,6 +18,7 @@ namespace Hogs.RPG.Services.GatheringServices
         private readonly InventoryService _inventoryService;
         private readonly EnergyService _energyService;
         private readonly GameEventService _gameEventService;
+        private readonly AchievementService _achievementService;
 
         private readonly Random _random = new();
 
@@ -24,12 +26,14 @@ namespace Hogs.RPG.Services.GatheringServices
             PlayerRepository playerRepository,
             InventoryService inventoryService,
             EnergyService energyService,
-            GameEventService gameEventService)
+            GameEventService gameEventService,
+            AchievementService achievementService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
             _energyService = energyService;
             _gameEventService = gameEventService;
+            _achievementService = achievementService;
         }
 
         public async Task<string> GatherAsync(ulong userId, string areaId, int energy)
@@ -90,13 +94,21 @@ namespace Hogs.RPG.Services.GatheringServices
             }
 
             // =========================
+            // 📊 ZONE ENERGY COUNTERS
+            // =========================
+            var zoneKey = areaId.ToLower();
+            if (zoneKey == "forest") player.ForestEnergySpent += energy;
+            else if (zoneKey == "mine") player.MineEnergySpent += energy;
+            else if (zoneKey == "swamp") player.SwampEnergySpent += energy;
+
+            // =========================
             // 🧪 ALCHEMY XP — 2 XP per energy spent in swamp
             // =========================
-            if (areaId.ToLower() == "swamp")
+            int alchemyLevelUps = 0;
+            if (zoneKey == "swamp")
             {
                 player.AlchemistXP += energy * 2;
 
-                int alchemyLevelUps = 0;
                 while (player.AlchemistLevel < 99)
                 {
                     int xpNeeded = player.AlchemistLevel * player.AlchemistLevel * 50;
@@ -107,11 +119,6 @@ namespace Hogs.RPG.Services.GatheringServices
                     }
                     else break;
                 }
-
-                await _playerRepository.UpdatePlayerAsync(player);
-
-                if (alchemyLevelUps > 0)
-                    await _gameEventService.SendAlchemistLevelUpAsync(player);
             }
 
             // =========================
@@ -121,7 +128,7 @@ namespace Hogs.RPG.Services.GatheringServices
             // =========================
             int crystalsFound = 0;
 
-            if (areaId.ToLower() == "mine" && player.SmithingLevel >= 99)
+            if (zoneKey == "mine" && player.SmithingLevel >= 99)
             {
                 for (int i = 0; i < energy; i++)
                 {
@@ -130,8 +137,23 @@ namespace Hogs.RPG.Services.GatheringServices
                 }
 
                 if (crystalsFound > 0)
+                {
                     await _inventoryService.GiveItemAsync(userId, "dragon_crystal", crystalsFound);
+                    player.DragonCrystalFound = true;
+                }
             }
+
+            // =========================
+            // 💾 SAVE PLAYER (all zones)
+            // Persists zone counters, alchemy XP, dragon crystal flag
+            // =========================
+            await _playerRepository.UpdatePlayerAsync(player);
+
+            // =========================
+            // ALCHEMY LEVEL UP ANNOUNCEMENTS
+            // =========================
+            if (alchemyLevelUps > 0)
+                await _gameEventService.SendAlchemistLevelUpAsync(player);
 
             // =========================
             // SPEND ENERGY
@@ -139,14 +161,19 @@ namespace Hogs.RPG.Services.GatheringServices
             await _energyService.SpendEnergy(player, energy);
 
             // =========================
+            // 🏆 ACHIEVEMENT CHECK
+            // =========================
+            await _achievementService.CheckAndAwardAsync(userId);
+
+            // =========================
             // BUILD RESULT
             // =========================
             var result = new StringBuilder();
 
-            bool isMine = areaId.ToLower() == "mine";
-            bool isSwamp = areaId.ToLower() == "swamp";
+            bool isMine = zoneKey == "mine";
+            bool isSwamp = zoneKey == "swamp";
 
-            string gatherIcon = isMine ? "⛏️" : isSwamp ? "🌿" : "🌿";
+            string gatherIcon = isMine ? "⛏️" : "🌿";
             string gatherVerb = isMine ? "mine" : isSwamp ? "forage" : "gather";
 
             result.AppendLine($"{gatherIcon} You {gatherVerb} in the {area.Name}...\n");

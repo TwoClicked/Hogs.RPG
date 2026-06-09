@@ -2,6 +2,7 @@
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.InventoryServices;
 using System.Text;
@@ -14,22 +15,24 @@ namespace Hogs.RPG.Services.SmithingServices
         private readonly InventoryService _inventoryService;
         private readonly SmithingShopRepository _shopRepository;
         private readonly GameEventService _gameEventService;
+        private readonly AchievementService _achievementService;
 
         public SmithingService(
             PlayerRepository playerRepository,
             InventoryService inventoryService,
             SmithingShopRepository shopRepository,
-            GameEventService gameEventService)
+            GameEventService gameEventService,
+            AchievementService achievementService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
             _shopRepository = shopRepository;
             _gameEventService = gameEventService;
+            _achievementService = achievementService;
         }
 
         // =========================
         // SMELT
-        // BlackSmith only — consumes ore, produces bars
         // =========================
         public async Task<string> SmeltAsync(ulong userId, string barId, int quantity)
         {
@@ -104,7 +107,6 @@ namespace Hogs.RPG.Services.SmithingServices
 
         // =========================
         // CRAFT
-        // BlackSmith only — consumes bars/materials, grants XP, auto-lists in shop
         // =========================
         public async Task<string> CraftAsync(ulong userId, string itemId, int quantity)
         {
@@ -180,12 +182,25 @@ namespace Hogs.RPG.Services.SmithingServices
             await _shopRepository.AddOrIncrementAsync(userId, itemId, quantity);
 
             // =========================
+            // 📊 ACHIEVEMENT COUNTERS
+            // Must be before UpdatePlayerAsync
+            // =========================
+            player.TotalItemsForged += quantity;
+            if (itemId == "dragon_blade")
+                player.DragonBladeForged = true;
+
+            // =========================
             // SAVE PLAYER
             // =========================
             await _playerRepository.UpdatePlayerAsync(player);
 
             if (levelUps > 0)
                 await _gameEventService.SendSmithingLevelUpAsync(player);
+
+            // =========================
+            // 🏆 ACHIEVEMENT CHECK
+            // =========================
+            await _achievementService.CheckAndAwardAsync(userId);
 
             // =========================
             // BUILD RESPONSE
@@ -232,8 +247,7 @@ namespace Hogs.RPG.Services.SmithingServices
         }
 
         // =========================
-        // XP CURVE — Total XP required to reach a given level
-        // Formula: level² × 50
+        // XP CURVE — level² × 50
         // =========================
         public static int GetTotalXpForLevel(int level)
         {

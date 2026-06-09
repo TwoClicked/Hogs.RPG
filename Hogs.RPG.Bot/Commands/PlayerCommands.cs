@@ -8,6 +8,7 @@ using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services;
+using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.GatheringServices;
 using Hogs.RPG.Services.PetServices;
@@ -33,6 +34,7 @@ namespace Hogs.RPG.Bot.Commands
         private readonly PetService _petService;
         private readonly RelicService _relicService;
         private readonly LeaderboardService _leaderboardService;
+        private readonly AchievementService _achievementService;
         public PlayerCommands(
             PlayerService playerService,
             PlayerRepository playerRepository,
@@ -44,7 +46,8 @@ namespace Hogs.RPG.Bot.Commands
             DiscordSocketClient client,
             PetService petService,
             RelicService relicService,
-            LeaderboardService leaderboardService)
+            LeaderboardService leaderboardService,
+            AchievementService achievementService)
         {
             _playerService = playerService;
             _playerRepository = playerRepository;
@@ -57,6 +60,7 @@ namespace Hogs.RPG.Bot.Commands
             _petService = petService;
             _relicService = relicService;
             _leaderboardService = leaderboardService;
+            _achievementService = achievementService;
         }
 
         // =========================
@@ -219,6 +223,7 @@ namespace Hogs.RPG.Bot.Commands
                     false)
                 .AddField("⚒️ Smithing Level", $"Level **{player.SmithingLevel}** — {player.SmithingXP:N0} XP", true)
                 .AddField("🧪 Alchemist Level", $"Level **{player.AlchemistLevel}** — {player.AlchemistXP:N0} XP", true)
+                .AddField("🏆 Achievements", $"**{player.AchievementCount}** earned", true)
 
                 // Gear
                 .AddField(
@@ -233,6 +238,8 @@ namespace Hogs.RPG.Bot.Commands
                     $"Ring:      {FormatItem(player.Ring)}\n" +
                     $"Amulet:    {FormatItem(player.Amulet)}",
                     false);
+
+
 
             // =========================
             // RELICS — field 18
@@ -342,7 +349,7 @@ namespace Hogs.RPG.Bot.Commands
 
                 // Row 4
                 .AddField("⚒️ Smithing", $"Lv. {player.SmithingLevel}\n{Rank(ranks.SmithingLevel)}", true)
-                .AddField("\u200b", "\u200b", true)
+                .AddField("🏆 Achievements", $"{player.AchievementCount}\n{Rank(ranks.AchievementCount)}", true)
                 .AddField("\u200b", "\u200b", true);
 
 
@@ -351,6 +358,20 @@ namespace Hogs.RPG.Bot.Commands
             {
                 msg.Content = null;
                 msg.Embed = embed.Build();
+            });
+        }
+
+        [SlashCommand("migrate-achievements", "Run the retroactive achievement migration for all players")]
+        [RequireRole("Admin")]
+        public async Task MigrateAchievements()
+        {
+            await DeferAsync(ephemeral: true);
+
+            await FollowupAsync("⏳ Starting retroactive migration... check Railway logs for progress.", ephemeral: true);
+
+            _ = Task.Run(async () =>
+            {
+                await _achievementService.RunRetroactiveMigrationAsync();
             });
         }
 

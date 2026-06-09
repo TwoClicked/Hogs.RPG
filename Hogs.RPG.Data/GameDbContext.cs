@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.AchievementObjects;
 using Hogs.RPG.Core.Entities.EquipmentObjects;
 using Hogs.RPG.Core.Entities.GlobalBossObjects;
 using Hogs.RPG.Core.Entities.JobObjects;
@@ -24,9 +25,8 @@ namespace Hogs.RPG.Data
         public DbSet<GearSet> GearSets { get; set; }
         public DbSet<SmithingShopListing> SmithingShopListings { get; set; }
 
-        // Player-to-player marketplace listings
         public DbSet<PlayerAuctionListing> PlayerAuctionListings { get; set; }
-
+        public DbSet<PlayerAchievement> PlayerAchievements { get; set; }
         public GameDbContext(DbContextOptions<GameDbContext> options)
             : base(options)
         {
@@ -77,6 +77,10 @@ namespace Hogs.RPG.Data
             modelBuilder.Entity<SmithingShopListing>()
                 .HasIndex(x => new { x.DiscordId, x.ItemId })
                 .IsUnique();
+
+            modelBuilder.Entity<PlayerAchievement>()
+            .HasIndex(x => new { x.DiscordId, x.AchievementId })
+            .IsUnique();
         }
     }
 }

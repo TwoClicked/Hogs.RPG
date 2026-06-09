@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Hogs.RPG.Core.Entities.JobObjects;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.AchievementServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Text;
@@ -18,8 +19,6 @@ namespace Hogs.RPG.Services.SmithingServices
         private const int NpcResetHourUtc = 12;
 
         private readonly Random _random = new();
-
-        // Track last run date to prevent double-firing
         private DateTime _lastRun = DateTime.MinValue;
 
         public NpcShopService(
@@ -38,13 +37,11 @@ namespace Hogs.RPG.Services.SmithingServices
             {
                 var now = DateTime.UtcNow;
 
-                // Fire once per day at 12:00 UTC (within a 1-minute window)
                 if (now.Hour == NpcResetHourUtc &&
                     now.Minute == 0 &&
                     _lastRun.Date != now.Date)
                 {
                     _lastRun = now;
-
                     Console.WriteLine($"[NpcShopService] Running daily NPC purchases at {now:HH:mm} UTC");
 
                     try
@@ -102,7 +99,6 @@ namespace Hogs.RPG.Services.SmithingServices
             var player = await playerRepo.GetByDiscordIdAsync(discordId);
             if (player == null) return;
 
-            // Reset today's earnings if it's a new day
             var todayKey = DateTime.UtcNow.ToString("yyyy-MM-dd");
             if (player.SmithingLastReset != todayKey)
             {
@@ -125,21 +121,17 @@ namespace Hogs.RPG.Services.SmithingServices
 
                 if (listing.Quantity <= 0) continue;
 
-                // Roll NPC demand — random between 0 and MaxNpcBuysPerDay
-                // If player drank Blacksmith's Elixir yesterday, NPCs always buy the max
                 var yesterday = DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-dd");
                 bool elixirActive = player.BlacksmithElixirActiveDate == yesterday;
 
                 int npcDemand = elixirActive
                     ? itemDef.MaxNpcBuysPerDay
-                    : _random.Next(0, itemDef.MaxNpcBuysPerDay + 1);
+                    : _random.Next(1, itemDef.MaxNpcBuysPerDay + 1);
 
                 if (npcDemand == 0) continue;
 
-                // Can't buy more than what's listed
                 int unitsSold = Math.Min(npcDemand, listing.Quantity);
 
-                // Respect the daily gold cap
                 int potentialEarnings = unitsSold * itemDef.NpcGoldPrice;
                 if (potentialEarnings > remainingCap)
                 {
@@ -148,7 +140,6 @@ namespace Hogs.RPG.Services.SmithingServices
                     potentialEarnings = unitsSold * itemDef.NpcGoldPrice;
                 }
 
-                // Deduct sold items from shop
                 await shopRepo.DeductAsync(discordId, listing.ItemId, unitsSold);
 
                 totalEarned += potentialEarnings;
@@ -159,13 +150,24 @@ namespace Hogs.RPG.Services.SmithingServices
 
             if (totalEarned <= 0) return;
 
-            // Credit gold to player
+            // =========================
+            // 📊 ACHIEVEMENT COUNTER
+            // =========================
             player.Gold += totalEarned;
             player.SmithingEarnedToday += totalEarned;
+            player.TotalNpcGoldEarned += totalEarned;
+
             await playerRepo.UpdatePlayerAsync(player);
 
-            // DM the player their receipt
+            // DM receipt
             await SendReceiptAsync(discordId, salesLog, totalEarned, player.SmithingEarnedToday);
+
+            // =========================
+            // 🏆 ACHIEVEMENT CHECK
+            // =========================
+            using var achScope = _scopeFactory.CreateScope();
+            var achievementService = achScope.ServiceProvider.GetRequiredService<AchievementService>();
+            await achievementService.CheckAndAwardAsync(discordId);
         }
 
         // =========================

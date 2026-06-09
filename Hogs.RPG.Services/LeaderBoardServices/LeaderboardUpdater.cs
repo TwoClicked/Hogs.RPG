@@ -92,6 +92,9 @@ public class LeaderboardUpdater
         var deaths = await service.GetTopDeaths(5);
         var trails = await service.GetTopTrails(5);
         var smithing = await service.GetTopSmithingLevel(5);
+        var achievements = await service.GetTopAchievements(5);
+
+
         List<Hogs.RPG.Core.Entities.PlayerObjects.Player> alchemist = await service.GetTopAlchemistLevel(5);
 
         var embed = new EmbedBuilder()
@@ -118,7 +121,7 @@ public class LeaderboardUpdater
         // Row 4
         embed.AddField("⚒️ Smithing Level", FormatSmithing(smithing), true);
         embed.AddField("🧪 Alchemist Level", FormatAlchemist(alchemist), true);
-        embed.AddField("\u200b", "\u200b", true);
+        embed.AddField("🏆 Achievements", FormatAchievements(achievements), true);
 
         _mainMsgId = await SendOrUpdate(channel, embed.Build(), _mainMsgId);
     }
@@ -138,6 +141,12 @@ public class LeaderboardUpdater
         };
     }
 
+    private string FormatAchievements(List<(ulong DiscordId, int Count)> entries)
+    {
+        if (!entries.Any()) return "*No data yet*";
+        return string.Join("\n", entries.Select((e, i) =>
+            $"{GetMedal(i + 1)} {GetDisplayName(e.DiscordId, "Unknown")} — **{e.Count}** achievements"));
+    }
     private string FormatAlchemist(List<Hogs.RPG.Core.Entities.PlayerObjects.Player> players)
     {
         if (!players.Any()) return "*No data yet*";

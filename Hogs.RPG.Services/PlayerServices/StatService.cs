@@ -1,5 +1,6 @@
 ﻿using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.GameData.Achievements;
 using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
@@ -84,6 +85,15 @@ namespace Hogs.RPG.Services.GameplayServices
             attack = (int)(attack * (1f + relicBonuses.AttackPercent));
             defense = (int)(defense * (1f + relicBonuses.DefensePercent));
             health = (int)(health * (1f + relicBonuses.MaxHpPercent));
+
+            // =========================
+            // 🏆 ACHIEVEMENT MILESTONE BONUSES
+            // Flat stat bonuses from achievement count milestones
+            // =========================
+            var achBonus = AchievementMilestones.GetBonus(player.AchievementCount);
+            attack += achBonus.BonusAttack;
+            defense += achBonus.BonusDefense;
+            health += achBonus.BonusHealth;
 
             // =========================
             // 🧪 ACTIVE STAT BUFF (Alchemist potions)

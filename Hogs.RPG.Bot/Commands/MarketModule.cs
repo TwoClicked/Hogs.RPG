@@ -31,7 +31,8 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         [SlashCommand("list-item", "List an inventory item for sale")]
         public async Task ListItem(
-            [Summary("item_id", "Item ID (check /inventory for IDs)")] string itemId,
+            [Summary("item", "Select an item from your inventory"),
+            Autocomplete(typeof(MarketListItemAutocompleteHandler))] string itemId,
             [Summary("base_price", "Minimum bid price in gold")] int basePrice,
             [Summary("buyout_price", "Optional instant-buy price (leave 0 for none)")] int buyoutPrice = 0)
         {
@@ -95,7 +96,8 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         [SlashCommand("list-relic", "List a relic for sale")]
         public async Task ListRelic(
-            [Summary("relic_id", "Relic DB ID (check /relics for IDs)")] int relicId,
+            [Summary("relic", "Select an unequipped relic to list"),
+            Autocomplete(typeof(MarketListRelicAutocompleteHandler))] int relicId,
             [Summary("base_price", "Minimum bid price in gold")] int basePrice,
             [Summary("buyout_price", "Optional instant-buy price (leave 0 for none)")] int buyoutPrice = 0)
         {

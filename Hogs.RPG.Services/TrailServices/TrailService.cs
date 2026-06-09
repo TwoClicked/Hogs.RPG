@@ -5,10 +5,12 @@ using Discord.WebSocket;
 using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Core.Entities.TrailObjects;
 using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.GameData.Achievements;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.GameData.Trails;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.InventoryServices;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text;
@@ -77,8 +79,10 @@ namespace Hogs.RPG.Services.TrailServices
                 player.LastTrailDate = today;
             }
 
-            if (player.TrailsToday >= MaxDailyTrails)
-                return ($"You've used all {MaxDailyTrails} trails for today. Resets at midnight UTC.", null, null);
+            var achTrailBonus = AchievementMilestones.GetBonus(player.AchievementCount);
+            int dailyTrailLimit = MaxDailyTrails + achTrailBonus.ExtraTrails;
+            if (player.TrailsToday >= dailyTrailLimit)
+                return ($"You've used all {dailyTrailLimit} trails for today. Resets at midnight UTC.", null, null);
 
             player.TrailsToday++;
             await playerRepo.UpdatePlayerAsync(player);
@@ -142,51 +146,20 @@ namespace Hogs.RPG.Services.TrailServices
                     if (choice == "ambush")
                     {
                         bool success = _random.NextDouble() < 0.60;
-                        if (success)
-                        {
-                            int bonus = boosted ? 15 : 10;
-                            state.TokensEarned += bonus;
-                            logEntry += $" — You struck true! **+{bonus} tokens**";
-                        }
-                        else
-                        {
-                            int penalty = (int)(state.TokensEarned * 0.20);
-                            state.TokensEarned = Math.Max(0, state.TokensEarned - penalty);
-                            logEntry += $" — The beast fought back hard. **-{penalty} tokens**";
-                        }
+                        if (success) { int bonus = boosted ? 15 : 10; state.TokensEarned += bonus; logEntry += $" — You struck true! **+{bonus} tokens**"; }
+                        else { int penalty = (int)(state.TokensEarned * 0.20); state.TokensEarned = Math.Max(0, state.TokensEarned - penalty); logEntry += $" — The beast fought back hard. **-{penalty} tokens**"; }
                     }
-                    else
-                    {
-                        state.TokensEarned += 2;
-                        logEntry += " — You slipped past quietly. **+2 tokens**";
-                    }
+                    else { state.TokensEarned += 2; logEntry += " — You slipped past quietly. **+2 tokens**"; }
                     break;
 
                 case TrailEventType.TrackersGamble:
                     if (choice == "pressluck")
                     {
                         bool success = _random.NextDouble() < 0.50;
-                        if (success)
-                        {
-                            int before = state.TokensEarned;
-                            state.TokensEarned = boosted
-                                ? (int)(state.TokensEarned * 2.5)
-                                : state.TokensEarned * 2;
-                            logEntry += $" — Fortune favours the bold! **+{state.TokensEarned - before} tokens**";
-                        }
-                        else
-                        {
-                            int penalty = (int)(state.TokensEarned * 0.40);
-                            state.TokensEarned = Math.Max(0, state.TokensEarned - penalty);
-                            logEntry += $" — Another hunter got there first. **-{penalty} tokens**";
-                        }
+                        if (success) { int before = state.TokensEarned; state.TokensEarned = boosted ? (int)(state.TokensEarned * 2.5) : state.TokensEarned * 2; logEntry += $" — Fortune favours the bold! **+{state.TokensEarned - before} tokens**"; }
+                        else { int penalty = (int)(state.TokensEarned * 0.40); state.TokensEarned = Math.Max(0, state.TokensEarned - penalty); logEntry += $" — Another hunter got there first. **-{penalty} tokens**"; }
                     }
-                    else
-                    {
-                        int safe = boosted ? 8 : 5;
-                        state.TokensEarned += safe;
-                        logEntry += $" — You took the safe option. **+{safe} tokens**";
-                    }
+                    else { int safe = boosted ? 8 : 5; state.TokensEarned += safe; logEntry += $" — You took the safe option. **+{safe} tokens**"; }
                     break;
 
                 case TrailEventType.RareSighting:
@@ -202,18 +175,9 @@ namespace Hogs.RPG.Services.TrailServices
                             logEntry += $" — You secured a rare find! **+1x {matName}**";
                             state.NotableDrops.Add($"1x {matName}");
                         }
-                        else
-                        {
-                            int penalty = (int)(state.TokensEarned * 0.20);
-                            state.TokensEarned = Math.Max(0, state.TokensEarned - penalty);
-                            logEntry += $" — It spooked and vanished, costing you time. **-{penalty} tokens**";
-                        }
+                        else { int penalty = (int)(state.TokensEarned * 0.20); state.TokensEarned = Math.Max(0, state.TokensEarned - penalty); logEntry += $" — It spooked and vanished, costing you time. **-{penalty} tokens**"; }
                     }
-                    else
-                    {
-                        state.TokensEarned += 1;
-                        logEntry += " — You moved on carefully. **+1 token**";
-                    }
+                    else { state.TokensEarned += 1; logEntry += " — You moved on carefully. **+1 token**"; }
                     break;
 
                 case TrailEventType.LegendaryEncounter:
@@ -241,11 +205,7 @@ namespace Hogs.RPG.Services.TrailServices
                             logEntry += " — The creature regarded you calmly, then disappeared into the dark. **+5 tokens**";
                         }
                     }
-                    else
-                    {
-                        state.TokensEarned += 3;
-                        logEntry += " — You retreated quietly into the trees. **+3 tokens**";
-                    }
+                    else { state.TokensEarned += 3; logEntry += " — You retreated quietly into the trees. **+3 tokens**"; }
                     break;
             }
 
@@ -278,10 +238,7 @@ namespace Hogs.RPG.Services.TrailServices
                 if (IsDecisionEvent(evt.Type))
                     break;
 
-                int modifier = state.NextEventBoosted
-                    ? (int)(evt.TokenModifier * 1.5)
-                    : evt.TokenModifier;
-
+                int modifier = state.NextEventBoosted ? (int)(evt.TokenModifier * 1.5) : evt.TokenModifier;
                 state.NextEventBoosted = false;
 
                 string logEntry = $"{evt.Icon} **{evt.Name}**";
@@ -340,8 +297,13 @@ namespace Hogs.RPG.Services.TrailServices
 
             int total = Math.Max(1, state.TokensEarned + state.BaseTokens);
 
+            // =========================
+            // 📊 ACHIEVEMENT COUNTER
+            // Must be before UpdatePlayerAsync
+            // =========================
             player.TrackerTokens += total;
             player.TrailsCompleted++;
+            player.TotalTrackerTokensEarned += total;
 
             await playerRepo.UpdatePlayerAsync(player);
 
@@ -350,10 +312,16 @@ namespace Hogs.RPG.Services.TrailServices
             state.IsComplete = true;
 
             await PostFeedAsync(state, player);
+
+            // =========================
+            // 🏆 ACHIEVEMENT CHECK
+            // =========================
+            var achievementService = services.GetRequiredService<AchievementService>();
+            await achievementService.CheckAndAwardAsync(state.UserId);
         }
 
         // =========================
-        // UPDATE DM MESSAGE (legacy — unused by decision flow)
+        // UPDATE DM MESSAGE
         // =========================
         public async Task UpdateDmMessageAsync(TrailState state)
         {
@@ -409,21 +377,11 @@ namespace Hogs.RPG.Services.TrailServices
 
             if (state.IsComplete)
             {
-                embed.AddField(
-                    "🏅 Tokens Awarded",
-                    $"**{state.TotalTokensAwarded}** *(includes {state.BaseTokens} base trail tokens)*",
-                    inline: false);
-
-                embed.AddField(
-                    "💰 Your Balance",
-                    $"**{state.PlayerTokenBalance} Tracker Tokens** — use `/trail shop` to spend them",
-                    inline: false);
+                embed.AddField("🏅 Tokens Awarded", $"**{state.TotalTokensAwarded}** *(includes {state.BaseTokens} base trail tokens)*", inline: false);
+                embed.AddField("💰 Your Balance", $"**{state.PlayerTokenBalance} Tracker Tokens** — use `/trail shop` to spend them", inline: false);
 
                 if (state.PetDropped)
-                    embed.AddField(
-                        "🐾 Hunting Companion Found!",
-                        "A rare creature has joined your side. It will aid you on future hunts.",
-                        inline: false);
+                    embed.AddField("🐾 Hunting Companion Found!", "A rare creature has joined your side. It will aid you on future hunts.", inline: false);
             }
 
             return (embed.Build(), components);
@@ -498,7 +456,6 @@ namespace Hogs.RPG.Services.TrailServices
                                 break;
 
                             picked = evt;
-
                             if (evt.Type == TrailEventType.LegendaryEncounter)
                                 legendaryCount++;
 
@@ -560,13 +517,11 @@ namespace Hogs.RPG.Services.TrailServices
             switch (category)
             {
                 case "gear":
-                    // All 9 Hunter's gear pieces cost 200 tokens each
                     cost = 200;
                     quantity = 1;
                     break;
 
                 case "craft":
-                    // Level 30 required — prevents tier skipping
                     if (player.Level < 30)
                         return "❌ Craft materials are locked until **Level 30**. Keep hunting and grinding!";
                     cost = 50;
@@ -574,7 +529,6 @@ namespace Hogs.RPG.Services.TrailServices
                     break;
 
                 case "rare":
-                    // Level 30 required — prevents tier skipping
                     if (player.Level < 30)
                         return "❌ Rare materials are locked until **Level 30**. Keep hunting and grinding!";
                     cost = 75;
@@ -638,7 +592,6 @@ namespace Hogs.RPG.Services.TrailServices
         // =========================
         // HELPERS
         // =========================
-
         private static bool IsDecisionEvent(TrailEventType type) =>
             type == TrailEventType.AmbushEncounter ||
             type == TrailEventType.TrackersGamble ||

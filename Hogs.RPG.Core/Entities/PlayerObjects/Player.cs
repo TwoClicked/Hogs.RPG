@@ -131,6 +131,49 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
         public string? BlacksmithElixirActiveDate { get; set; }
 
         // =========================
+        // ACHIEVEMENTS
+        // =========================
+
+        // Total achievements earned — drives milestone bonuses
+        public int AchievementCount { get; set; } = 0;
+
+        // Highest earned title — shown on profile
+        public string? Title { get; set; }
+
+        // =========================
+        // ACHIEVEMENT COUNTERS
+        // =========================
+
+        // Hunting
+        public int TotalHuntsCompleted { get; set; } = 0;
+        public int TotalRareDrops { get; set; } = 0;
+        public int TotalStaminaSpent { get; set; } = 0;
+
+        // Gathering
+        public int ForestEnergySpent { get; set; } = 0;
+        public int MineEnergySpent { get; set; } = 0;
+        public int SwampEnergySpent { get; set; } = 0;
+
+        // Blacksmith
+        public int TotalItemsForged { get; set; } = 0;
+        public bool DragonCrystalFound { get; set; } = false;
+        public bool DragonBladeForged { get; set; } = false;
+        public int TotalNpcGoldEarned { get; set; } = 0;
+
+        // Alchemist
+        public int TotalPotionsBrewed { get; set; } = 0;
+        public bool BlacksmithElixirUsed { get; set; } = false;
+
+        // Pets
+        public int HighestPetLevel { get; set; } = 0;
+        public int TotalPetsOwned { get; set; } = 0;
+        public bool CapyTaraEvolved { get; set; } = false;
+        public bool HuntingCompanionUnlocked { get; set; } = false;
+
+        // Trails
+        public int TotalTrackerTokensEarned { get; set; } = 0;
+
+        // =========================
         // 🔄 BUFF SERIALIZATION
         // =========================
         public void DeserializeBuffs()

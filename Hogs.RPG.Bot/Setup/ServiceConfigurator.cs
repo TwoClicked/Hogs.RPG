@@ -2,6 +2,7 @@
 using Hogs.RPG.Data;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services;
+using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.AlchemyServices;
 using Hogs.RPG.Services.AuctionServices;
 using Hogs.RPG.Services.DungeonServices;
@@ -64,6 +65,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<RaidRepository>();
             services.AddScoped<GearSetRepository>();
             services.AddScoped<PlayerAuctionRepository>();
+            services.AddScoped<AchievementRepository>();
 
             // =========================
             // ⚙️ CORE GAME SERVICES (Scoped)
@@ -95,6 +97,8 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<SmithingService>();
             services.AddScoped<SmithingShopRepository>();
             services.AddScoped<AlchemyBrewService>();
+            services.AddScoped<AchievementService>();
+
 
             // =========================
             // 🏆 LEADERBOARDS

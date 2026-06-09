@@ -2,9 +2,11 @@
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities.DungeonObjects;
 using Hogs.RPG.Core.Entities.PetObjects;
+using Hogs.RPG.Core.GameData.Achievements;
 using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
@@ -42,23 +44,33 @@ namespace Hogs.RPG.Services.DungeonServices
             if (_active.ContainsKey(userId))
                 return Simple("❌ You are already in a dungeon. Finish it first.");
 
-            if (_lastDungeonRun.TryGetValue(userId, out var lastRun))
-            {
-                var elapsed = DateTime.UtcNow - lastRun;
-                if (elapsed.TotalMinutes < CooldownMinutes)
-                {
-                    int remaining = CooldownMinutes - (int)elapsed.TotalMinutes;
-                    return Simple($"⏳ You must wait **{remaining}m** before entering another dungeon.");
-                }
-            }
-
             using var scope = _scopeFactory.CreateScope();
             var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
             var statService = scope.ServiceProvider.GetRequiredService<StatService>();
 
+            // Load player first — needed for achievement-based cooldown
             var player = await playerRepo.GetByDiscordIdAsync(userId);
             if (player == null)
                 return Simple("Use /startadventure first.");
+
+            // =========================
+            // 🏆 ACHIEVEMENT-BASED COOLDOWN
+            // =========================
+            if (_lastDungeonRun.TryGetValue(userId, out var lastRun))
+            {
+                var bonus = AchievementMilestones.GetBonus(player.AchievementCount);
+                int cooldownMins = bonus.DungeonCooldownMinutes;
+                var elapsed = DateTime.UtcNow - lastRun;
+
+                if (elapsed.TotalMinutes < cooldownMins)
+                {
+                    var remaining = TimeSpan.FromMinutes(cooldownMins) - elapsed;
+                    int h = (int)remaining.TotalHours;
+                    int m = remaining.Minutes;
+                    string timeText = h > 0 ? $"{h}h {m}m" : $"{m}m";
+                    return Simple($"⏳ You must wait **{timeText}** before entering another dungeon.");
+                }
+            }
 
             if (!PetDungeonRegistry.All.TryGetValue(dungeonId, out var dungeon))
                 return Simple("❌ Pet dungeon not found.");
@@ -116,23 +128,13 @@ namespace Hogs.RPG.Services.DungeonServices
             if (pet != null)
                 PetRegistry.All.TryGetValue(pet.PetId, out petDef);
 
-            // =========================
-            // ⚔ PLAYER ATTACK
-            // =========================
             int enemyDefense = session.IsBoss ? dungeon.Boss.Defense : 10;
 
             int playerDamage = (int)(session.Attack * (100.0 / (100 + enemyDefense)));
             playerDamage = Math.Max(1, playerDamage);
 
-            // =========================
-            // 🐾 PET PASSIVES
-            // =========================
-            playerDamage = petPassiveService.ModifyOutgoingDamage(
-                playerDamage, pet, petDef, session.EnemyHealth, session.EnemyMaxHealth);
+            playerDamage = petPassiveService.ModifyOutgoingDamage(playerDamage, pet, petDef, session.EnemyHealth, session.EnemyMaxHealth);
 
-            // =========================
-            // 💎 RELIC COMBAT BONUSES
-            // =========================
             var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
             double enemyHpPercent = (double)session.EnemyHealth / session.EnemyMaxHealth;
@@ -142,7 +144,6 @@ namespace Hogs.RPG.Services.DungeonServices
             session.EnemyHealth = Math.Max(0, session.EnemyHealth - playerDamage);
             var text = $"⚔ You deal {playerDamage} damage!\n";
 
-            // Pet lifesteal on hit
             int heal = petPassiveService.ApplyOnHitEffects(playerDamage, null, pet);
             if (heal > 0)
             {
@@ -156,9 +157,6 @@ namespace Hogs.RPG.Services.DungeonServices
                 return await NextFloor(userId, session, text);
             }
 
-            // =========================
-            // 👹 ENEMY ATTACK
-            // =========================
             int enemyAttack = session.IsBoss
                 ? dungeon.Boss.Attack
                 : dungeon.BaseEnemyAttack + (session.Floor * dungeon.EnemyAttackScaling);
@@ -166,17 +164,12 @@ namespace Hogs.RPG.Services.DungeonServices
             int enemyDamage = (int)(enemyAttack * (100.0 / (100 + session.Defense)));
             enemyDamage = Math.Max(5, enemyDamage);
 
-            // =========================
-            // 🐾 PET PASSIVES (INCOMING)
-            // =========================
             enemyDamage = petPassiveService.ModifyIncomingDamage(enemyDamage, pet);
 
-            // Boss behaviors
             string behaviorText = null;
             if (session.IsBoss)
                 behaviorText = HandleBossBehavior(session, dungeon.Boss, ref enemyDamage);
 
-            // Crit
             if (_random.Next(0, 100) < 10)
             {
                 enemyDamage = (int)(enemyDamage * 2);
@@ -186,7 +179,6 @@ namespace Hogs.RPG.Services.DungeonServices
             session.PlayerHealth = Math.Max(0, session.PlayerHealth - enemyDamage);
             text += $"👹 Enemy hits you for {enemyDamage}!";
 
-            // Thorns
             int reflect = petPassiveService.ApplyOnHitTaken(enemyDamage, pet);
             if (reflect > 0)
             {
@@ -315,10 +307,6 @@ namespace Hogs.RPG.Services.DungeonServices
             player.XP += xp;
             player.DungeonRunsCompleted++;
 
-
-            // =========================
-            // 🐾 PET XP
-            // =========================
             var (petLeveledUp, petNewLevel) = await petService.AddXPAsync(userId, petXp);
             string petLevelMessage = "";
             if (petLeveledUp)
@@ -330,9 +318,6 @@ namespace Hogs.RPG.Services.DungeonServices
 
             var (levelMessage, _) = levelService.CheckLevelUp(player);
 
-            // =========================
-            // 🎁 PET DROP
-            // =========================
             string petDropText = "";
             var petDrops = dungeon?.Boss?.PetDrops;
 
@@ -344,22 +329,25 @@ namespace Hogs.RPG.Services.DungeonServices
                     if (roll <= drop.ChancePercent)
                     {
                         await petService.GivePetAsync(userId, drop.PetId);
-
-                        if (PetRegistry.All.TryGetValue(drop.PetId, out var droppedPet))
-                            petDropText += $"\n🎉 **{droppedPet.Icon} {droppedPet.Name}** joined your party!";
-                        else
-                            petDropText += $"\n🎉 **New pet acquired!**";
+                        petDropText += PetRegistry.All.TryGetValue(drop.PetId, out var droppedPet)
+                            ? $"\n🎉 **{droppedPet.Icon} {droppedPet.Name}** joined your party!"
+                            : $"\n🎉 **New pet acquired!**";
                     }
                 }
             }
 
             await playerRepo.UpdatePlayerAsync(player);
 
+            // =========================
+            // 🏆 ACHIEVEMENT CHECK
+            // =========================
+            var achievementService = scope.ServiceProvider.GetRequiredService<AchievementService>();
+            await achievementService.CheckAndAwardAsync(userId);
+
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync(
                     $"🐾 <@{userId}> cleared **{dungeon?.Name ?? "a pet dungeon"}**!\n" +
-                    $"+{gold} Gold\n+{xp} XP\n+{petXp} Pet XP{petDropText}{petLevelMessage}{levelMessage}"
-                );
+                    $"+{gold} Gold\n+{xp} XP\n+{petXp} Pet XP{petDropText}{petLevelMessage}{levelMessage}");
 
             return new DungeonResult
             {
@@ -397,6 +385,12 @@ namespace Hogs.RPG.Services.DungeonServices
 
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync($"💀 <@{userId}> died in a **pet dungeon**");
+
+            // =========================
+            // 🏆 ACHIEVEMENT CHECK (death counter)
+            // =========================
+            var achievementService = scope.ServiceProvider.GetRequiredService<AchievementService>();
+            await achievementService.CheckAndAwardAsync(userId);
 
             return new DungeonResult
             {
@@ -492,12 +486,9 @@ namespace Hogs.RPG.Services.DungeonServices
         }
 
         // =========================
-        // RESET PET DUNGEON COOLDOWN
+        // RESET COOLDOWN
         // =========================
-        public void ResetPetDungeonCooldown(ulong userId)
-        {
-            _lastDungeonRun.Remove(userId);
-        }
+        public void ResetPetDungeonCooldown(ulong userId) => _lastDungeonRun.Remove(userId);
 
         // =========================
         // HELPERS

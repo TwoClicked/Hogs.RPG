@@ -4,6 +4,7 @@ using Hogs.RPG.Core.GameData.Alchemy;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
@@ -17,6 +18,7 @@ namespace Hogs.RPG.Services.AlchemyServices
         private readonly InventoryService _inventoryService;
         private readonly HunterStaminaService _staminaService;
         private readonly GameEventService _gameEventService;
+        private readonly AchievementService _achievementService;
 
         private const int DailyPotionCap = 5;
 
@@ -24,17 +26,18 @@ namespace Hogs.RPG.Services.AlchemyServices
             PlayerRepository playerRepository,
             InventoryService inventoryService,
             HunterStaminaService staminaService,
-            GameEventService gameEventService)
+            GameEventService gameEventService,
+            AchievementService achievementService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
             _staminaService = staminaService;
             _gameEventService = gameEventService;
+            _achievementService = achievementService;
         }
 
         // =========================
         // BREW
-        // Consumes ingredients, gives potion, grants Alchemy XP
         // =========================
         public async Task<string> BrewAsync(ulong userId, string potionId, int quantity)
         {
@@ -109,10 +112,26 @@ namespace Hogs.RPG.Services.AlchemyServices
 
             int levelUps = ProcessLevelUps(player);
 
+            // =========================
+            // 📊 ACHIEVEMENT COUNTERS
+            // Must be before UpdatePlayerAsync
+            // =========================
+            player.TotalPotionsBrewed += quantity;
+            if (potionId == "blacksmiths_elixir")
+                player.BlacksmithElixirUsed = true;
+
+            // =========================
+            // SAVE PLAYER
+            // =========================
             await _playerRepository.UpdatePlayerAsync(player);
 
             if (levelUps > 0)
                 await _gameEventService.SendAlchemistLevelUpAsync(player);
+
+            // =========================
+            // 🏆 ACHIEVEMENT CHECK
+            // =========================
+            await _achievementService.CheckAndAwardAsync(userId);
 
             // =========================
             // BUILD RESPONSE
@@ -139,7 +158,6 @@ namespace Hogs.RPG.Services.AlchemyServices
 
         // =========================
         // DRINK
-        // Consumes potion from inventory, applies effect
         // =========================
         public async Task<string> DrinkAsync(ulong userId, string potionId)
         {
@@ -224,9 +242,6 @@ namespace Hogs.RPG.Services.AlchemyServices
         {
             switch (potion.PotionType)
             {
-                // =========================
-                // INSTANT POTIONS
-                // =========================
                 case "instant":
                     return potion.EffectId switch
                     {
@@ -237,29 +252,19 @@ namespace Hogs.RPG.Services.AlchemyServices
                         _ => "✅ Effect applied."
                     };
 
-                // =========================
-                // STAT BUFFS
-                // =========================
                 case "stat":
                     player.ActiveStatBuffId = potion.Id;
                     player.ActiveStatBuffExpiry = DateTime.UtcNow.AddMinutes(potion.DurationMinutes);
+                    return $"✅ **{potion.Description}**\n" +
+                           $"⏳ Expires at **{player.ActiveStatBuffExpiry.Value:dd MMM HH:mm} UTC**";
 
-                    var statDesc = $"✅ **{potion.Description}**\n" +
-                                   $"⏳ Expires at **{player.ActiveStatBuffExpiry.Value:dd MMM HH:mm} UTC**";
-                    return statDesc;
-
-                // =========================
-                // UTILITY BUFFS
-                // =========================
                 case "utility":
-                    // Blacksmith's Elixir — special handling
                     if (potion.EffectId == "npc_max_demand")
                     {
                         player.BlacksmithElixirActiveDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
                         return "✅ **Blacksmith's Elixir active!**\nNPCs will buy the maximum amount from your shop at tomorrow's 12 UTC reset.";
                     }
 
-                    // Dungeon-scoped utility buffs (no expiry time — expire on dungeon end)
                     if (potion.DurationMinutes == 0)
                     {
                         player.ActiveUtilityBuffId = potion.Id;
@@ -269,7 +274,6 @@ namespace Hogs.RPG.Services.AlchemyServices
 
                     player.ActiveUtilityBuffId = potion.Id;
                     player.ActiveUtilityBuffExpiry = DateTime.UtcNow.AddMinutes(potion.DurationMinutes);
-
                     return $"✅ **{potion.Description}**\n" +
                            $"⏳ Expires at **{player.ActiveUtilityBuffExpiry.Value:dd MMM HH:mm} UTC**";
 
@@ -312,7 +316,6 @@ namespace Hogs.RPG.Services.AlchemyServices
 
         private string ApplyRevival(Player player)
         {
-            // Revival is stored as a utility buff checked by DungeonService
             player.ActiveUtilityBuffId = "revival_draught";
             player.ActiveUtilityBuffExpiry = DateTime.UtcNow.AddHours(24);
             return "✅ **Revival Draught active!** You will survive one killing blow in your next dungeon run.";

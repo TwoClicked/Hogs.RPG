@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.PlayerObjects;
+using Hogs.RPG.Core.GameData.Achievements;
 using Hogs.RPG.Data.Repositories;
 using System;
 using System.Threading.Tasks;
@@ -41,7 +42,8 @@ namespace Hogs.RPG.Services.GatheringServices
             var now = DateTimeOffset.UtcNow;
             var minutesPassed = (now - lastUpdate).TotalMinutes;
 
-            int energyRecovered = (int)(minutesPassed / RegenMinutes);
+            int regenRate = AchievementMilestones.GetBonus(player.AchievementCount).RegenRate;
+            int energyRecovered = (int)(minutesPassed / RegenMinutes) * regenRate;
 
             if (energyRecovered <= 0)
                 return;

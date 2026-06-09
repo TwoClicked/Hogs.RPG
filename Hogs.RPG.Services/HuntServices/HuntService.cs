@@ -9,6 +9,7 @@ using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.GameData.Hunts;
+using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
@@ -31,6 +32,7 @@ namespace Hogs.RPG.Services.HuntServices
         private readonly DiscordSocketClient _client;
         private readonly PetService _petService;
         private readonly GameEventService _gameEventService;
+        private readonly AchievementService _achievementService;
 
         private readonly ulong _feedChannelId = 1485357755433750549;
         private readonly Random _random = new();
@@ -43,7 +45,8 @@ namespace Hogs.RPG.Services.HuntServices
             HunterStaminaService staminaService,
             DiscordSocketClient client,
             PetService petService,
-            GameEventService gameEventService)
+            GameEventService gameEventService,
+            AchievementService achievementService)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
@@ -53,6 +56,7 @@ namespace Hogs.RPG.Services.HuntServices
             _client = client;
             _petService = petService;
             _gameEventService = gameEventService;
+            _achievementService = achievementService;
         }
 
         public async Task<string> HuntAsync(ulong userId, string targetId = null, int stamina = 10)
@@ -157,7 +161,6 @@ namespace Hogs.RPG.Services.HuntServices
 
             // =========================
             // 🧪 ALCHEMIST POTION BUFFS
-            // Check active utility buff for loot and XP boosts
             // =========================
             bool potionLootActive = false;
             bool potionXpActive = false;
@@ -249,7 +252,6 @@ namespace Hogs.RPG.Services.HuntServices
 
             // =========================
             // 🧪 APPLY POTION XP BONUS
-            // Applied after gear bonuses, before shop double XP
             // =========================
             if (potionXpActive && potionXpBonus > 0)
                 totalXp = (int)(totalXp * (1 + potionXpBonus));
@@ -321,13 +323,12 @@ namespace Hogs.RPG.Services.HuntServices
 
             // =========================
             // 🧪 ALCHEMY XP — granted when hunting alchemy category monsters
-            // IMPORTANT: must be before UpdatePlayerAsync to persist correctly
             // =========================
+            int alchemyLevelUps = 0;
             if (target.AlchemyXpReward > 0)
             {
                 player.AlchemistXP += target.AlchemyXpReward;
 
-                int alchemyLevelUps = 0;
                 while (player.AlchemistLevel < 99)
                 {
                     int xpNeeded = player.AlchemistLevel * player.AlchemistLevel * 50;
@@ -338,14 +339,19 @@ namespace Hogs.RPG.Services.HuntServices
                     }
                     else break;
                 }
-
-                if (alchemyLevelUps > 0)
-                    await _gameEventService.SendAlchemistLevelUpAsync(player);
             }
 
             // =========================
+            // 📊 ACHIEVEMENT COUNTERS
+            // Must be before UpdatePlayerAsync so they are persisted
+            // =========================
+            player.TotalHuntsCompleted++;
+            player.TotalRareDrops += rareCount;
+            player.TotalStaminaSpent += stamina;
+
+            // =========================
             // 💾 SAVE PLAYER
-            // All player field changes (XP, alchemy XP, stamina) saved in one call
+            // All player field changes saved in one call
             // =========================
             await _playerRepository.UpdatePlayerAsync(player);
 
@@ -358,6 +364,17 @@ namespace Hogs.RPG.Services.HuntServices
                 if (channel != null)
                     await channel.SendMessageAsync($"🎉 <@{player.DiscordId}> reached **Level {player.Level}**!");
             }
+
+            // =========================
+            // 🧪 ALCHEMY LEVEL UP FEED
+            // =========================
+            if (alchemyLevelUps > 0)
+                await _gameEventService.SendAlchemistLevelUpAsync(player);
+
+            // =========================
+            // 🏆 ACHIEVEMENT CHECK
+            // =========================
+            await _achievementService.CheckAndAwardAsync(userId);
 
             // =========================
             // 🧾 RESULT

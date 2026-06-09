@@ -127,9 +127,9 @@ namespace Hogs.RPG.Core.GameData.Equipment
             Id = "gritch_warplate",
             Name = "Gritch's Star-Iron Warplate",
             Slot = EquipmentSlot.Body,
-            Defense = 42,
-            Attack = 52,
-            Health = 190
+            Defense = 5,
+            Attack = 50,
+            Health = 75
         };
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.PlayerObjects;
+using Hogs.RPG.Core.GameData.Achievements;
 using System;
 
 namespace Hogs.RPG.Services.GameplayServices
@@ -37,7 +38,8 @@ namespace Hogs.RPG.Services.GameplayServices
 
             int max = GetMaxStamina(player);
 
-            player.HunterStamina = Math.Min(max, player.HunterStamina + minutesPassed);
+            int regenRate = AchievementMilestones.GetBonus(player.AchievementCount).RegenRate;
+            player.HunterStamina = Math.Min(max, player.HunterStamina + (minutesPassed * regenRate));
 
             player.LastHunterStaminaUpdate = last
                 .AddMinutes(minutesPassed)
