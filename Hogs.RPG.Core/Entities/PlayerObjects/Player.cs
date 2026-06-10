@@ -80,6 +80,14 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
 
         // Whether the player owns the hunting companion pet
         public bool HasHuntingPet { get; set; } = false;
+        // Whether the player owns the Alchemist companion pet
+        public bool HasAlchemistPet { get; set; } = false;
+
+        // Whether the player owns the Gather companion pet
+        public bool HasGatherPet { get; set; } = false;
+
+        // Whether the player owns the Blacksmith companion pet
+        public bool HasBlacksmithPet { get; set; } = false;
 
         // Date string of the last trail reset purchase — enforces once-per-day limit
         public string? TrailResetUsedDate { get; set; }
@@ -169,9 +177,15 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
         public int TotalPetsOwned { get; set; } = 0;
         public bool CapyTaraEvolved { get; set; } = false;
         public bool HuntingCompanionUnlocked { get; set; } = false;
+        public bool AlchemistCompanionUnlocked { get; set; } = false;
+        public bool GatherCompanionUnlocked { get; set; } = false;
+        public bool BlacksmithCompanionUnlocked { get; set; } = false;
 
         // Trails
         public int TotalTrackerTokensEarned { get; set; } = 0;
+
+        // Gold 
+        public long TotalGoldSpent { get; set; } = 0;
 
         // =========================
         // 🔄 BUFF SERIALIZATION

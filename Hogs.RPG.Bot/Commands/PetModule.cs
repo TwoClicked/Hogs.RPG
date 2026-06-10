@@ -2,6 +2,7 @@
 using Discord.Interactions;
 using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.GameData.Registries;
+using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.PetServices;
 using System;
 using System.Collections.Generic;
@@ -14,10 +15,12 @@ namespace Hogs.RPG.Bot.Commands
     public class PetModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly PetService _petService;
+        private readonly PlayerRepository _playerRepository;
 
-        public PetModule(PetService petService)
+        public PetModule(PetService petService, PlayerRepository playerRepository)
         {
             _petService = petService;
+            _playerRepository = playerRepository;
         }
 
         // =========================
@@ -53,6 +56,59 @@ namespace Hogs.RPG.Bot.Commands
             await RespondAsync(
                 $"🐾 **Your Pets**\n\n{string.Join("\n", lines)}",
                 ephemeral: true);
+        }
+
+        // =========================
+        // 🐾 /companion — View all companions
+        // =========================
+        [SlashCommand("companion", "View all your active companions and their bonuses")]
+        public async Task Companion()
+        {
+            await DeferAsync(ephemeral: true);
+
+            var player = await _playerRepository.GetByDiscordIdAsync(Context.User.Id);
+            if (player == null)
+            {
+                await FollowupAsync("❌ You haven't started your adventure yet.", ephemeral: true);
+                return;
+            }
+
+            var embed = new EmbedBuilder()
+                .WithTitle("🐾 Your Companions")
+                .WithColor(Color.DarkGreen)
+                .WithDescription("Companions are passive bonuses that are always active once unlocked.")
+
+                .AddField(
+                    player.HasHuntingPet ? "✅ Hunting Companion" : "❌ Hunting Companion — *Locked*",
+                    player.HasHuntingPet
+                        ? "+5% Hunt XP · +5% Hunt Materials · +3% Rare Drop Rate\n*Found on the Ashwood Trail*"
+                        : "*Discover it on the Ashwood Trail via `/trail`*",
+                    false)
+
+                .AddField(
+                    player.HasAlchemistPet ? "✅ Bandit, the Workshop Assistant" : "❌ Alchemist Companion — *Locked*",
+                    player.HasAlchemistPet
+                        ? "+10% Alchemy XP on every brew and swamp gather\n*Found in The Abandoned Academy (Lv 27)*"
+                        : "*Defeat Bandit in The Abandoned Academy (Lv 27)*",
+                    false)
+
+                .AddField(
+                    player.HasGatherPet ? "✅ The Ravens of Odin" : "❌ Gather Companion — *Locked*",
+                    player.HasGatherPet
+                        ? "+15% Gather yield on all zones · +50 Max Energy\n*Found in The Ashen Hollow (Lv 29)*"
+                        : "*Defeat the Ravens in The Ashen Hollow (Lv 29)*",
+                    false)
+
+                .AddField(
+                    player.HasBlacksmithPet ? "✅ Furny da Clanka" : "❌ Blacksmith Companion — *Locked*",
+                    player.HasBlacksmithPet
+                        ? "+10% Smithing XP on every craft\n*Found in Ember ClankaVille (Lv 31)*"
+                        : "*Defeat Furny in Ember ClankaVille (Lv 31)*",
+                    false)
+
+                .WithFooter("Companions are permanent — once found, always active.");
+
+            await FollowupAsync(embed: embed.Build(), ephemeral: true);
         }
 
         // =========================

@@ -79,5 +79,68 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
                 new PetDrop { PetId = "ice_wolf", ChancePercent = 3 }
             }
         };
+
+        // =========================
+        // 🧪 ALCHEMIST COMPANION BOSS
+        // The Abandoned Academy — Lv 27
+        // =========================
+        public static readonly DungeonBossDefinition Bandit = new()
+        {
+            Id = "bandit",
+            Name = "Bandit, the Workshop Assistant",
+            Description = "A mischievous lab creature that survived the academy's collapse by drinking everything it could find.",
+            MaxHealth = 4000,
+            Attack = 330,
+            Defense = 65,
+            ImageUrl = "PLACEHOLDER_BANDIT",
+            BehaviorId = "toxic_concoction",
+            AbilitiesText = "At 50% HP, hurls a volatile brew — poisoning you for 3 turns and reducing your attack by 20% for 2 turns.",
+            PetDrops = new List<PetDrop>
+            {
+                new PetDrop { PetId = "bandit", ChancePercent = 3 }
+            }
+        };
+
+        // =========================
+        // 🌿 GATHER COMPANION BOSS
+        // The Ashen Hollow — Lv 29
+        // =========================
+        public static readonly DungeonBossDefinition RavensOfOdin = new()
+        {
+            Id = "ravens_of_odin",
+            Name = "The Ravens of Odin",
+            Description = "Ancient ravens bound to the land, guarding the hollow against those deemed unworthy.",
+            MaxHealth = 4700,
+            Attack = 365,
+            Defense = 72,
+            ImageUrl = "PLACEHOLDER_RAVENS",
+            BehaviorId = "raven_swarm",
+            AbilitiesText = "25% chance each turn to split into a swarm, striking 3 times with reduced damage — hard to defend against.",
+            PetDrops = new List<PetDrop>
+            {
+                new PetDrop { PetId = "ravens_of_odin", ChancePercent = 3 }
+            }
+        };
+
+        // =========================
+        // 🔨 BLACKSMITH COMPANION BOSS
+        // Ember ClankaVille — Lv 31
+        // =========================
+        public static readonly DungeonBossDefinition FurnyDaClanka = new()
+        {
+            Id = "furny_da_clanka",
+            Name = "Furny da Clanka",
+            Description = "A rogue forge golem that built itself a village and doesn't appreciate visitors.",
+            MaxHealth = 5500,
+            Attack = 400,
+            Defense = 80,
+            ImageUrl = "PLACEHOLDER_FURNY",
+            BehaviorId = "forge_slam",
+            AbilitiesText = "Below 40% HP, enters forge fury — all attacks deal +30% damage and have a 15% chance to stun.",
+            PetDrops = new List<PetDrop>
+            {
+                new PetDrop { PetId = "furny_da_clanka", ChancePercent = 3 }
+            }
+        };
     }
 }

@@ -85,6 +85,14 @@ namespace Hogs.RPG.Services.GatheringServices
                 }
             }
 
+            // Gather companion — +15% yield (rounded down)
+            if (player.HasGatherPet)
+            {
+                var keys = gathered.Keys.ToList();
+                foreach (var key in keys)
+                    gathered[key] = (int)(gathered[key] * 1.15);
+            }
+
             // =========================
             // GIVE ITEMS
             // =========================
@@ -107,7 +115,10 @@ namespace Hogs.RPG.Services.GatheringServices
             int alchemyLevelUps = 0;
             if (zoneKey == "swamp")
             {
-                player.AlchemistXP += energy * 2;
+                int alchemyXp = energy * 2;
+                if (player.HasAlchemistPet)
+                    alchemyXp = (int)(alchemyXp * 1.10);
+                player.AlchemistXP += alchemyXp;
 
                 while (player.AlchemistLevel < 99)
                 {

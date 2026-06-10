@@ -118,6 +118,14 @@ namespace Hogs.RPG.Services.DungeonServices
             if (!PetDungeonRegistry.All.TryGetValue(session.DungeonId, out var dungeon))
                 return Simple("❌ Dungeon data missing.");
 
+            // Stun check — forge_slam can skip the player's turn
+            if (session.StunnedThisTurn)
+            {
+                session.StunnedThisTurn = false;
+                _lastAction[userId] = DateTime.UtcNow;
+                return Wrap(BuildEmbed(session, GetDungeon(session), "😵 **You are stunned and cannot act this turn!**"));
+            }
+
             using var scope = _scopeFactory.CreateScope();
             var petService = scope.ServiceProvider.GetRequiredService<PetService>();
             var petPassiveService = scope.ServiceProvider.GetRequiredService<PetPassiveService>();
@@ -132,6 +140,10 @@ namespace Hogs.RPG.Services.DungeonServices
 
             int playerDamage = (int)(session.Attack * (100.0 / (100 + enemyDefense)));
             playerDamage = Math.Max(1, playerDamage);
+
+            // Toxic concoction attack reduction (-20% while active)
+            if (session.ToxicAttackReductionTurnsRemaining > 0)
+                playerDamage = (int)(playerDamage * 0.80);
 
             playerDamage = petPassiveService.ModifyOutgoingDamage(playerDamage, pet, petDef, session.EnemyHealth, session.EnemyMaxHealth);
 
@@ -328,10 +340,41 @@ namespace Hogs.RPG.Services.DungeonServices
                     int roll = _random.Next(1, 101);
                     if (roll <= drop.ChancePercent)
                     {
-                        await petService.GivePetAsync(userId, drop.PetId);
-                        petDropText += PetRegistry.All.TryGetValue(drop.PetId, out var droppedPet)
-                            ? $"\n🎉 **{droppedPet.Icon} {droppedPet.Name}** joined your party!"
-                            : $"\n🎉 **New pet acquired!**";
+                        // =========================
+                        // COMPANION PETS — set player flag instead of giving a PlayerPet
+                        // =========================
+                        bool isCompanion = false;
+
+                        if (drop.PetId == "bandit" && !player.HasAlchemistPet)
+                        {
+                            player.HasAlchemistPet = true;
+                            player.AlchemistCompanionUnlocked = true;
+                            petDropText += "\n🎉 **Bandit, the Workshop Assistant** is now your Alchemist Companion! (+10% Alchemy XP)";
+                            isCompanion = true;
+                        }
+                        else if (drop.PetId == "ravens_of_odin" && !player.HasGatherPet)
+                        {
+                            player.HasGatherPet = true;
+                            player.GatherCompanionUnlocked = true;
+                            petDropText += "\n🎉 **The Ravens of Odin** are now your Gather Companions! (+15% yield, +50 max energy)";
+                            isCompanion = true;
+                        }
+                        else if (drop.PetId == "furny_da_clanka" && !player.HasBlacksmithPet)
+                        {
+                            player.HasBlacksmithPet = true;
+                            player.BlacksmithCompanionUnlocked = true;
+                            petDropText += "\n🎉 **Furny da Clanka** is now your Blacksmith Companion! (+10% Smithing XP)";
+                            isCompanion = true;
+                        }
+
+                        if (!isCompanion)
+                        {
+                            // Regular pet drop — give as PlayerPet entry
+                            await petService.GivePetAsync(userId, drop.PetId);
+                            petDropText += PetRegistry.All.TryGetValue(drop.PetId, out var droppedPet)
+                                ? $"\n🎉 **{droppedPet.Icon} {droppedPet.Name}** joined your party!"
+                                : $"\n🎉 **New pet acquired!**";
+                        }
                     }
                 }
             }
@@ -478,6 +521,60 @@ namespace Hogs.RPG.Services.DungeonServices
                         enemyDamage = (int)(boss.Attack * (100.0 / (100 + reducedDef)));
                         enemyDamage = (int)(enemyDamage * 1.5);
                         return $"💥 **{boss.Name} shatters your defenses!**";
+                    }
+                    return null;
+
+                case "toxic_concoction":
+                    if (!session.ToxicConcoctionTriggered && session.EnemyHealth <= boss.MaxHealth * 0.5)
+                    {
+                        session.ToxicConcoctionTriggered = true;
+                        session.ToxicPoisonTurnsRemaining = 3;
+                        session.ToxicAttackReductionTurnsRemaining = 2;
+                        return $"🧪 **{boss.Name} hurls a volatile brew! You are poisoned for 3 turns and weakened for 2!**";
+                    }
+                    if (session.ToxicPoisonTurnsRemaining > 0 || session.ToxicAttackReductionTurnsRemaining > 0)
+                    {
+                        string behaviorMsg = null;
+                        if (session.ToxicPoisonTurnsRemaining > 0)
+                        {
+                            int poisonDmg = 40;
+                            enemyDamage += poisonDmg;
+                            session.ToxicPoisonTurnsRemaining--;
+                            string suffix = session.ToxicPoisonTurnsRemaining > 0
+                                ? $" ({session.ToxicPoisonTurnsRemaining} turns remaining)"
+                                : " (poison fades...)";
+                            behaviorMsg = $"☠️ **The toxic brew burns for {poisonDmg} extra damage!{suffix}**";
+                        }
+                        if (session.ToxicAttackReductionTurnsRemaining > 0)
+                            session.ToxicAttackReductionTurnsRemaining--;
+                        return behaviorMsg;
+                    }
+                    return null;
+
+                case "raven_swarm":
+                    if (_random.Next(0, 100) < 25)
+                    {
+                        int singleHit = (int)(enemyDamage * 0.45);
+                        singleHit = Math.Max(5, singleHit);
+                        enemyDamage = singleHit * 3;
+                        return $"🪶 **The Ravens of Odin split into a swarm — 3 strikes of {singleHit} each!**";
+                    }
+                    return null;
+
+                case "forge_slam":
+                    if (!session.ForgeFuryTriggered && session.EnemyHealth <= boss.MaxHealth * 0.4)
+                    {
+                        session.ForgeFuryTriggered = true;
+                        return $"🔥 **{boss.Name} enters FORGE FURY! Every strike burns hotter!**";
+                    }
+                    if (session.ForgeFuryTriggered)
+                    {
+                        enemyDamage = (int)(enemyDamage * 1.3);
+                        if (_random.Next(0, 100) < 15)
+                        {
+                            session.StunnedThisTurn = true;
+                            return $"🔨 **{boss.Name} lands a stunning blow — you are STUNNED!**";
+                        }
                     }
                     return null;
             }

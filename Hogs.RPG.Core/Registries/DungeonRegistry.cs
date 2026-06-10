@@ -29,10 +29,13 @@ namespace Hogs.RPG.Core.GameData.Registries
     public static class PetDungeonRegistry
     {
         public static readonly Dictionary<string, DungeonDefinition> All = new()
-        {
-            { PetDungeons.BlazewingsGorge.Id,   PetDungeons.BlazewingsGorge   },  // Lv 15 — Attack pet
-            { PetDungeons.StonehallDepths.Id,   PetDungeons.StonehallDepths   },  // Lv 20 — Defense pet
-            { PetDungeons.DrownedArchives.Id,   PetDungeons.DrownedArchives   },  // Lv 25 — Health pet
-        };
+    {
+        { PetDungeons.BlazewingsGorge.Id,    PetDungeons.BlazewingsGorge    },  // Lv 15 — Attack pet
+        { PetDungeons.StonehallDepths.Id,    PetDungeons.StonehallDepths    },  // Lv 20 — Defense pet
+        { PetDungeons.DrownedArchives.Id,    PetDungeons.DrownedArchives    },  // Lv 25 — Health pet
+        { PetDungeons.AbandonedAcademy.Id,   PetDungeons.AbandonedAcademy   },  // Lv 27 — Alchemist companion
+        { PetDungeons.AshenHollow.Id,        PetDungeons.AshenHollow        },  // Lv 29 — Gather companion
+        { PetDungeons.EmberClankaVille.Id,   PetDungeons.EmberClankaVille   },  // Lv 31 — Blacksmith companion
+    };
     }
 }

@@ -172,6 +172,8 @@ namespace Hogs.RPG.Services.SmithingServices
             // GRANT XP + LEVEL UP CHECK
             // =========================
             int xpGained = itemDef.SmithingXpReward * quantity;
+            if (player.HasBlacksmithPet)
+                xpGained = (int)(xpGained * 1.10);
             player.SmithingXP += xpGained;
 
             int levelUps = ProcessLevelUps(player);

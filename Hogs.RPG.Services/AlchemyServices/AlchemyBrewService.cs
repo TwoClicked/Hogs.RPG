@@ -108,6 +108,8 @@ namespace Hogs.RPG.Services.AlchemyServices
             // GRANT XP + LEVEL UP CHECK
             // =========================
             int xpGained = potion.AlchemyXpReward * quantity;
+            if (player.HasAlchemistPet)
+                xpGained = (int)(xpGained * 1.10);
             player.AlchemistXP += xpGained;
 
             int levelUps = ProcessLevelUps(player);

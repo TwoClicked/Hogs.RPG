@@ -68,6 +68,7 @@ namespace Hogs.RPG.Services.ShopServices
             }
 
             player.Gold -= item.Price;
+            player.TotalGoldSpent += item.Price;
             await playerRepo.UpdatePlayerAsync(player);
 
             // Declare before use
@@ -124,6 +125,7 @@ namespace Hogs.RPG.Services.ShopServices
                 return (false, "❌ You don't have a pet equipped. Equip a pet first then try again.");
 
             player.Gold -= item.Price;
+            player.TotalGoldSpent += item.Price;
             await playerRepo.UpdatePlayerAsync(player);
 
             pet.CustomName = newName;

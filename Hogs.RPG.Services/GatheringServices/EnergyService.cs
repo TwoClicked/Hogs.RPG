@@ -21,11 +21,16 @@ namespace Hogs.RPG.Services.GatheringServices
 
         public int GetMaxEnergy(Player player)
         {
+            int max = BaseMaxEnergy;
+
             if (player.StaminaBoostExpiry.HasValue &&
                 player.StaminaBoostExpiry.Value > DateTime.UtcNow)
-                return BoostedMaxEnergy;
+                max = BoostedMaxEnergy;
 
-            return BaseMaxEnergy;
+            if (player.HasGatherPet)
+                max += 50;
+
+            return max;
         }
 
         public void RegenerateEnergy(Player player)

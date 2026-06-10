@@ -73,5 +73,56 @@ namespace Hogs.RPG.Core.GameData.Dungeons
 
             Boss = PetDungeonBosses.IceWolf
         };
+
+        // =========================
+        // 🧪 ALCHEMIST COMPANION DUNGEON — Lv 27
+        // =========================
+        public static readonly DungeonDefinition AbandonedAcademy = new()
+        {
+            Id = "abandoned_academy",
+            Name = "The Abandoned Academy",
+            RequiredLevel = 27,
+            Floors = 12,
+            BaseEnemyHealth = 420,
+            EnemyHealthScaling = 100,
+            BaseEnemyAttack = 240,
+            EnemyAttackScaling = 33,
+            IsPetDungeon = true,
+            Boss = PetDungeonBosses.Bandit
+        };
+
+        // =========================
+        // 🌿 GATHER COMPANION DUNGEON — Lv 29
+        // =========================
+        public static readonly DungeonDefinition AshenHollow = new()
+        {
+            Id = "ashen_hollow",
+            Name = "The Ashen Hollow",
+            RequiredLevel = 29,
+            Floors = 13,
+            BaseEnemyHealth = 490,
+            EnemyHealthScaling = 110,
+            BaseEnemyAttack = 270,
+            EnemyAttackScaling = 36,
+            IsPetDungeon = true,
+            Boss = PetDungeonBosses.RavensOfOdin
+        };
+
+        // =========================
+        // 🔨 BLACKSMITH COMPANION DUNGEON — Lv 31
+        // =========================
+        public static readonly DungeonDefinition EmberClankaVille = new()
+        {
+            Id = "ember_clankavile",
+            Name = "Ember ClankaVille",
+            RequiredLevel = 31,
+            Floors = 14,
+            BaseEnemyHealth = 560,
+            EnemyHealthScaling = 120,
+            BaseEnemyAttack = 300,
+            EnemyAttackScaling = 39,
+            IsPetDungeon = true,
+            Boss = PetDungeonBosses.FurnyDaClanka
+        };
     }
 }

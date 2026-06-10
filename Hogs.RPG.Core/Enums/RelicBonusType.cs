@@ -11,8 +11,6 @@ namespace Hogs.RPG.Core.Enums
         // Tank
         DefensePercent,
         MaxHpPercent,
-        ShattersLastLonger,
-        TauntCooldownReduction,
 
         // DPS
         AttackPercent,
@@ -23,8 +21,6 @@ namespace Hogs.RPG.Core.Enums
         // Healer
         IncreasedHealPercent,
         ChanceToSavePotion,
-        EmpowerLastsLonger,
-        WiderEmpower,
 
         // Universal
         BonusGold,

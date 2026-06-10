@@ -123,13 +123,16 @@ namespace Hogs.RPG.Core.GameData.Achievements
             // =========================
             // 🐾 PETS
             // =========================
-            new() { Id = "first_pet",       Name = "Bonded",             Icon = "🐾", Category = "Pets", Description = "Equip your first pet.",         Condition = ctx => ctx.Player.HighestPetLevel >= 1  },
-            new() { Id = "pet_level_10",    Name = "Pet Trainer",        Icon = "🐾", Category = "Pets", Description = "Reach pet level 10.",           Condition = ctx => ctx.Player.HighestPetLevel >= 10 },
-            new() { Id = "pet_level_20",    Name = "Pet Expert",         Icon = "🐾", Category = "Pets", Description = "Reach pet level 20.",           Condition = ctx => ctx.Player.HighestPetLevel >= 20 },
-            new() { Id = "pet_level_25",    Name = "Pet Master",         Icon = "🐾", Category = "Pets", Description = "Reach pet level 25.",           Condition = ctx => ctx.Player.HighestPetLevel >= 25 },
-            new() { Id = "pets_3",          Name = "Collector",          Icon = "🐾", Category = "Pets", Description = "Own 3 different pets.",         Condition = ctx => ctx.Player.TotalPetsOwned >= 3   },
-            new() { Id = "capytara",        Name = "Evolution",          Icon = "🐉", Category = "Pets", Description = "Evolve into CapyTara.",         Condition = ctx => ctx.Player.CapyTaraEvolved,       IsRetroactiveEligible = false },
-            new() { Id = "hunting_comp",    Name = "Hunting Companion",  Icon = "🐾", Category = "Pets", Description = "Unlock the Hunting Companion.", Condition = ctx => ctx.Player.HuntingCompanionUnlocked },
+            new() { Id = "first_pet",       Name = "Bonded",             Icon = "🐾", Category = "Pets", Description = "Equip your first pet.",              Condition = ctx => ctx.Player.HighestPetLevel >= 1  },
+            new() { Id = "pet_level_10",    Name = "Pet Trainer",        Icon = "🐾", Category = "Pets", Description = "Reach pet level 10.",                Condition = ctx => ctx.Player.HighestPetLevel >= 10 },
+            new() { Id = "pet_level_20",    Name = "Pet Expert",         Icon = "🐾", Category = "Pets", Description = "Reach pet level 20.",                Condition = ctx => ctx.Player.HighestPetLevel >= 20 },
+            new() { Id = "pet_level_25",    Name = "Pet Master",         Icon = "🐾", Category = "Pets", Description = "Reach pet level 25.",                Condition = ctx => ctx.Player.HighestPetLevel >= 25 },
+            new() { Id = "pets_3",          Name = "Collector",          Icon = "🐾", Category = "Pets", Description = "Own 3 different pets.",              Condition = ctx => ctx.Player.TotalPetsOwned >= 3   },
+            new() { Id = "capytara",        Name = "Evolution",          Icon = "🐉", Category = "Pets", Description = "Evolve into CapyTara.",              Condition = ctx => ctx.Player.CapyTaraEvolved,       IsRetroactiveEligible = false },
+            new() { Id = "hunting_comp",    Name = "Hunting Companion",  Icon = "🐾", Category = "Pets", Description = "Unlock the Hunting Companion.",      Condition = ctx => ctx.Player.HuntingCompanionUnlocked },
+            new() { Id = "alchemist_comp",  Name = "Workshop Assistant", Icon = "🧪", Category = "Pets", Description = "Unlock the Alchemist Companion.",    Condition = ctx => ctx.Player.AlchemistCompanionUnlocked },
+            new() { Id = "gather_comp",     Name = "Wings of Odin",      Icon = "🌿", Category = "Pets", Description = "Unlock the Gather Companion.",       Condition = ctx => ctx.Player.GatherCompanionUnlocked   },
+            new() { Id = "blacksmith_comp", Name = "Forge Friend",       Icon = "🔨", Category = "Pets", Description = "Unlock the Blacksmith Companion.",   Condition = ctx => ctx.Player.BlacksmithCompanionUnlocked },
 
             // =========================
             // 📈 PROGRESSION
@@ -150,7 +153,7 @@ namespace Hogs.RPG.Core.GameData.Achievements
             new() { Id = "gold_10k",    Name = "First Gold",        Icon = "💰", Category = "Wealth", Description = "Accumulate 10,000 gold.",      Condition = ctx => ctx.Player.Gold >= 10_000    },
             new() { Id = "gold_50k",    Name = "Getting Rich",      Icon = "💰", Category = "Wealth", Description = "Accumulate 50,000 gold.",      Condition = ctx => ctx.Player.Gold >= 50_000    },
             new() { Id = "gold_100k",   Name = "Tribe Millionaire", Icon = "💰", Category = "Wealth", Description = "Accumulate 100,000 gold.",     Condition = ctx => ctx.Player.Gold >= 100_000   },
-            new() { Id = "gold_1m",     Name = "Gold Hoarder",      Icon = "💰", Category = "Wealth", Description = "Accumulate 1,000,000 gold.",   Condition = ctx => ctx.Player.Gold >= 1_000_000 },
+            new() { Id = "gold_1m",     Name = "Gold Hoarder",      Icon = "💰", Category = "Wealth", Description = "Spend 1,000,000 gold.",        Condition = ctx => ctx.Player.TotalGoldSpent >= 1_000_000 },
 
             // =========================
             // 🌟 LEGEND

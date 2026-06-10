@@ -210,10 +210,12 @@ namespace Hogs.RPG.Bot.Commands
                         ? "✅ Complete — +4.5% XP, +4.5% materials, +5% rare drop on all hunts"
                         : "❌ Incomplete — collect all 9 pieces and use `/hunter-setcomplete`",
                     false)
-                .AddField("🐾 Hunting Companion",
-                    player.HasHuntingPet
-                        ? "✅ Active — +5% XP, +5% materials, +3% rare drop on all hunts"
-                        : "❌ Not found — discover it on the Ashwood Trail",
+                .AddField("🐾 Companions",
+                    $"{(player.HasHuntingPet ? "✅" : "❌")} Hunting  " +
+                    $"{(player.HasAlchemistPet ? "✅" : "❌")} Alchemist  " +
+                    $"{(player.HasGatherPet ? "✅" : "❌")} Gather  " +
+                    $"{(player.HasBlacksmithPet ? "✅" : "❌")} Blacksmith" +
+                    $"\n*Use `/companion` to view details*",
                     false)
                 .AddField("⚒️ Smithing Level", $"Level **{player.SmithingLevel}** — {player.SmithingXP:N0} XP", true)
                 .AddField("🧪 Alchemist Level", $"Level **{player.AlchemistLevel}** — {player.AlchemistXP:N0} XP", true)

@@ -49,6 +49,17 @@
         // Triggers at 50% HP, permanently doubles boss defense (applied in GetEnemyDefense)
         public bool StarIronMadnessTriggered { get; set; }
 
+        // Toxic Concoction (Bandit — Abandoned Academy Lv 27)
+        // Triggers at 50% HP, poisons for 3 turns and reduces attack by 20% for 2 turns
+        public bool ToxicConcoctionTriggered { get; set; }
+        public int ToxicPoisonTurnsRemaining { get; set; }
+        public int ToxicAttackReductionTurnsRemaining { get; set; }
+
+        // Forge Slam (Furny da Clanka — Ember ClankaVille Lv 31)
+        // Triggers below 40% HP, +30% damage and 15% stun chance
+        public bool ForgeFuryTriggered { get; set; }
+        public bool StunnedThisTurn { get; set; }
+
         // =========================
         // 🧪 ALCHEMIST POTION BUFFS
         // Populated at dungeon start from player's active utility buff
