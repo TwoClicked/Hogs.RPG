@@ -92,7 +92,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
             MaxHealth = 4000,
             Attack = 330,
             Defense = 65,
-            ImageUrl = "PLACEHOLDER_BANDIT",
+            ImageUrl = "https://media.discordapp.net/attachments/1490322685446717543/1513819678303195306/CF6A821D-9879-49EF-83E5-5F2D4D0321CB.png?ex=6a2a6f70&is=6a291df0&hm=14c1b7b9ed7e12dd97a4f493737ab715237ba708f4bd365bbcc25bb61d475510&=&format=webp&quality=lossless&width=968&height=968",
             BehaviorId = "toxic_concoction",
             AbilitiesText = "At 50% HP, hurls a volatile brew — poisoning you for 3 turns and reducing your attack by 20% for 2 turns.",
             PetDrops = new List<PetDrop>
@@ -113,7 +113,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
             MaxHealth = 4700,
             Attack = 365,
             Defense = 72,
-            ImageUrl = "PLACEHOLDER_RAVENS",
+            ImageUrl = "https://media.discordapp.net/attachments/1490322685446717543/1514301258352300123/image.png?ex=6a2ade72&is=6a298cf2&hm=d77886d0a9aef9455562489b169f85531655fa56e8d170e710a771cf372e3294&=&format=webp&quality=lossless",
             BehaviorId = "raven_swarm",
             AbilitiesText = "25% chance each turn to split into a swarm, striking 3 times with reduced damage — hard to defend against.",
             PetDrops = new List<PetDrop>
@@ -134,7 +134,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
             MaxHealth = 5500,
             Attack = 400,
             Defense = 80,
-            ImageUrl = "PLACEHOLDER_FURNY",
+            ImageUrl = "https://media.discordapp.net/attachments/1499080557995360267/1514179175232311406/AA4D0FD6-4777-4CF7-9C4F-9394A1302F9B.png?ex=6a2a6cbf&is=6a291b3f&hm=b1cbf0f3ef694260fda8a236d62a4141c1c5b55d37bec74fff81a106f9017396&=&format=webp&quality=lossless&width=968&height=968",
             BehaviorId = "forge_slam",
             AbilitiesText = "Below 40% HP, enters forge fury — all attacks deal +30% damage and have a 15% chance to stun.",
             PetDrops = new List<PetDrop>
