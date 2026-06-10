@@ -10,8 +10,6 @@ namespace Hogs.RPG.Core.GameData.Registries
             // Tank
             { AllRelics.IronVow.Id, AllRelics.IronVow },
             { AllRelics.FortressHeart.Id, AllRelics.FortressHeart },
-            { AllRelics.WardenResolve.Id, AllRelics.WardenResolve },
-            { AllRelics.Unyielding.Id, AllRelics.Unyielding },
 
             // DPS
             { AllRelics.BerserkersBrand.Id, AllRelics.BerserkersBrand },
@@ -22,8 +20,6 @@ namespace Hogs.RPG.Core.GameData.Registries
             // Healer
             { AllRelics.MendersGrace.Id, AllRelics.MendersGrace },
             { AllRelics.VialMastery.Id, AllRelics.VialMastery },
-            { AllRelics.SpiritWard.Id, AllRelics.SpiritWard },
-            { AllRelics.BoundlessCare.Id, AllRelics.BoundlessCare },
 
             // Universal
             { AllRelics.WanderersCoin.Id, AllRelics.WanderersCoin },

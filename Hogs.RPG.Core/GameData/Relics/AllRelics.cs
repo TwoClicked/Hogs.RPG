@@ -29,27 +29,6 @@ namespace Hogs.RPG.Core.GameData.Relics
             BonusPerRank = new float[] { 0.03f, 0.06f, 0.10f, 0.14f, 0.18f }
         };
 
-        public static readonly RelicDefinition WardenResolve = new()
-        {
-            Id = "warden_resolve",
-            Name = "Warden's Resolve",
-            Description = "Your Shatter lingers longer, leaving the boss exposed for an extra round.",
-            Affinity = RelicAffinity.Tank,
-            BonusType = RelicBonusType.ShattersLastLonger,
-            BonusPerRank = new float[] { 1, 1, 2, 2, 3 },
-            SpecialEffectDescription = "Shatter debuff lasts additional rounds based on relic rank."
-        };
-
-        public static readonly RelicDefinition Unyielding = new()
-        {
-            Id = "unyielding",
-            Name = "Unyielding",
-            Description = "Your taunt comes faster — no enemy holds its gaze elsewhere for long.",
-            Affinity = RelicAffinity.Tank,
-            BonusType = RelicBonusType.TauntCooldownReduction,
-            BonusPerRank = new float[] { 1, 1, 1, 2, 2 },
-            SpecialEffectDescription = "Taunt becomes available rounds sooner based on relic rank."
-        };
 
         // =========================
         // ⚔️ DPS RELICS
@@ -122,28 +101,6 @@ namespace Hogs.RPG.Core.GameData.Relics
             BonusType = RelicBonusType.ChanceToSavePotion,
             BonusPerRank = new float[] { 0.05f, 0.08f, 0.12f, 0.16f, 0.20f },
             SpecialEffectDescription = "Chance each heal does not consume a potion."
-        };
-
-        public static readonly RelicDefinition SpiritWard = new()
-        {
-            Id = "spirit_ward",
-            Name = "Spirit Ward",
-            Description = "The power you grant lingers in the air — your empowerment outlasts the moment.",
-            Affinity = RelicAffinity.Healer,
-            BonusType = RelicBonusType.EmpowerLastsLonger,
-            BonusPerRank = new float[] { 1, 1, 2, 2, 3 },
-            SpecialEffectDescription = "Empower buff lasts additional rounds based on relic rank."
-        };
-
-        public static readonly RelicDefinition BoundlessCare = new()
-        {
-            Id = "boundless_care",
-            Name = "Boundless Care",
-            Description = "Your spirit reaches further — your empower can uplift more than one at a time.",
-            Affinity = RelicAffinity.Healer,
-            BonusType = RelicBonusType.WiderEmpower,
-            BonusPerRank = new float[] { 1, 1, 2, 2, 3 },
-            SpecialEffectDescription = "Empower affects an additional party member once every set number of rounds."
         };
 
         // =========================

@@ -208,13 +208,6 @@ namespace Hogs.RPG.Services.RelicServices
                         bonuses.ExecutionerBonusPercent += value; break;
                     case RelicBonusType.ConsecutiveHitBonus:
                         bonuses.ConsecutiveHitBonusPercent += value; break;
-                    case RelicBonusType.ShattersLastLonger:
-                        bonuses.ShatterExtraRounds += (int)value; break;
-                    case RelicBonusType.TauntCooldownReduction:
-                        bonuses.TauntCooldownReduction += (int)value; break;
-                    case RelicBonusType.EmpowerLastsLonger:
-                        bonuses.EmpowerExtraRounds += (int)value; break;
-                    case RelicBonusType.WiderEmpower:
                         bonuses.WiderEmpowerThreshold += (int)value; break;
                     case RelicBonusType.BonusLootRoll:
                         bonuses.BonusLootRollPercent += value; break;
@@ -235,8 +228,6 @@ namespace Hogs.RPG.Services.RelicServices
                 {
                     RelicBonusType.DefensePercent,
                     RelicBonusType.MaxHpPercent,
-                    RelicBonusType.ShattersLastLonger,
-                    RelicBonusType.TauntCooldownReduction
                 },
                 RelicAffinity.Dps => new List<RelicBonusType>
                 {
@@ -249,8 +240,6 @@ namespace Hogs.RPG.Services.RelicServices
                 {
                     RelicBonusType.IncreasedHealPercent,
                     RelicBonusType.ChanceToSavePotion,
-                    RelicBonusType.EmpowerLastsLonger,
-                    RelicBonusType.WiderEmpower
                 },
                 RelicAffinity.Universal => new List<RelicBonusType>
                 {
@@ -292,15 +281,11 @@ namespace Hogs.RPG.Services.RelicServices
                 RelicBonusType.AttackPercent => "Attack %",
                 RelicBonusType.DefensePercent => "Defense %",
                 RelicBonusType.MaxHpPercent => "Max HP %",
-                RelicBonusType.ShattersLastLonger => "Shatter Lasts Longer",
-                RelicBonusType.TauntCooldownReduction => "Taunt Cooldown Reduction",
                 RelicBonusType.ExecutionerBonus => "Executioner Bonus",
                 RelicBonusType.LifeSteal => "Life Steal",
                 RelicBonusType.ConsecutiveHitBonus => "Consecutive Hit Bonus",
                 RelicBonusType.IncreasedHealPercent => "Increased Heal %",
                 RelicBonusType.ChanceToSavePotion => "Chance to Save Potion",
-                RelicBonusType.EmpowerLastsLonger => "Empower Lasts Longer",
-                RelicBonusType.WiderEmpower => "Wider Empower",
                 RelicBonusType.BonusGold => "Bonus Gold",
                 RelicBonusType.BonusPlayerXp => "Bonus Player XP",
                 RelicBonusType.BonusPetXp => "Bonus Pet XP",
