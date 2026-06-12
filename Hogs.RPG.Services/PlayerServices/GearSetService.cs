@@ -14,6 +14,8 @@ namespace Hogs.RPG.Services.GameplayServices
         private readonly InventoryService _inventoryService;
         private readonly StatService _statService;
 
+        private const int GearSwapCooldownSeconds = 120;
+
         public GearSetService(
             GearSetRepository gearSetRepository,
             PlayerRepository playerRepository,
@@ -63,6 +65,19 @@ namespace Hogs.RPG.Services.GameplayServices
         {
             var player = await _playerRepository.GetByDiscordIdAsync(userId);
             if (player == null) return "You need to start your adventure first.";
+
+            // =========================
+            // COOLDOWN CHECK
+            // =========================
+            if (player.LastGearSwapAt.HasValue)
+            {
+                var elapsed = DateTime.UtcNow - player.LastGearSwapAt.Value;
+                if (elapsed.TotalSeconds < GearSwapCooldownSeconds)
+                {
+                    var remaining = GearSwapCooldownSeconds - (int)elapsed.TotalSeconds;
+                    return $"⏳ Gear swap on cooldown. Please wait **{remaining}s** before swapping again.";
+                }
+            }
 
             var set = await _gearSetRepository.GetSetAsync(userId, setIndex);
             if (set == null) return $"❌ No gear set saved in slot {setIndex}.";
@@ -126,6 +141,9 @@ namespace Hogs.RPG.Services.GameplayServices
             var (_, _, maxHealth) = _statService.CalculateStats(player);
             if (player.Health > maxHealth)
                 player.Health = maxHealth;
+
+            // Stamp cooldown
+            player.LastGearSwapAt = DateTime.UtcNow;
 
             await _playerRepository.UpdatePlayerAsync(player);
 

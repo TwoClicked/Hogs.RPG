@@ -160,8 +160,44 @@ namespace Hogs.RPG.Bot.Commands
             await ShowShop(category, page, component);
         }
 
+        // =========================
+        // BUY BUTTON — show confirm screen
+        // =========================
         [ComponentInteraction("trail_buy_*_*_*")]
         public async Task ShopBuy(string itemId, string category, int page)
+        {
+            if (Context.Interaction is not SocketMessageComponent component) return;
+            await component.DeferAsync();
+
+            // Build a human-readable label for the confirm screen
+            var (displayName, cost, qty) = GetItemDisplayInfo(itemId, category);
+
+            var embed = new EmbedBuilder()
+                .WithTitle("🏕️ Confirm Purchase")
+                .WithColor(new Color(0x8B4513))
+                .WithDescription(
+                    $"Are you sure you want to buy **{qty}x {displayName}**?\n\n" +
+                    $"**Cost:** {cost} 🪙 Tracker Tokens")
+                .Build();
+
+            var components = new ComponentBuilder()
+                .WithButton("✅ Confirm", $"trail_confirm_{itemId}_{category}_{page}", ButtonStyle.Success, row: 0)
+                .WithButton("❌ Cancel", $"trail_buycancel_{category}_{page}", ButtonStyle.Secondary, row: 0)
+                .Build();
+
+            await component.ModifyOriginalResponseAsync(msg =>
+            {
+                msg.Content = null;
+                msg.Embed = embed;
+                msg.Components = components;
+            });
+        }
+
+        // =========================
+        // CONFIRM BUTTON — execute purchase
+        // =========================
+        [ComponentInteraction("trail_confirm_*_*_*")]
+        public async Task ShopConfirm(string itemId, string category, int page)
         {
             if (Context.Interaction is not SocketMessageComponent component) return;
             await component.DeferAsync();
@@ -177,6 +213,17 @@ namespace Hogs.RPG.Bot.Commands
                     .WithButton("← Back to Shop", $"trail_shop_{category}_{page}", ButtonStyle.Secondary)
                     .Build();
             });
+        }
+
+        // =========================
+        // CANCEL BUTTON — back to shop page
+        // =========================
+        [ComponentInteraction("trail_buycancel_*_*")]
+        public async Task ShopBuyCancel(string category, int page)
+        {
+            if (Context.Interaction is not SocketMessageComponent component) return;
+            await component.DeferAsync();
+            await ShowShop(category, page, component);
         }
 
         // =========================
@@ -261,9 +308,29 @@ namespace Hogs.RPG.Bot.Commands
 
             await component.ModifyOriginalResponseAsync(msg =>
             {
+                msg.Content = null;
                 msg.Embed = embed.Build();
                 msg.Components = components.Build();
             });
+        }
+
+        // =========================
+        // ITEM DISPLAY INFO HELPER
+        // Used to build the confirm screen label without calling the DB
+        // =========================
+        private static (string displayName, int cost, string qty) GetItemDisplayInfo(string itemId, string category)
+        {
+            var name = itemId.Replace("-", " ");
+            name = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name);
+
+            return category switch
+            {
+                "gear" => (name, 200, "1"),
+                "craft" => (name, 50, "100"),
+                "rare" => (name, 75, "5"),
+                "snack" => ("Trail Pet Snack", 8, "1"),
+                _ => (name, 0, "1")
+            };
         }
 
         private void BuildGearShop(EmbedBuilder embed, ComponentBuilder components, int page)

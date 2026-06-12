@@ -33,6 +33,9 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
         public string? Ring { get; set; }
         public string? Amulet { get; set; }
 
+        // Cooldown for gear set swapping — prevents duplication exploits
+        public DateTime? LastGearSwapAt { get; set; }
+
         // 🔥 STORED IN DB
         public string ActiveBuffsData { get; set; } = "";
 

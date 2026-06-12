@@ -311,9 +311,15 @@ namespace Hogs.RPG.Services.AlchemyServices
         private string ApplyTrailReset(Player player)
         {
             var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
-            player.TrailsToday = 0;
+
+            if (player.TrailResetUsedDate == today)
+                return "❌ You've already used a Trail Tonic today. Come back tomorrow.";
+
+            player.TrailsToday = Math.Max(0, player.TrailsToday - 1);
             player.LastTrailDate = today;
-            return "✅ **+1 Trail run granted!** Your daily trails have been reset.";
+            player.TrailResetUsedDate = today;
+
+            return "✅ **+1 Trail run granted!** You have an extra trail available today.";
         }
 
         private string ApplyRevival(Player player)
