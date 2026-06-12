@@ -113,6 +113,8 @@ namespace Hogs.RPG.Services.HuntServices
 
             // =========================
             // 🏹 HUNTING GEAR BONUSES
+            // Skipped for hunting gear pieces if permanent set bonus is active —
+            // prevents double-stacking bonuses after /hunter-setcomplete
             // =========================
             var equippedSlots = new[]
             {
@@ -129,6 +131,9 @@ namespace Hogs.RPG.Services.HuntServices
             {
                 if (string.IsNullOrEmpty(slotId)) continue;
                 if (!EquipmentRegistry.All.TryGetValue(slotId, out var gearDef)) continue;
+
+                // Skip hunting gear bonuses if permanent set bonus is active
+                if (gearDef.IsHuntingGear && player.HasHunterSetBonus) continue;
 
                 huntXpBonus += gearDef.HuntXpBonus;
                 huntMaterialBonus += gearDef.HuntMaterialBonus;
