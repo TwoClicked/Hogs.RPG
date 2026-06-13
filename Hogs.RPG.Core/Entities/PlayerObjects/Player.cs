@@ -35,6 +35,8 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
 
         // Cooldown for gear set swapping — prevents duplication exploits
         public DateTime? LastGearSwapAt { get; set; }
+        // Date string of the last Trail Tonic drink — separate from the shop trail reset
+        public string? TrailTonicUsedDate { get; set; }
 
         // 🔥 STORED IN DB
         public string ActiveBuffsData { get; set; } = "";

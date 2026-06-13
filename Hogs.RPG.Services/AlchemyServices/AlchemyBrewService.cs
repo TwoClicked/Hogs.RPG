@@ -184,7 +184,7 @@ namespace Hogs.RPG.Services.AlchemyServices
             if (player.PotionsDrankToday >= DailyPotionCap)
                 return $"❌ You have already used **{DailyPotionCap} potions** today. Come back tomorrow.";
 
-            if (player.TrailResetUsedDate == today)
+            if (player.TrailTonicUsedDate == today)
                 return "❌ You've already used a Trail Tonic today. Come back tomorrow.";
 
             // =========================
