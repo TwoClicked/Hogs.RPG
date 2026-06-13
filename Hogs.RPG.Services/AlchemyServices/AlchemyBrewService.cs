@@ -184,6 +184,9 @@ namespace Hogs.RPG.Services.AlchemyServices
             if (player.PotionsDrankToday >= DailyPotionCap)
                 return $"❌ You have already used **{DailyPotionCap} potions** today. Come back tomorrow.";
 
+            if (player.TrailResetUsedDate == today)
+                return "❌ You've already used a Trail Tonic today. Come back tomorrow.";
+
             // =========================
             // CHECK INVENTORY
             // =========================
@@ -311,9 +314,6 @@ namespace Hogs.RPG.Services.AlchemyServices
         private string ApplyTrailReset(Player player)
         {
             var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
-
-            if (player.TrailResetUsedDate == today)
-                return "❌ You've already used a Trail Tonic today. Come back tomorrow.";
 
             player.TrailsToday = Math.Max(0, player.TrailsToday - 1);
             player.LastTrailDate = today;
