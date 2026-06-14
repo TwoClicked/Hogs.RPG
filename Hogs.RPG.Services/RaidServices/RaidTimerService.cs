@@ -61,8 +61,6 @@ namespace Hogs.RPG.Services.RaidServices
 
         // =========================
         // 🧹 DAILY THREAD CLEANUP
-        // Runs at 03:00 UTC. Deletes Discord threads and DB records for all
-        // completed (Victory/Wiped) raid sessions.
         // =========================
         private async Task CleanupCompletedRaidsAsync()
         {
@@ -78,7 +76,6 @@ namespace Hogs.RPG.Services.RaidServices
 
             foreach (var session in completedSessions)
             {
-                // Delete the Discord thread if it exists
                 if (session.ThreadId != 0)
                 {
                     try
@@ -94,7 +91,6 @@ namespace Hogs.RPG.Services.RaidServices
                     }
                 }
 
-                // Delete the session record from the DB
                 try
                 {
                     await raidRepo.DeleteSessionAsync(session.Id);
@@ -126,7 +122,6 @@ namespace Hogs.RPG.Services.RaidServices
 
                 Console.WriteLine($"⏳ Raid {session.Id} round {session.CurrentRound} timed out — auto-resolving.");
 
-                // Set default actions for players who haven't acted
                 foreach (var participant in session.Participants.Where(p => !p.HasActedThisRound))
                 {
                     string defaultAction = participant.Role switch
@@ -145,7 +140,6 @@ namespace Hogs.RPG.Services.RaidServices
 
                 await raidRepo.SaveSessionAsync(session);
 
-                // Force resolve directly — bypasses SubmitActionAsync to avoid HasActedThisRound conflict
                 RaidRoundResult roundResult;
                 try
                 {
@@ -157,7 +151,6 @@ namespace Hogs.RPG.Services.RaidServices
                     continue;
                 }
 
-                // Post result to thread
                 var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
                 if (thread == null) continue;
 
@@ -239,6 +232,9 @@ namespace Hogs.RPG.Services.RaidServices
             }
         }
 
+        // =========================
+        // WIPE — thread + feed
+        // =========================
         private async Task PostWipeAsync(IThreadChannel thread, RaidRoundResult result)
         {
             var embed = new EmbedBuilder()
@@ -252,6 +248,8 @@ namespace Hogs.RPG.Services.RaidServices
 
             await thread.SendMessageAsync(embed: embed);
             await thread.ModifyAsync(t => t.Archived = true);
+
+            await PostRaidWipeFeedAsync(result);
         }
 
         private async Task PostVictoryAsync(IThreadChannel thread, RaidRoundResult result)
@@ -327,6 +325,41 @@ namespace Hogs.RPG.Services.RaidServices
                 .WithTitle($"⚔️ Raid Clear — {bossName}")
                 .WithColor(Color.Gold)
                 .WithDescription(sb.ToString())
+                .WithFooter($"Tier {session?.Tier} Raid")
+                .Build();
+
+            await feedChannel.SendMessageAsync(embed: embed);
+        }
+
+        // =========================
+        // FEED: RAID WIPE
+        // =========================
+        private async Task PostRaidWipeFeedAsync(RaidRoundResult result)
+        {
+            var feedChannel = _client.GetChannel(1485357755433750549UL) as IMessageChannel;
+            if (feedChannel == null) return;
+
+            var session = result.Session;
+            var raidDef = RaidRegistry.GetByTier(session?.Tier ?? 0);
+            var bossName = raidDef?.Name ?? "Unknown Raid Boss";
+
+            var sb = new StringBuilder();
+            foreach (var p in session?.Participants ?? new())
+            {
+                string roleIcon = p.Role switch
+                {
+                    RaidRole.Tank => "🛡️",
+                    RaidRole.Dps => "⚔️",
+                    RaidRole.Healer => "💚",
+                    _ => "❓"
+                };
+                sb.AppendLine($"{roleIcon} <@{p.DiscordId}>");
+            }
+
+            var embed = new EmbedBuilder()
+                .WithTitle($"💀 Raid Wipe — {bossName}")
+                .WithColor(Color.DarkRed)
+                .WithDescription(sb.ToString().Trim())
                 .WithFooter($"Tier {session?.Tier} Raid")
                 .Build();
 
