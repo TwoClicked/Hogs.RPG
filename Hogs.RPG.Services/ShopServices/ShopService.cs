@@ -527,14 +527,16 @@ namespace Hogs.RPG.Services.ShopServices
                 // 🏰 DUNGEON COOLDOWN RESET
                 // =========================
                 case "rpg_dungeon_reset":
-                    _dungeonService.ResetDungeonCooldown(userId);
+                    player.LastDungeonAt = null;
+                    await playerRepo.UpdatePlayerAsync(player);
                     break;
 
                 // =========================
                 // 🏰 PET DUNGEON COOLDOWN RESET
                 // =========================
                 case "rpg_pet_dungeon_reset":
-                    _petService.ResetPetDungeonCooldown(userId);
+                    player.LastPetDungeonAt = null;
+                    await playerRepo.UpdatePlayerAsync(player);
                     break;
 
                 // =========================

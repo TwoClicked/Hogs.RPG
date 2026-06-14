@@ -192,6 +192,10 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
         // Gold 
         public long TotalGoldSpent { get; set; } = 0;
 
+        // taking the dungeon and pet dungeon timer out of memory and into the db
+        public DateTime? LastDungeonAt { get; set; }
+        public DateTime? LastPetDungeonAt { get; set; }
+
         // =========================
         // 🔄 BUFF SERIALIZATION
         // =========================

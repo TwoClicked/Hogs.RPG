@@ -27,7 +27,6 @@ namespace Hogs.RPG.Services.Game
 
         private readonly Dictionary<ulong, (ulong messageId, ulong channelId)> _lastMessages = new();
         private readonly Dictionary<ulong, DateTime> _lastAction = new();
-        private readonly Dictionary<ulong, DateTime> _lastDungeonRun = new();
         private readonly Dictionary<ulong, ActiveDungeon> _active = new();
         private readonly Random _random = new();
 
@@ -57,14 +56,14 @@ namespace Hogs.RPG.Services.Game
                 return Simple("Use /startadventure first.");
 
             // =========================
-            // 🏆 ACHIEVEMENT-BASED COOLDOWN
+            // 🏆 ACHIEVEMENT-BASED COOLDOWN — persisted to DB
             // Default 120 min, reduces to 60 min at 100 achievements
             // =========================
-            if (_lastDungeonRun.TryGetValue(userId, out var lastRun))
+            if (player.LastDungeonAt.HasValue)
             {
                 var bonus = AchievementMilestones.GetBonus(player.AchievementCount);
                 int cooldownMinutes = bonus.DungeonCooldownMinutes;
-                var diff = DateTime.UtcNow - lastRun;
+                var diff = DateTime.UtcNow - player.LastDungeonAt.Value;
 
                 if (diff.TotalMinutes < cooldownMinutes)
                 {
@@ -129,7 +128,10 @@ namespace Hogs.RPG.Services.Game
             }
 
             _active[userId] = session;
-            _lastDungeonRun[userId] = DateTime.UtcNow;
+
+            // Stamp cooldown immediately on entry
+            player.LastDungeonAt = DateTime.UtcNow;
+            await playerRepository.UpdatePlayerAsync(player);
 
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync($"🏰 <@{userId}> entered **{dungeon.Name}**");
@@ -328,7 +330,7 @@ namespace Hogs.RPG.Services.Game
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync($"🏃 <@{userId}> fled **{dungeon.Name}**");
 
-            _lastDungeonRun[userId] = DateTime.UtcNow;
+            // Cooldown already stamped on entry — no update needed on flee
 
             return new DungeonResult
             {
@@ -392,12 +394,11 @@ namespace Hogs.RPG.Services.Game
             var (attack, defense, maxHealth) = statService.CalculateStats(player);
             player.Health = maxHealth;
 
+            // Cooldown already stamped on entry — no update needed here
             await playerRepository.UpdatePlayerAsync(player);
 
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync($"💀 <@{userId}> died in **{dungeon.Name}**");
-
-            _lastDungeonRun[userId] = DateTime.UtcNow;
 
             // =========================
             // 🏆 ACHIEVEMENT CHECK (death counter)
@@ -477,6 +478,7 @@ namespace Hogs.RPG.Services.Game
                 }
             }
 
+            // Cooldown already stamped on entry — no update needed here
             await playerRepository.UpdatePlayerAsync(player);
 
             // =========================
@@ -500,14 +502,21 @@ namespace Hogs.RPG.Services.Game
                     $"🏆 <@{userId}> cleared **{dungeon.Name}**\n" +
                     $"+{gold} Gold\n+{xp} XP{dropText}{levelMessage}{petLevelMessage}");
 
-            _lastDungeonRun[userId] = DateTime.UtcNow;
             return result;
         }
 
         // =========================
-        // RESET DUNGEON COOLDOWN
+        // RESET DUNGEON COOLDOWN (shop purchase)
         // =========================
-        public void ResetDungeonCooldown(ulong userId) => _lastDungeonRun.Remove(userId);
+        public async Task ResetDungeonCooldownAsync(ulong userId)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+            var player = await playerRepo.GetByDiscordIdAsync(userId);
+            if (player == null) return;
+            player.LastDungeonAt = null;
+            await playerRepo.UpdatePlayerAsync(player);
+        }
 
         // =========================
         // UPDATE MESSAGE

@@ -23,11 +23,8 @@ namespace Hogs.RPG.Services.DungeonServices
         private readonly Random _random = new();
 
         private readonly Dictionary<ulong, ActiveDungeon> _active = new();
-        private readonly Dictionary<ulong, DateTime> _lastDungeonRun = new();
         private readonly Dictionary<ulong, DateTime> _lastAction = new();
         private readonly Dictionary<ulong, (ulong messageId, ulong channelId)> _messages = new();
-
-        private const int CooldownMinutes = 120;
 
         public PetDungeonService(IServiceScopeFactory scopeFactory, DiscordSocketClient client)
         {
@@ -48,19 +45,18 @@ namespace Hogs.RPG.Services.DungeonServices
             var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
             var statService = scope.ServiceProvider.GetRequiredService<StatService>();
 
-            // Load player first — needed for achievement-based cooldown
             var player = await playerRepo.GetByDiscordIdAsync(userId);
             if (player == null)
                 return Simple("Use /startadventure first.");
 
             // =========================
-            // 🏆 ACHIEVEMENT-BASED COOLDOWN
+            // 🏆 ACHIEVEMENT-BASED COOLDOWN — persisted to DB
             // =========================
-            if (_lastDungeonRun.TryGetValue(userId, out var lastRun))
+            if (player.LastPetDungeonAt.HasValue)
             {
                 var bonus = AchievementMilestones.GetBonus(player.AchievementCount);
                 int cooldownMins = bonus.DungeonCooldownMinutes;
-                var elapsed = DateTime.UtcNow - lastRun;
+                var elapsed = DateTime.UtcNow - player.LastPetDungeonAt.Value;
 
                 if (elapsed.TotalMinutes < cooldownMins)
                 {
@@ -96,7 +92,10 @@ namespace Hogs.RPG.Services.DungeonServices
             };
 
             _active[userId] = session;
-            _lastDungeonRun[userId] = DateTime.UtcNow;
+
+            // Stamp cooldown immediately on entry
+            player.LastPetDungeonAt = DateTime.UtcNow;
+            await playerRepo.UpdatePlayerAsync(player);
 
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync($"🐾 <@{userId}> entered **{dungeon.Name}**");
@@ -118,7 +117,6 @@ namespace Hogs.RPG.Services.DungeonServices
             if (!PetDungeonRegistry.All.TryGetValue(session.DungeonId, out var dungeon))
                 return Simple("❌ Dungeon data missing.");
 
-            // Stun check — forge_slam can skip the player's turn
             if (session.StunnedThisTurn)
             {
                 session.StunnedThisTurn = false;
@@ -141,7 +139,6 @@ namespace Hogs.RPG.Services.DungeonServices
             int playerDamage = (int)(session.Attack * (100.0 / (100 + enemyDefense)));
             playerDamage = Math.Max(1, playerDamage);
 
-            // Toxic concoction attack reduction (-20% while active)
             if (session.ToxicAttackReductionTurnsRemaining > 0)
                 playerDamage = (int)(playerDamage * 0.80);
 
@@ -250,12 +247,13 @@ namespace Hogs.RPG.Services.DungeonServices
                 return Simple("You are not in a pet dungeon.");
 
             _active.Remove(userId);
-            _lastDungeonRun[userId] = DateTime.UtcNow;
 
             var dungeon = GetDungeonById(session.DungeonId);
 
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync($"🏃 <@{userId}> fled **{dungeon?.Name ?? "a pet dungeon"}**");
+
+            // Cooldown already stamped on entry — no update needed on flee
 
             return new DungeonResult
             {
@@ -340,9 +338,6 @@ namespace Hogs.RPG.Services.DungeonServices
                     int roll = _random.Next(1, 101);
                     if (roll <= drop.ChancePercent)
                     {
-                        // =========================
-                        // COMPANION PETS — set player flag instead of giving a PlayerPet
-                        // =========================
                         bool isCompanion = false;
 
                         if (drop.PetId == "bandit" && !player.HasAlchemistPet)
@@ -369,7 +364,6 @@ namespace Hogs.RPG.Services.DungeonServices
 
                         if (!isCompanion)
                         {
-                            // Regular pet drop — give as PlayerPet entry
                             await petService.GivePetAsync(userId, drop.PetId);
                             petDropText += PetRegistry.All.TryGetValue(drop.PetId, out var droppedPet)
                                 ? $"\n🎉 **{droppedPet.Icon} {droppedPet.Name}** joined your party!"
@@ -379,11 +373,9 @@ namespace Hogs.RPG.Services.DungeonServices
                 }
             }
 
+            // Cooldown already stamped on entry — no update needed here
             await playerRepo.UpdatePlayerAsync(player);
 
-            // =========================
-            // 🏆 ACHIEVEMENT CHECK
-            // =========================
             var achievementService = scope.ServiceProvider.GetRequiredService<AchievementService>();
             await achievementService.CheckAndAwardAsync(userId);
 
@@ -409,7 +401,6 @@ namespace Hogs.RPG.Services.DungeonServices
         private async Task<DungeonResult> HandleDeath(ulong userId)
         {
             _active.Remove(userId);
-            _lastDungeonRun[userId] = DateTime.UtcNow;
 
             using var scope = _scopeFactory.CreateScope();
             var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
@@ -424,14 +415,12 @@ namespace Hogs.RPG.Services.DungeonServices
             var (_, _, maxHealth) = statService.CalculateStats(player);
             player.Health = maxHealth;
 
+            // Cooldown already stamped on entry — no update needed here
             await playerRepo.UpdatePlayerAsync(player);
 
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync($"💀 <@{userId}> died in a **pet dungeon**");
 
-            // =========================
-            // 🏆 ACHIEVEMENT CHECK (death counter)
-            // =========================
             var achievementService = scope.ServiceProvider.GetRequiredService<AchievementService>();
             await achievementService.CheckAndAwardAsync(userId);
 
@@ -444,6 +433,19 @@ namespace Hogs.RPG.Services.DungeonServices
                     .Build(),
                 IsFinished = true
             };
+        }
+
+        // =========================
+        // RESET COOLDOWN (shop purchase)
+        // =========================
+        public async Task ResetPetDungeonCooldownAsync(ulong userId)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+            var player = await playerRepo.GetByDiscordIdAsync(userId);
+            if (player == null) return;
+            player.LastPetDungeonAt = null;
+            await playerRepo.UpdatePlayerAsync(player);
         }
 
         // =========================
@@ -581,11 +583,6 @@ namespace Hogs.RPG.Services.DungeonServices
 
             return null;
         }
-
-        // =========================
-        // RESET COOLDOWN
-        // =========================
-        public void ResetPetDungeonCooldown(ulong userId) => _lastDungeonRun.Remove(userId);
 
         // =========================
         // HELPERS
