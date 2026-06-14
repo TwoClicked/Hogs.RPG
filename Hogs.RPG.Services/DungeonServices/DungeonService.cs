@@ -46,11 +46,9 @@ namespace Hogs.RPG.Services.Game
             var playerRepository = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
             var statService = scope.ServiceProvider.GetRequiredService<StatService>();
 
-            // Prevent multiple active sessions
             if (_active.ContainsKey(userId))
                 return Simple("You are already in a dungeon.");
 
-            // Load player first — needed for achievement-based cooldown
             var player = await playerRepository.GetByDiscordIdAsync(userId);
             if (player == null)
                 return Simple("Use /startadventure first.");
@@ -187,6 +185,22 @@ namespace Hogs.RPG.Services.Game
 
             var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
+            // =========================
+            // 💎 RELIC: CONSECUTIVE HIT BONUS
+            // =========================
+            if (relicBonuses.ConsecutiveHitBonusPercent > 0)
+            {
+                session.ConsecutiveHits++;
+                playerDamage = (int)(playerDamage * (1f + relicBonuses.ConsecutiveHitBonusPercent * session.ConsecutiveHits));
+            }
+            else
+            {
+                session.ConsecutiveHits = 0;
+            }
+
+            // =========================
+            // 💎 RELIC: EXECUTIONER
+            // =========================
             double enemyHpPercent = (double)session.EnemyHealth / session.EnemyMaxHealth;
             if (enemyHpPercent < 0.50 && relicBonuses.ExecutionerBonusPercent > 0)
                 playerDamage = (int)(playerDamage * (1f + relicBonuses.ExecutionerBonusPercent));
@@ -196,13 +210,20 @@ namespace Hogs.RPG.Services.Game
             if (playerSnared)
             {
                 text = $"⛓️ **{dungeon.Boss.Name} chains you in place! Your attack was nullified!**\n";
+                session.ConsecutiveHits = 0;
             }
             else
             {
                 session.EnemyHealth = Math.Max(0, session.EnemyHealth - playerDamage);
                 text = $"⚔ You deal {playerDamage} damage!\n";
 
+                // =========================
+                // 💎 RELIC: LIFESTEAL
+                // =========================
                 int heal = petPassiveService.ApplyOnHitEffects(playerDamage, null, pet);
+                if (relicBonuses.LifeStealPercent > 0)
+                    heal += (int)(playerDamage * relicBonuses.LifeStealPercent);
+
                 if (heal > 0)
                 {
                     session.PlayerHealth = Math.Min(session.MaxHealth, session.PlayerHealth + heal);
@@ -292,6 +313,7 @@ namespace Hogs.RPG.Services.Game
         {
             using var scope = _scopeFactory.CreateScope();
             var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
+            var relicService = scope.ServiceProvider.GetRequiredService<RelicService>();
 
             if (!_active.TryGetValue(userId, out var session))
                 return Simple("You are not in a dungeon.");
@@ -308,11 +330,34 @@ namespace Hogs.RPG.Services.Game
             if (potion == null || potion.Quantity <= 0)
                 return Wrap(BuildEmbed(session, "❌ You have no health potions.", session.CurrentImageUrl));
 
-            await inventoryService.TakeItemAsync(userId, "health_potion", 1);
-            session.PlayerHealth = session.MaxHealth;
+            var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
+            // =========================
+            // 💎 RELIC: CHANCE TO SAVE POTION
+            // =========================
+            bool potionConsumed = true;
+            if (relicBonuses.ChanceToSavePotion > 0 && _random.NextDouble() < relicBonuses.ChanceToSavePotion)
+                potionConsumed = false;
+
+            if (potionConsumed)
+                await inventoryService.TakeItemAsync(userId, "health_potion", 1);
+
+            // =========================
+            // 💎 RELIC: INCREASED HEAL PERCENT
+            // Base heal is full HP; relic adds a bonus % of max HP on top
+            // =========================
+            int healAmount = session.MaxHealth;
+            if (relicBonuses.IncreasedHealPercent > 0)
+                healAmount = (int)(healAmount * (1f + relicBonuses.IncreasedHealPercent));
+
+            session.PlayerHealth = Math.Min(session.MaxHealth, session.PlayerHealth + healAmount);
+
+            // Reset consecutive hits on heal
+            session.ConsecutiveHits = 0;
+
+            string savedText = potionConsumed ? "" : " *(potion saved!)*";
             _lastAction[userId] = DateTime.UtcNow;
-            return Wrap(BuildEmbed(session, "🧪 You healed to full!", session.CurrentImageUrl));
+            return Wrap(BuildEmbed(session, $"🧪 You healed to full!{savedText}", session.CurrentImageUrl));
         }
 
         // =========================
@@ -329,8 +374,6 @@ namespace Hogs.RPG.Services.Game
 
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync($"🏃 <@{userId}> fled **{dungeon.Name}**");
-
-            // Cooldown already stamped on entry — no update needed on flee
 
             return new DungeonResult
             {
@@ -394,15 +437,11 @@ namespace Hogs.RPG.Services.Game
             var (attack, defense, maxHealth) = statService.CalculateStats(player);
             player.Health = maxHealth;
 
-            // Cooldown already stamped on entry — no update needed here
             await playerRepository.UpdatePlayerAsync(player);
 
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync($"💀 <@{userId}> died in **{dungeon.Name}**");
 
-            // =========================
-            // 🏆 ACHIEVEMENT CHECK (death counter)
-            // =========================
             var achievementService = scope.ServiceProvider.GetRequiredService<AchievementService>();
             await achievementService.CheckAndAwardAsync(userId);
 
@@ -439,14 +478,12 @@ namespace Hogs.RPG.Services.Game
             int xp = (int)(1000 * (1f + relicBonuses.BonusPlayerXpPercent));
             int petXp = (int)(50 * (1f + relicBonuses.BonusPetXpPercent));
 
-            // Gold boost
             if (session.GoldBoostPercent > 0)
                 gold = (int)(gold * (1 + session.GoldBoostPercent));
 
             player.Gold += gold;
             player.XP += xp;
 
-            // Pet XP
             var (petLeveledUp, petNewLevel) = await petService.AddXPAsync(userId, petXp);
 
             string petLevelMessage = "";
@@ -478,12 +515,8 @@ namespace Hogs.RPG.Services.Game
                 }
             }
 
-            // Cooldown already stamped on entry — no update needed here
             await playerRepository.UpdatePlayerAsync(player);
 
-            // =========================
-            // 🏆 ACHIEVEMENT CHECK
-            // =========================
             var achievementService = scope.ServiceProvider.GetRequiredService<AchievementService>();
             await achievementService.CheckAndAwardAsync(userId);
 

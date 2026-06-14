@@ -70,5 +70,9 @@
         public bool HasRevival { get; set; } = false;               // Revival Draught
         public double GoldBoostPercent { get; set; } = 0;           // Gold Rush Flask
         public bool FirstStrikeUsed { get; set; } = false;          // Track if first strike reduction consumed
+        // =========================
+        // 💎 RELIC COMBAT STATE
+        // =========================
+        public int ConsecutiveHits { get; set; } = 0;
     }
 }

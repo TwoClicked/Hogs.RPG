@@ -146,6 +146,22 @@ namespace Hogs.RPG.Services.DungeonServices
 
             var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
+            // =========================
+            // 💎 RELIC: CONSECUTIVE HIT BONUS
+            // =========================
+            if (relicBonuses.ConsecutiveHitBonusPercent > 0)
+            {
+                session.ConsecutiveHits++;
+                playerDamage = (int)(playerDamage * (1f + relicBonuses.ConsecutiveHitBonusPercent * session.ConsecutiveHits));
+            }
+            else
+            {
+                session.ConsecutiveHits = 0;
+            }
+
+            // =========================
+            // 💎 RELIC: EXECUTIONER
+            // =========================
             double enemyHpPercent = (double)session.EnemyHealth / session.EnemyMaxHealth;
             if (enemyHpPercent < 0.50 && relicBonuses.ExecutionerBonusPercent > 0)
                 playerDamage = (int)(playerDamage * (1f + relicBonuses.ExecutionerBonusPercent));
@@ -153,7 +169,13 @@ namespace Hogs.RPG.Services.DungeonServices
             session.EnemyHealth = Math.Max(0, session.EnemyHealth - playerDamage);
             var text = $"⚔ You deal {playerDamage} damage!\n";
 
+            // =========================
+            // 💎 RELIC: LIFESTEAL
+            // =========================
             int heal = petPassiveService.ApplyOnHitEffects(playerDamage, null, pet);
+            if (relicBonuses.LifeStealPercent > 0)
+                heal += (int)(playerDamage * relicBonuses.LifeStealPercent);
+
             if (heal > 0)
             {
                 session.PlayerHealth = Math.Min(session.MaxHealth, session.PlayerHealth + heal);
@@ -224,6 +246,7 @@ namespace Hogs.RPG.Services.DungeonServices
 
             using var scope = _scopeFactory.CreateScope();
             var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
+            var relicService = scope.ServiceProvider.GetRequiredService<RelicService>();
 
             var inventory = await inventoryService.GetInventoryAsync(userId);
             var potion = inventory.Find(i => i.ItemId == "health_potion");
@@ -231,11 +254,33 @@ namespace Hogs.RPG.Services.DungeonServices
             if (potion == null || potion.Quantity <= 0)
                 return Wrap(BuildEmbed(session, GetDungeon(session), "❌ You have no health potions."));
 
-            await inventoryService.TakeItemAsync(userId, "health_potion", 1);
-            session.PlayerHealth = session.MaxHealth;
+            var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
+            // =========================
+            // 💎 RELIC: CHANCE TO SAVE POTION
+            // =========================
+            bool potionConsumed = true;
+            if (relicBonuses.ChanceToSavePotion > 0 && new Random().NextDouble() < relicBonuses.ChanceToSavePotion)
+                potionConsumed = false;
+
+            if (potionConsumed)
+                await inventoryService.TakeItemAsync(userId, "health_potion", 1);
+
+            // =========================
+            // 💎 RELIC: INCREASED HEAL PERCENT
+            // =========================
+            int healAmount = session.MaxHealth;
+            if (relicBonuses.IncreasedHealPercent > 0)
+                healAmount = (int)(healAmount * (1f + relicBonuses.IncreasedHealPercent));
+
+            session.PlayerHealth = Math.Min(session.MaxHealth, session.PlayerHealth + healAmount);
+
+            // Reset consecutive hits on heal
+            session.ConsecutiveHits = 0;
+
+            string savedText = potionConsumed ? "" : " *(potion saved!)*";
             _lastAction[userId] = DateTime.UtcNow;
-            return Wrap(BuildEmbed(session, GetDungeon(session), "🧪 You healed to full!"));
+            return Wrap(BuildEmbed(session, GetDungeon(session), $"🧪 You healed to full!{savedText}"));
         }
 
         // =========================
@@ -252,8 +297,6 @@ namespace Hogs.RPG.Services.DungeonServices
 
             if (_announcementChannel != null)
                 await _announcementChannel.SendMessageAsync($"🏃 <@{userId}> fled **{dungeon?.Name ?? "a pet dungeon"}**");
-
-            // Cooldown already stamped on entry — no update needed on flee
 
             return new DungeonResult
             {
@@ -373,7 +416,6 @@ namespace Hogs.RPG.Services.DungeonServices
                 }
             }
 
-            // Cooldown already stamped on entry — no update needed here
             await playerRepo.UpdatePlayerAsync(player);
 
             var achievementService = scope.ServiceProvider.GetRequiredService<AchievementService>();
@@ -415,7 +457,6 @@ namespace Hogs.RPG.Services.DungeonServices
             var (_, _, maxHealth) = statService.CalculateStats(player);
             player.Health = maxHealth;
 
-            // Cooldown already stamped on entry — no update needed here
             await playerRepo.UpdatePlayerAsync(player);
 
             if (_announcementChannel != null)
