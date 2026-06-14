@@ -851,8 +851,15 @@ namespace Hogs.RPG.Services.RaidServices
 
         private static float GetShardDropChance(int tier)
         {
-            // T1 = 10%, T2 = 8%, T3 = 6%, T4 = 4%, T5 = 2%
-            return Math.Max(0f, (0.10f - (tier - 1) * 0.02f));
+            // T1 = 10%, T2&T3 = 8%, T4 = 6%, T5 = 4%
+            return tier switch
+            {
+                1 => 0.10f,
+                2 or 3 => 0.08f,
+                4 => 0.06f,
+                5 => 0.04f,
+                _ => 0.03f
+            };
         }
 
         private bool IsValidAction(RaidRole role, string action)
