@@ -7,6 +7,7 @@ using Hogs.RPG.Services.InventoryServices;
 using System.Text;
 
 [BossLock]
+[GearSwapLock]
 public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly InventoryService _inventoryService;

@@ -27,6 +27,9 @@ namespace Hogs.RPG.Core.Entities.EquipmentObjects
         public string? Boots { get; set; }
         public string? Ring { get; set; }
         public string? Amulet { get; set; }
+        public int? RelicSlot1Id { get; set; }
+        public int? RelicSlot2Id { get; set; }
+        public string? PetId { get; set; }
     }
 }
 

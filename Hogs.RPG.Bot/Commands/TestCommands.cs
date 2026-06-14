@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -18,6 +19,8 @@ using static Hogs.RPG.Core.Entities.GlobalBossObjects.BossDefinition;
 
 namespace Hogs.RPG.Bot.Commands
 {
+    [BossLock]
+    [GearSwapLock]
     public class TestCommands : InteractionModuleBase<SocketInteractionContext>
     {
         private const ulong ADMIN_ROLE_ID = 1483528182106685691;

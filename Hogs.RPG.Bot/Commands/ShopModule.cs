@@ -13,6 +13,7 @@ using System.Text;
 namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
+    [GearSwapLock]
     // =========================
     // PET RENAME MODAL
     // =========================

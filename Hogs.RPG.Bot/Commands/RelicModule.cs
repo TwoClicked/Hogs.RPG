@@ -9,6 +9,7 @@ using Hogs.RPG.Services.RelicServices;
 namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
+    [GearSwapLock]
     public class RelicModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly RelicService _relicService;

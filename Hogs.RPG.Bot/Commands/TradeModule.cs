@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
+    [GearSwapLock]
     public class TradeModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly TradeService _tradeService;

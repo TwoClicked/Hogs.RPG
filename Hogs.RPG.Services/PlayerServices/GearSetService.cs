@@ -4,6 +4,8 @@ using Hogs.RPG.Core.Entities.EquipmentObjects;
 using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.InventoryServices;
+using Hogs.RPG.Services.PetServices;
+using Hogs.RPG.Services.RelicServices;
 
 namespace Hogs.RPG.Services.GameplayServices
 {
@@ -13,6 +15,8 @@ namespace Hogs.RPG.Services.GameplayServices
         private readonly PlayerRepository _playerRepository;
         private readonly InventoryService _inventoryService;
         private readonly StatService _statService;
+        private readonly PetService _petService;
+        private readonly RelicService _relicService;
 
         private const int GearSwapCooldownSeconds = 120;
 
@@ -20,12 +24,16 @@ namespace Hogs.RPG.Services.GameplayServices
             GearSetRepository gearSetRepository,
             PlayerRepository playerRepository,
             InventoryService inventoryService,
-            StatService statService)
+            StatService statService,
+            PetService petService,
+            RelicService relicService)
         {
             _gearSetRepository = gearSetRepository;
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
             _statService = statService;
+            _petService = petService;
+            _relicService = relicService;
         }
 
         // =========================
@@ -52,10 +60,19 @@ namespace Hogs.RPG.Services.GameplayServices
                 Amulet = player.Amulet
             };
 
+            // Snapshot equipped relics
+            var relics = await _relicService.GetEquippedRelicsAsync(userId);
+            gearSet.RelicSlot1Id = relics.FirstOrDefault(r => r.SlotIndex == 0)?.Id;
+            gearSet.RelicSlot2Id = relics.FirstOrDefault(r => r.SlotIndex == 1)?.Id;
+
+            // Snapshot equipped pet
+            var equippedPet = await _petService.GetEquippedPetAsync(userId);
+            gearSet.PetId = equippedPet?.PetId;
+
             await _gearSetRepository.SaveSetAsync(gearSet);
 
             var slotCount = CountFilledSlots(gearSet);
-            return $"✅ Saved **{setName}** (Set {setIndex}) with {slotCount}/9 slot(s) filled.";
+            return $"✅ Saved **{setName}** (Set {setIndex}) with {slotCount}/9 gear slot(s) filled.";
         }
 
         // =========================
@@ -85,9 +102,6 @@ namespace Hogs.RPG.Services.GameplayServices
             var changing = BuildSlotList(player, set)
                 .Where(s => s.Current != s.Target)
                 .ToList();
-
-            if (!changing.Any())
-                return $"⚔️ **{set.SetName}** is already equipped.";
 
             // ─────────────────────────────────────────
             // SIMULATE inventory to handle cross-slot
@@ -133,9 +147,44 @@ namespace Hogs.RPG.Services.GameplayServices
             foreach (var s in toExecute.Where(s => !string.IsNullOrEmpty(s.Target)))
                 await _inventoryService.TakeItemAsync(userId, s.Target!, 1);
 
-            // Phase 4 — update player slots
+            // Phase 4 — update player gear slots
             foreach (var s in toExecute)
                 s.SetSlot(player, s.Target);
+
+            // =========================
+            // RELICS
+            // =========================
+            var allRelics = await _relicService.GetRelicsAsync(userId);
+
+            // Unequip all current relics
+            foreach (var r in allRelics.Where(r => r.IsEquipped))
+            {
+                r.IsEquipped = false;
+                await _relicService.SaveRelicAsync(r);
+            }
+
+            // Equip saved relics if they still exist and belong to this player
+            if (set.RelicSlot1Id.HasValue)
+            {
+                var r = allRelics.FirstOrDefault(r => r.Id == set.RelicSlot1Id.Value);
+                if (r != null) { r.IsEquipped = true; r.SlotIndex = 0; await _relicService.SaveRelicAsync(r); }
+            }
+            if (set.RelicSlot2Id.HasValue)
+            {
+                var r = allRelics.FirstOrDefault(r => r.Id == set.RelicSlot2Id.Value);
+                if (r != null) { r.IsEquipped = true; r.SlotIndex = 1; await _relicService.SaveRelicAsync(r); }
+            }
+
+            // =========================
+            // PET
+            // =========================
+            if (!string.IsNullOrEmpty(set.PetId))
+            {
+                var pets = await _petService.GetPetsAsync(userId);
+                bool ownsPet = pets.Any(p => p.PetId == set.PetId);
+                if (ownsPet)
+                    await _petService.EquipPetAsync(userId, set.PetId);
+            }
 
             // Clamp health to new max
             var (_, _, maxHealth) = _statService.CalculateStats(player);

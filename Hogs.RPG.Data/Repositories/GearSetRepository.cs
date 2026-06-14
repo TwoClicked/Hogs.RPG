@@ -57,6 +57,9 @@ namespace Hogs.RPG.Data.Repositories
                 existing.Boots = gearSet.Boots;
                 existing.Ring = gearSet.Ring;
                 existing.Amulet = gearSet.Amulet;
+                existing.RelicSlot1Id = gearSet.RelicSlot1Id;
+                existing.RelicSlot2Id = gearSet.RelicSlot2Id;
+                existing.PetId = gearSet.PetId;
 
                 _context.GearSets.Update(existing);
             }

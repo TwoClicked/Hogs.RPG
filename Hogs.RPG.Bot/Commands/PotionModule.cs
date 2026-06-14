@@ -5,6 +5,7 @@ using Hogs.RPG.Services.GameplayServices;
 using System.Threading.Tasks;
 
 [BossLock]
+[GearSwapLock]
 public class PotionModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly PotionService _potionService;

@@ -3,20 +3,25 @@
 using Discord;
 using Discord.Interactions;
 using Hogs.RPG.Bot.Preconditions;
+using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Services.GameplayServices;
+using Hogs.RPG.Services.RelicServices;
 using System.Text;
 
 namespace Hogs.RPG.Bot.Commands
 {
     [Group("gearset", "Manage your gear sets")]
     [BossLock]
+    [GearSwapLock]
     public class GearSetModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly GearSetService _gearSetService;
+        private readonly RelicService _relicService;
 
-        public GearSetModule(GearSetService gearSetService)
+        public GearSetModule(GearSetService gearSetService, RelicService relicService)
         {
             _gearSetService = gearSetService;
+            _relicService = relicService;
         }
 
         // =========================
@@ -64,6 +69,7 @@ namespace Hogs.RPG.Bot.Commands
             await DeferAsync(ephemeral: true);
 
             var sets = await _gearSetService.GetSetsAsync(Context.User.Id);
+            var allRelics = await _relicService.GetRelicsAsync(Context.User.Id);
 
             var embed = new EmbedBuilder()
                 .WithTitle("🗃️ Your Gear Sets")
@@ -92,6 +98,40 @@ namespace Hogs.RPG.Bot.Commands
                 AppendSlotLine(sb, "🥾 Boots", set.Boots);
                 AppendSlotLine(sb, "💍 Ring", set.Ring);
                 AppendSlotLine(sb, "📿 Amulet", set.Amulet);
+
+                // Relics
+                if (set.RelicSlot1Id.HasValue)
+                {
+                    var relic = allRelics.FirstOrDefault(r => r.Id == set.RelicSlot1Id.Value);
+                    var relicName = relic != null
+                        ? $"{RelicRegistry.Get(relic.RelicId).Name} (Rank {relic.Rank})"
+                        : $"ID {set.RelicSlot1Id} *(sold or traded)*";
+                    sb.AppendLine($"💎 Relic 1: {relicName}");
+                }
+                else
+                    sb.AppendLine("💎 Relic 1: —");
+
+                if (set.RelicSlot2Id.HasValue)
+                {
+                    var relic = allRelics.FirstOrDefault(r => r.Id == set.RelicSlot2Id.Value);
+                    var relicName = relic != null
+                        ? $"{RelicRegistry.Get(relic.RelicId).Name} (Rank {relic.Rank})"
+                        : $"ID {set.RelicSlot2Id} *(sold or traded)*";
+                    sb.AppendLine($"💎 Relic 2: {relicName}");
+                }
+                else
+                    sb.AppendLine("💎 Relic 2: —");
+
+                // Pet
+                if (!string.IsNullOrEmpty(set.PetId))
+                {
+                    var petName = PetRegistry.All.TryGetValue(set.PetId, out var petDef)
+                        ? $"{petDef.Icon} {petDef.Name}"
+                        : set.PetId;
+                    sb.AppendLine($"🐾 Pet: {petName}");
+                }
+                else
+                    sb.AppendLine("🐾 Pet: —");
 
                 embed.AddField($"Set {i}", sb.ToString(), inline: false);
             }

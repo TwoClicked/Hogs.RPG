@@ -13,6 +13,7 @@ namespace Hogs.RPG.Bot.Commands
 {
     [Group("raidkey", "Raid key crafting")]
     [BossLock]
+    [GearSwapLock]
     public class RaidKeyModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly AlchemyService _alchemyService;

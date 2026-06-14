@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
+    [GearSwapLock]
     public class PetModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly PetService _petService;

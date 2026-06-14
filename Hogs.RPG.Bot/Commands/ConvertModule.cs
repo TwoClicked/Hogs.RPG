@@ -11,6 +11,7 @@ using Hogs.RPG.Services.RaidServices;
 namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
+    [GearSwapLock]
     public class ConvertModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly MaterialConversionService _conversionService;

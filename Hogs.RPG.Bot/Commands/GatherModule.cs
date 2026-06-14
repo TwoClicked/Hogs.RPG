@@ -4,6 +4,7 @@ using Hogs.RPG.Services.GatheringServices;
 using System.Threading.Tasks;
 
 [BossLock]
+[GearSwapLock]
 public class GatherModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly GatherService _gatherService;

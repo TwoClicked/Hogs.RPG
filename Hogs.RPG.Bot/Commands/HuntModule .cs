@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
+    [GearSwapLock]
     public class HuntModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly HuntService _huntService;

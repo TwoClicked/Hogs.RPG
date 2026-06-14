@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
+    [GearSwapLock]
     public class PlayerCommands : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly PlayerService _playerService;

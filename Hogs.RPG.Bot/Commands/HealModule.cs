@@ -5,6 +5,7 @@ using Hogs.RPG.Services.InventoryServices;
 using System.Threading.Tasks;
 
 [BossLock]
+[GearSwapLock]
 public class HealModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly HealService _healService;

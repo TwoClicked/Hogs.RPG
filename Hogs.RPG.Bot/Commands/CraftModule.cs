@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
+    [GearSwapLock]
     public class CraftModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly CraftingService _craftingService;

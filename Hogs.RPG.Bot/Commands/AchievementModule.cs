@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.GameData.Achievements;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -9,6 +10,8 @@ using System.Text;
 namespace Hogs.RPG.Bot.Commands
 {
     [Group("achievements", "Achievement commands")]
+    [GearSwapLock]
+    [BossLock]
     public class AchievementModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly AchievementRepository _achievementRepository;

@@ -36,7 +36,6 @@ namespace Hogs.RPG.Services.RaidServices
         private const int RaidPlayerXpReward = 1500;
         private const int RaidPetXpReward = 100;
         private const int WipeGoldPenalty = 1000;
-        private const float RelicShardDropChance = 0.03f;
         private const int PotionGoldFallback = 500;
 
         public RaidService(
@@ -773,7 +772,7 @@ namespace Hogs.RPG.Services.RaidServices
 
                 await _petService.AddXPAsync(p.DiscordId, petXp);
 
-                float shardDropChance = RelicShardDropChance + relicBonuses.BonusLootRollPercent;
+                float shardDropChance = GetShardDropChance(session.Tier) + relicBonuses.BonusLootRollPercent;
                 bool shardDropped = _random.NextDouble() < shardDropChance;
                 if (shardDropped)
                     await _relicService.GiveShardAsync(p.DiscordId, session.Tier);
@@ -848,6 +847,12 @@ namespace Hogs.RPG.Services.RaidServices
             if (participant == null) return;
             participant.ActionMessageId = messageId;
             await _raidRepo.SaveSessionAsync(session);
+        }
+
+        private static float GetShardDropChance(int tier)
+        {
+            // T1 = 10%, T2 = 8%, T3 = 6%, T4 = 4%, T5 = 2%
+            return Math.Max(0f, (0.10f - (tier - 1) * 0.02f));
         }
 
         private bool IsValidAction(RaidRole role, string action)
