@@ -16,7 +16,7 @@ namespace Hogs.RPG.Core.GameData.Pets
         {
             Id = PetPassive.DoubleStrike,
             Name = "DoubleStrike",
-            Description = "5% chance to deal double damage"
+            Description = "20% chance to deal double damage"
         };
 
         public static readonly PetPassiveDefinition GuardianShield = new()
