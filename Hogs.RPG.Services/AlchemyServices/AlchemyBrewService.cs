@@ -317,7 +317,7 @@ namespace Hogs.RPG.Services.AlchemyServices
 
             player.TrailsToday = Math.Max(0, player.TrailsToday - 1);
             player.LastTrailDate = today;
-            player.TrailResetUsedDate = today;
+            player.TrailTonicUsedDate = today;
 
             return "✅ **+1 Trail run granted!** You have an extra trail available today.";
         }
