@@ -313,7 +313,7 @@ namespace Hogs.RPG.Services.RaidServices
                     _ => "❓"
                 };
 
-                sb.Append($"{roleIcon} <@{reward.DiscordId}> — 💰 +{reward.Gold} gold | 📈 +{reward.PlayerXp} XP");
+                sb.Append($"{roleIcon} <@{reward.DiscordId}> — 💰 +{reward.Gold} gold | 📈 +{reward.PlayerXp} XP | 🐾 +{reward.PetXp} Pet XP");
 
                 if (reward.ShardDropped)
                     sb.Append($"\n  💎 **Tier {reward.ShardTier} Relic Shard dropped!**");
