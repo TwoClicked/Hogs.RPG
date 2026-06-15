@@ -419,7 +419,13 @@ namespace Hogs.RPG.Services.RaidServices
                     session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - damage);
                     int petLifesteal = _petPassiveService.ApplyOnHitEffects(damage, dpsPlayer, dpsPet);
                     if (petLifesteal > 0) dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + petLifesteal);
-                    string lsSuffix = petLifesteal > 0 ? $" 🩸 Pet lifesteal: **+{petLifesteal} HP**." : "";
+                    int relicHeal = (int)(damage * relicBonuses.LifeStealPercent);
+                    if (relicHeal > 0) dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + relicHeal);
+                    string lsSuffix = (relicHeal > 0 && petLifesteal > 0)
+                        ? $" 🩸 Life steal: **+{relicHeal}** (relic) + **+{petLifesteal}** (pet)."
+                        : relicHeal > 0 ? $" 🩸 Life steal healed for **{relicHeal}**."
+                        : petLifesteal > 0 ? $" 🩸 Pet lifesteal: **+{petLifesteal} HP**."
+                        : "";
                     result.DpsText = dps.FocusStacks > 0
                         ? $"💀 Reckless Strike! ({dps.FocusStacks}x Focus) dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self.{lsSuffix}"
                         : $"💀 Reckless Strike dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self.{lsSuffix}";
