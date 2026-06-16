@@ -96,12 +96,24 @@ namespace Hogs.RPG.Services.PetServices
             var pet = await _repo.GetEquippedPetAsync(userId);
             if (pet == null) return (false, 0);
 
-            pet.XP += amount;
+            if (pet.Level >= 30)
+            {
+                pet.XP = 0;
+                await _repo.SaveAsync();
+                return (false, pet.Level);
+            }
 
+            pet.XP += amount;
             bool leveledUp = false;
 
             while (true)
             {
+                if (pet.Level >= 25)
+                {
+                    pet.XP = 0;
+                    break;
+                }
+
                 int required = 20 + (pet.Level * pet.Level * 15);
 
                 if (pet.XP < required)
@@ -133,7 +145,6 @@ namespace Hogs.RPG.Services.PetServices
             }
 
             await _repo.SaveAsync();
-
             return (leveledUp, pet.Level);
         }
 
