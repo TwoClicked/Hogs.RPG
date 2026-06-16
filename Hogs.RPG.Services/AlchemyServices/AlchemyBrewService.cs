@@ -184,7 +184,8 @@ namespace Hogs.RPG.Services.AlchemyServices
             if (player.PotionsDrankToday >= DailyPotionCap)
                 return $"❌ You have already used **{DailyPotionCap} potions** today. Come back tomorrow.";
 
-            if (player.TrailTonicUsedDate == today)
+            // AFTER — only blocks drinking a second Trail Tonic
+            if (potion.EffectId == "trail_reset" && player.TrailTonicUsedDate == today)
                 return "❌ You've already used a Trail Tonic today. Come back tomorrow.";
 
             // =========================
