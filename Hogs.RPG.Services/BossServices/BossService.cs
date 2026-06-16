@@ -96,7 +96,7 @@ namespace Hogs.RPG.Services.Game
             if (pet != null)
                 PetRegistry.All.TryGetValue(pet.PetId, out petDef);
 
-            damage = petPassiveService.ModifyOutgoingDamage(damage, pet, petDef, boss.CurrentHealth, boss.Definition.MaxHealth);
+            (damage, _) = petPassiveService.ModifyOutgoingDamage(damage, pet, petDef, boss.CurrentHealth, boss.Definition.MaxHealth);
 
             // Relic bonuses
             var relicBonuses = await relicService.GetRelicBonusesAsync(userId);

@@ -181,7 +181,8 @@ namespace Hogs.RPG.Services.Game
             int playerDamage = (int)(session.Attack * (100.0 / (100 + enemyDefense)));
             playerDamage = Math.Max(1, playerDamage);
 
-            playerDamage = petPassiveService.ModifyOutgoingDamage(playerDamage, pet, petDef, session.EnemyHealth, session.EnemyMaxHealth);
+            var (modifiedPlayerDamage, outgoingTriggerText) = petPassiveService.ModifyOutgoingDamage(playerDamage, pet, petDef, session.EnemyHealth, session.EnemyMaxHealth);
+            playerDamage = modifiedPlayerDamage;
 
             var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
@@ -243,7 +244,8 @@ namespace Hogs.RPG.Services.Game
             int enemyDamage = (int)(enemyAttack * (100.0 / (100 + session.Defense)));
             enemyDamage = Math.Max(5, enemyDamage);
 
-            enemyDamage = petPassiveService.ModifyIncomingDamage(enemyDamage, pet);
+            var (modifiedEnemyDamage, shieldTriggerText) = petPassiveService.ModifyIncomingDamage(enemyDamage, pet);
+            enemyDamage = modifiedEnemyDamage;
 
             // Dodge
             if (session.DodgeChanceBonus > 0 && _random.NextDouble() < session.DodgeChanceBonus)

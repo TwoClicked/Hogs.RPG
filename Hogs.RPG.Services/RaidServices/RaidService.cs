@@ -408,7 +408,7 @@ namespace Hogs.RPG.Services.RaidServices
                 if (dpsPet != null)
                     PetRegistry.All.TryGetValue(dpsPet.PetId, out dpsPetDef);
 
-                damage = _petPassiveService.ModifyOutgoingDamage(damage, dpsPet, dpsPetDef, session.BossCurrentHp, session.BossMaxHp);
+                (damage, _) = _petPassiveService.ModifyOutgoingDamage(damage, dpsPet, dpsPetDef, session.BossCurrentHp, session.BossMaxHp);
 
                 if (dps.PendingAction == "reckless")
                 {
@@ -573,7 +573,8 @@ namespace Hogs.RPG.Services.RaidServices
                 int finalDamage = (int)(rawDamage * (1f - damageReduction));
                 finalDamage = Math.Max(1, finalDamage);
                 var tankPet = await _petService.GetEquippedPetAsync(tank.DiscordId);
-                finalDamage = _petPassiveService.ModifyIncomingDamage(finalDamage, tankPet);
+                var (modifiedFinalDamage, _) = _petPassiveService.ModifyIncomingDamage(finalDamage, tankPet);
+                finalDamage = modifiedFinalDamage;
                 finalDamage = Math.Max(1, finalDamage);
                 tank.CurrentHp = Math.Max(0, tank.CurrentHp - finalDamage);
                 result.BossText += $"🗡️ Boss attacks **Tank** for **{finalDamage}** damage.";
