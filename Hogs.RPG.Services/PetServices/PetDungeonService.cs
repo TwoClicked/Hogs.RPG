@@ -142,7 +142,8 @@ namespace Hogs.RPG.Services.DungeonServices
             if (session.ToxicAttackReductionTurnsRemaining > 0)
                 playerDamage = (int)(playerDamage * 0.80);
 
-            playerDamage = petPassiveService.ModifyOutgoingDamage(playerDamage, pet, petDef, session.EnemyHealth, session.EnemyMaxHealth);
+            var (modifiedPlayerDamage, outgoingTriggerText) = petPassiveService.ModifyOutgoingDamage(playerDamage, pet, petDef, session.EnemyHealth, session.EnemyMaxHealth);
+            playerDamage = modifiedPlayerDamage;
 
             var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
@@ -195,7 +196,8 @@ namespace Hogs.RPG.Services.DungeonServices
             int enemyDamage = (int)(enemyAttack * (100.0 / (100 + session.Defense)));
             enemyDamage = Math.Max(5, enemyDamage);
 
-            enemyDamage = petPassiveService.ModifyIncomingDamage(enemyDamage, pet);
+            var (modifiedEnemyDamage, shieldTriggerText) = petPassiveService.ModifyIncomingDamage(enemyDamage, pet);
+            enemyDamage = modifiedEnemyDamage;
 
             string behaviorText = null;
             if (session.IsBoss)
