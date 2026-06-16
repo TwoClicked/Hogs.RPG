@@ -9,61 +9,70 @@ public class PetPassiveService
 
     /// <summary>
     /// Modifies outgoing damage based on the pet's active passives.
-    /// Called before damage is applied to the target.
+    /// Returns modified damage and any trigger text to append to combat log.
     /// </summary>
-    public int ModifyOutgoingDamage(int baseDamage, PlayerPet pet, PetDefinition def, int targetCurrentHp, int targetMaxHp)
+    public (int damage, string triggerText) ModifyOutgoingDamage(int baseDamage, PlayerPet pet, PetDefinition def, int targetCurrentHp, int targetMaxHp)
     {
         int damage = baseDamage;
+        var triggers = new List<string>();
 
-        // No pet equipped — return base damage unmodified
-        if (pet == null) return damage;
+        if (pet == null) return (damage, null);
 
         foreach (var passive in GetActivePassives(pet))
         {
             switch (passive)
             {
                 case PetPassive.DoubleStrike:
-                    // 20% chance to deal double damage
                     if (_random.NextDouble() < 0.20)
+                    {
                         damage *= 2;
+                        triggers.Add($"⚡ **Double Strike!** You hit twice for **{damage}** total damage!");
+                    }
                     break;
 
                 case PetPassive.Executioner:
-                    // Deal 25% bonus damage when target is below 30% HP
                     double hpPercent = (double)targetCurrentHp / targetMaxHp;
                     if (hpPercent < 0.30)
+                    {
+                        int bonus = (int)(damage * 0.25);
                         damage = (int)(damage * 1.25);
+                        triggers.Add($"💀 **Executioner!** +25% damage on low HP enemy (+{bonus})!");
+                    }
                     break;
             }
         }
 
-        return damage;
+        string text = triggers.Count > 0 ? string.Join("\n", triggers) : null;
+        return (damage, text);
     }
 
     /// <summary>
     /// Modifies incoming damage based on the pet's active passives.
-    /// Called before damage is applied to the player.
+    /// Returns modified damage and any trigger text to append to combat log.
     /// </summary>
-    public int ModifyIncomingDamage(int incomingDamage, PlayerPet pet)
+    public (int damage, string triggerText) ModifyIncomingDamage(int incomingDamage, PlayerPet pet)
     {
         int damage = incomingDamage;
+        string triggerText = null;
 
-        // No pet equipped — return incoming damage unmodified
-        if (pet == null) return damage;
+        if (pet == null) return (damage, null);
 
         foreach (var passive in GetActivePassives(pet))
         {
             switch (passive)
             {
                 case PetPassive.GuardianShield:
-                    // 15% chance to reduce incoming damage by 30%
                     if (_random.NextDouble() < 0.15)
-                        damage = (int)(damage * 0.7);
+                    {
+                        int blocked = incomingDamage - (int)(incomingDamage * 0.7);
+                        damage = (int)(incomingDamage * 0.7);
+                        triggerText = $"🛡️ **Guardian Shield!** Blocked {blocked} damage! ({incomingDamage} → {damage})";
+                    }
                     break;
             }
         }
 
-        return damage;
+        return (damage, triggerText);
     }
 
     /// <summary>
@@ -72,7 +81,6 @@ public class PetPassiveService
     /// </summary>
     public int ApplyOnHitEffects(int damageDealt, Player player, PlayerPet pet)
     {
-        // No pet equipped — no healing to apply
         if (pet == null) return 0;
 
         int healing = 0;
@@ -82,7 +90,6 @@ public class PetPassiveService
             switch (passive)
             {
                 case PetPassive.Lifesteal:
-                    // Heal the player for 10% of the damage dealt
                     healing += (int)(damageDealt * 0.10);
                     break;
             }
@@ -97,7 +104,6 @@ public class PetPassiveService
     /// </summary>
     public int ApplyOnHitTaken(int damageTaken, PlayerPet pet)
     {
-        // No pet equipped — no damage to reflect
         if (pet == null) return 0;
 
         int reflect = 0;
@@ -107,7 +113,6 @@ public class PetPassiveService
             switch (passive)
             {
                 case PetPassive.Thorns:
-                    // Reflect 15% of damage taken + 5 flat damage back to attacker
                     reflect += (int)(damageTaken * 0.15) + 5;
                     break;
             }
@@ -116,19 +121,11 @@ public class PetPassiveService
         return reflect;
     }
 
-    /// <summary>
-    /// Collects all active (non-null) passives from the pet's two passive slots.
-    /// </summary>
     private List<PetPassive> GetActivePassives(PlayerPet pet)
     {
         var list = new List<PetPassive>();
-
-        if (pet.Passive1 != null)
-            list.Add(pet.Passive1.Value);
-
-        if (pet.Passive2 != null)
-            list.Add(pet.Passive2.Value);
-
+        if (pet.Passive1 != null) list.Add(pet.Passive1.Value);
+        if (pet.Passive2 != null) list.Add(pet.Passive2.Value);
         return list;
     }
 }
