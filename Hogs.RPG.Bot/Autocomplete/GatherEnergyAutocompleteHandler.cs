@@ -42,28 +42,34 @@ public class GatherEnergyAutocompleteHandler : AutocompleteHandler
         int maxEnergy = energyService.GetMaxEnergy(player);
         bool boosted = maxEnergy > 100;
 
-        var options = new List<string> { "10", "25", "50", "100", "Max" };
+        var results = new List<AutocompleteResult>();
 
-        var results = options
-            .Where(o =>
-            {
-                if (o.Equals("Max", StringComparison.OrdinalIgnoreCase)) return currentEnergy > 0;
-                if (int.TryParse(o, out int val)) return val <= currentEnergy;
-                return false;
-            })
-            .Where(o => o.Contains(input, StringComparison.OrdinalIgnoreCase))
+        // =========================
+        // MAX FIRST (matches Hunt ordering)
+        // =========================
+        if (currentEnergy > 0)
+        {
+            string boostTag = boosted ? " ⚡ Boosted" : "";
+            results.Add(new AutocompleteResult($"⚡ Max ({currentEnergy}/{maxEnergy}){boostTag}", currentEnergy.ToString()));
+        }
+
+        // =========================
+        // PRESETS — generated relative to the player's real max
+        // =========================
+        var presets = new[] { 10, 25, 50, 100, 150, 200 };
+        foreach (var val in presets)
+        {
+            if (val > maxEnergy) continue;
+            if (val > currentEnergy) continue;
+
+            int percent = (int)Math.Round((double)val / maxEnergy * 100);
+            results.Add(new AutocompleteResult($"⚡ {val} ({percent}%) (Energy: {currentEnergy}/{maxEnergy})", val.ToString()));
+        }
+
+        results = results
+            .Where(r => r.Name.Contains(input, StringComparison.OrdinalIgnoreCase))
             .Take(25)
-            .Select(o =>
-            {
-                if (o.Equals("Max", StringComparison.OrdinalIgnoreCase))
-                    return new AutocompleteResult($"⚡ Max ({currentEnergy}/{maxEnergy}){(boosted ? " ⚡ Boosted" : "")}", currentEnergy.ToString());
-                return new AutocompleteResult($"⚡ {o} (Energy: {currentEnergy}/{maxEnergy})", o);
-            })
             .ToList();
-
-        // Add 150 preset only if boost is active and player has enough energy
-        if (boosted && currentEnergy >= 150)
-            results.Add(new AutocompleteResult($"150 (100%) ⚡", "150"));
 
         if (results.Count == 0)
             results.Add(new AutocompleteResult($"⚡ Current Energy: {currentEnergy}/{maxEnergy}", currentEnergy.ToString()));
