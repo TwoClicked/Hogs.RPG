@@ -11,6 +11,7 @@ namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     public class RaidActionModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly RaidService _raidService;

@@ -12,6 +12,7 @@ namespace Hogs.RPG.Bot.Commands
 {
     [Group("trail", "The Ashwood Trail — hunt for tokens, gear and your companion")]
     [BossLock]
+    [TradeLock]
     [GearSwapLock]
     public class TrailModule : InteractionModuleBase<SocketInteractionContext>
     {

@@ -6,6 +6,7 @@ using Hogs.RPG.Core.Entities.TradeObjects;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
+using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PlayerServices;
 using Hogs.RPG.Services.RelicServices;
@@ -25,27 +26,56 @@ namespace Hogs.RPG.Bot.Commands
         private readonly InventoryService _inventoryService;
         private readonly PlayerService _playerService;
         private readonly RelicService _relicService;
+        private readonly BossService _bossService;
 
         private const ulong TRADE_CHANNEL_ID = 1489405758603923477;
+        private static readonly TimeSpan BossBlackoutWindow = TimeSpan.FromMinutes(10);
 
         public TradeModule(
             TradeService tradeService,
             InventoryService inventoryService,
             PlayerService playerService,
-            RelicService relicService)
+            RelicService relicService,
+            BossService bossService)
         {
             _tradeService = tradeService;
             _inventoryService = inventoryService;
             _playerService = playerService;
             _relicService = relicService;
+            _bossService = bossService;
         }
 
+        // =========================
+        // CHANNEL GATE
+        // Used by every trade command, including cancel/view.
+        // =========================
         private async Task<bool> EnsureTradeChannel()
         {
             if (Context.Channel.Id != TRADE_CHANNEL_ID)
             {
                 await RespondAsync(
                     $"❌ Trading can only be done in <#{TRADE_CHANNEL_ID}>.",
+                    ephemeral: true);
+                return false;
+            }
+            return true;
+        }
+
+        // =========================
+        // BOSS PROXIMITY GATE
+        // Blocks commands that start or grow a trade when a scheduled
+        // boss is within the blackout window. Deliberately NOT applied
+        // to tradecancel or tradeview — players should always be able
+        // to back out of or check a trade, even during the blackout.
+        // =========================
+        private async Task<bool> EnsureNotNearBoss()
+        {
+            var timeUntilBoss = _bossService.GetTimeUntilNextScheduledBoss();
+            if (timeUntilBoss <= BossBlackoutWindow)
+            {
+                var minutes = Math.Max(0, (int)Math.Ceiling(timeUntilBoss.TotalMinutes));
+                await RespondAsync(
+                    $"⚔️ Trading is locked — a boss spawns in **{minutes} minute(s)**. You can still `/tradecancel` an existing trade.",
                     ephemeral: true);
                 return false;
             }
@@ -103,6 +133,7 @@ namespace Hogs.RPG.Bot.Commands
         public async Task Trade(SocketGuildUser target)
         {
             if (!await EnsureTradeChannel()) return;
+            if (!await EnsureNotNearBoss()) return;
 
             if (target.Id == Context.User.Id)
             {
@@ -133,6 +164,7 @@ namespace Hogs.RPG.Bot.Commands
         public async Task TradeAccept()
         {
             if (!await EnsureTradeChannel()) return;
+            if (!await EnsureNotNearBoss()) return;
 
             var trade = _tradeService.GetTrade(Context.User.Id);
 
@@ -169,6 +201,7 @@ namespace Hogs.RPG.Bot.Commands
             int amount)
         {
             if (!await EnsureTradeChannel()) return;
+            if (!await EnsureNotNearBoss()) return;
 
             var trade = _tradeService.GetTrade(Context.User.Id);
 
@@ -221,6 +254,7 @@ namespace Hogs.RPG.Bot.Commands
         public async Task TradeAddGold(int amount)
         {
             if (!await EnsureTradeChannel()) return;
+            if (!await EnsureNotNearBoss()) return;
 
             var trade = _tradeService.GetTrade(Context.User.Id);
 
@@ -267,6 +301,7 @@ namespace Hogs.RPG.Bot.Commands
         public async Task TradeAddPet(int petId)
         {
             if (!await EnsureTradeChannel()) return;
+            if (!await EnsureNotNearBoss()) return;
 
             var trade = _tradeService.GetTrade(Context.User.Id);
 
@@ -325,6 +360,7 @@ namespace Hogs.RPG.Bot.Commands
             [Summary("relic_id", "The relic to add"), Autocomplete(typeof(RelicAutocompleteHandler))] int relicId)
         {
             if (!await EnsureTradeChannel()) return;
+            if (!await EnsureNotNearBoss()) return;
 
             var trade = _tradeService.GetTrade(Context.User.Id);
 
@@ -396,6 +432,7 @@ namespace Hogs.RPG.Bot.Commands
         public async Task TradeConfirm()
         {
             if (!await EnsureTradeChannel()) return;
+            if (!await EnsureNotNearBoss()) return;
 
             var trade = _tradeService.GetTrade(Context.User.Id);
 

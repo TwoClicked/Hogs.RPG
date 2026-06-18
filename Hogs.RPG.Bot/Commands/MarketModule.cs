@@ -13,6 +13,7 @@ namespace Hogs.RPG.Bot.Commands
     [Group("market", "Player-to-player marketplace — list, bid and trade")]
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     public class MarketModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly PlayerAuctionService _marketService;

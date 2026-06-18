@@ -34,6 +34,15 @@ namespace Hogs.RPG.Services.Game
         private readonly ulong _feedChannelId = 1485357755433750549;
         private static readonly Random _rand = new();
 
+        // =========================
+        // SCHEDULED SPAWN HOURS
+        // Mirrors BossScheduler.SpawnHours (UTC). Used by
+        // GetTimeUntilNextScheduledBoss() for the trade boss-blackout
+        // lock. If you ever change the spawn schedule, update both
+        // places — or better, move this into a shared static.
+        // =========================
+        private static readonly HashSet<int> SpawnHours = new() { 0, 3, 6, 9, 12, 15, 18, 21 };
+
         public BossService(IServiceScopeFactory scopeFactory, DiscordSocketClient client)
         {
             _scopeFactory = scopeFactory;
@@ -207,6 +216,36 @@ namespace Hogs.RPG.Services.Game
             var boss = _activeBosses[bossId];
             if (boss.IsDead || DateTime.UtcNow >= boss.ExpireAt) return null;
             return boss;
+        }
+
+        // =========================
+        // TIME UNTIL NEXT SCHEDULED BOSS
+        // Pure math against the fixed SpawnHours schedule — no new
+        // persisted state. Used by TradeModule to enforce a trading
+        // blackout window in the run-up to a scheduled boss spawn.
+        // Walks forward hour by hour (max 24 checks) until it finds
+        // the next UTC hour that's in SpawnHours.
+        // =========================
+        public TimeSpan GetTimeUntilNextScheduledBoss()
+        {
+            var now = DateTime.UtcNow;
+
+            for (int addHours = 0; addHours <= 24; addHours++)
+            {
+                var candidate = now.AddHours(addHours);
+                var candidateHourStart = new DateTime(
+                    candidate.Year, candidate.Month, candidate.Day, candidate.Hour, 0, 0, DateTimeKind.Utc);
+
+                bool isSpawnHour = SpawnHours.Contains(candidateHourStart.Hour);
+                bool isFutureOrNow = candidateHourStart >= now;
+
+                if (isSpawnHour && isFutureOrNow)
+                    return candidateHourStart - now;
+            }
+
+            // Should never be reached given SpawnHours always has entries
+            // within 24h, but return a safe default rather than throwing.
+            return TimeSpan.FromHours(24);
         }
 
         // =========================

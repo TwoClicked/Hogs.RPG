@@ -9,6 +9,7 @@ namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     public class HuntModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly HuntService _huntService;

@@ -13,6 +13,7 @@ namespace Hogs.RPG.Bot.Commands
     [Group("gearset", "Manage your gear sets")]
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     public class GearSetModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly GearSetService _gearSetService;

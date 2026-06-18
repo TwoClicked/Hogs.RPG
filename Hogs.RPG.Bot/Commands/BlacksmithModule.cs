@@ -13,6 +13,7 @@ namespace Hogs.RPG.Bot.Commands
     [Group("blacksmith", "Blacksmith commands — smelt bars and forge weapons")]
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     public class BlacksmithModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly SmithingService _smithingService;

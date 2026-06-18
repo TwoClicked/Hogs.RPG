@@ -14,6 +14,7 @@ namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     // =========================
     // PET RENAME MODAL
     // =========================

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 [BossLock]
 [GearSwapLock]
+[TradeLock]
 public class HealModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly HealService _healService;

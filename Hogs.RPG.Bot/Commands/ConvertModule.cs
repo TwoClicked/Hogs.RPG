@@ -12,6 +12,7 @@ namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     public class ConvertModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly MaterialConversionService _conversionService;

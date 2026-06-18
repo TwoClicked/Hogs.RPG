@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 [BossLock]
 [GearSwapLock]
+[TradeLock]
 public class GatherModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly GatherService _gatherService;

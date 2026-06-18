@@ -6,6 +6,7 @@ using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.RelicServices;
+using Hogs.RPG.Services.TradeServices;
 
 namespace Hogs.RPG.Services.GameplayServices
 {
@@ -17,6 +18,7 @@ namespace Hogs.RPG.Services.GameplayServices
         private readonly StatService _statService;
         private readonly PetService _petService;
         private readonly RelicService _relicService;
+        private readonly TradeService _tradeService;
 
         private const int GearSwapCooldownSeconds = 120;
 
@@ -26,7 +28,8 @@ namespace Hogs.RPG.Services.GameplayServices
             InventoryService inventoryService,
             StatService statService,
             PetService petService,
-            RelicService relicService)
+            RelicService relicService,
+            TradeService tradeService)
         {
             _gearSetRepository = gearSetRepository;
             _playerRepository = playerRepository;
@@ -34,6 +37,7 @@ namespace Hogs.RPG.Services.GameplayServices
             _statService = statService;
             _petService = petService;
             _relicService = relicService;
+            _tradeService = tradeService;
         }
 
         // =========================
@@ -82,6 +86,18 @@ namespace Hogs.RPG.Services.GameplayServices
         {
             var player = await _playerRepository.GetByDiscordIdAsync(userId);
             if (player == null) return "You need to start your adventure first.";
+
+            // =========================
+            // TRADE LOCK
+            // Blocks gear swaps while the player has an active or pending
+            // trade. Prevents stale GearSet snapshots from re-equipping an
+            // item that is simultaneously sitting in a trade offer — this
+            // was the root cause of the gear duplication exploit.
+            // =========================
+            if (_tradeService.HasActiveTrade(userId))
+            {
+                return "📦 You have an active trade — finish or cancel it with `/tradecancel` before swapping gear sets.";
+            }
 
             // =========================
             // COOLDOWN CHECK

@@ -11,6 +11,7 @@ namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     public class HunterModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly PlayerRepository _playerRepository;

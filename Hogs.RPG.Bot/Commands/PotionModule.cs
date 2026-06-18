@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 [BossLock]
 [GearSwapLock]
+[TradeLock]
 public class PotionModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly PotionService _potionService;

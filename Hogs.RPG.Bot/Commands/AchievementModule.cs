@@ -12,6 +12,7 @@ namespace Hogs.RPG.Bot.Commands
     [Group("achievements", "Achievement commands")]
     [GearSwapLock]
     [BossLock]
+    [TradeLock]
     public class AchievementModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly AchievementRepository _achievementRepository;

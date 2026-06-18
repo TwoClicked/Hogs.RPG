@@ -14,6 +14,7 @@ namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     public class CraftModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly CraftingService _craftingService;

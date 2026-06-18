@@ -8,6 +8,7 @@ using System.Text;
 
 [BossLock]
 [GearSwapLock]
+[TradeLock]
 public class InventoryModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly InventoryService _inventoryService;

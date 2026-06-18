@@ -21,6 +21,7 @@ namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     public class PlayerCommands : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly PlayerService _playerService;

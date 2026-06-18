@@ -12,6 +12,7 @@ using System.Text;
 [Group("alchemy", "Alchemy commands")]
 [BossLock]
 [GearSwapLock]
+[TradeLock]
 public class AlchemyModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly AlchemyService _alchemyService;

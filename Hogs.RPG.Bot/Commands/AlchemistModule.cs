@@ -13,6 +13,7 @@ namespace Hogs.RPG.Bot.Commands
     [Group("alchemist", "Alchemist commands — brew and drink potions")]
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     public class AlchemistModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly AlchemyBrewService _brewService;

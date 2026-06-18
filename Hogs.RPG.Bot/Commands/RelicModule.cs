@@ -10,6 +10,7 @@ namespace Hogs.RPG.Bot.Commands
 {
     [BossLock]
     [GearSwapLock]
+    [TradeLock]
     public class RelicModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly RelicService _relicService;
