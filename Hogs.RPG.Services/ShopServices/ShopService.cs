@@ -487,7 +487,7 @@ namespace Hogs.RPG.Services.ShopServices
                 // ⚗️ ENERGY REFILL
                 // =========================
                 case "rpg_energy_refill":
-                    player.Energy = (player.StaminaBoostExpiry.HasValue && player.StaminaBoostExpiry.Value > DateTime.UtcNow) ? 150 : 100;
+                    player.Energy = new EnergyService(playerRepo).GetMaxEnergy(player);
                     player.LastEnergyUpdate = DateTimeOffset.UtcNow.ToString("o");
                     await playerRepo.UpdatePlayerAsync(player);
                     break;
