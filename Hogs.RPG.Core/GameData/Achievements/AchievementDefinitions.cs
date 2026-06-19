@@ -162,6 +162,18 @@ namespace Hogs.RPG.Core.GameData.Achievements
             new() { Id = "dual_master",    Name = "Dual Master",           Icon = "🌟", Category = "Legend", Description = "Reach level 99 in both Smithing and Alchemy.",        Condition = ctx => ctx.Player.SmithingLevel >= 99 && ctx.Player.AlchemistLevel >= 99                                              },
             new() { Id = "complete_pkg",   Name = "The Complete Package",  Icon = "🌟", Category = "Legend", Description = "Own CapyTara and 2 T5 relics.",                       Condition = ctx => ctx.Player.CapyTaraEvolved && ctx.Slot1RelicRank >= 5 && ctx.Slot2RelicRank >= 5, IsRetroactiveEligible = false },
             new() { Id = "the_legend",     Name = "The Legend",            Icon = "🌟", Category = "Legend", Description = "Reach player level 50, 500 dungeons and 100 raids.",  Condition = ctx => ctx.Player.Level >= 50 && ctx.Player.DungeonRunsCompleted >= 500 && ctx.Player.RaidsCompleted >= 100          },
+
+            // =========================
+            // 🗼 TOWER OF DOOM
+            // =========================
+            new() { Id = "tower_solo_10",  Name = "First Ascent",          Icon = "🗼", Category = "Tower", Description = "Reach floor 10 in a solo Tower run.",   Condition = ctx => ctx.Player.BestSoloTowerFloor >= 10,  IsRetroactiveEligible = false },
+            new() { Id = "tower_solo_25",  Name = "Solo Climber",          Icon = "🗼", Category = "Tower", Description = "Reach floor 25 in a solo Tower run.",   Condition = ctx => ctx.Player.BestSoloTowerFloor >= 25,  IsRetroactiveEligible = false },
+            new() { Id = "tower_solo_50",  Name = "Lone Ascendant",        Icon = "🗼", Category = "Tower", Description = "Reach floor 50 in a solo Tower run.",   Condition = ctx => ctx.Player.BestSoloTowerFloor >= 50,  IsRetroactiveEligible = false },
+            new() { Id = "tower_solo_100", Name = "The Lone Summit",       Icon = "🗼", Category = "Tower", Description = "Reach floor 100 in a solo Tower run.",  Condition = ctx => ctx.Player.BestSoloTowerFloor >= 100, IsRetroactiveEligible = false },
+            new() { Id = "tower_duo_10",   Name = "Partners in Doom",      Icon = "🗼", Category = "Tower", Description = "Reach floor 10 in a duo Tower run.",    Condition = ctx => ctx.Player.BestDuoTowerFloor >= 10,   IsRetroactiveEligible = false },
+            new() { Id = "tower_duo_25",   Name = "Dynamic Duo",           Icon = "🗼", Category = "Tower", Description = "Reach floor 25 in a duo Tower run.",    Condition = ctx => ctx.Player.BestDuoTowerFloor >= 25,   IsRetroactiveEligible = false },
+            new() { Id = "tower_duo_50",   Name = "Unbreakable Bond",      Icon = "🗼", Category = "Tower", Description = "Reach floor 50 in a duo Tower run.",    Condition = ctx => ctx.Player.BestDuoTowerFloor >= 50,   IsRetroactiveEligible = false },
+            new() { Id = "tower_duo_100",  Name = "Two at the Summit",     Icon = "🗼", Category = "Tower", Description = "Reach floor 100 in a duo Tower run.",   Condition = ctx => ctx.Player.BestDuoTowerFloor >= 100,  IsRetroactiveEligible = false },
         };
     }
 }

@@ -4,6 +4,7 @@ using Hogs.RPG.Core.Entities.TowerObjects;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.Tower;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
@@ -652,6 +653,7 @@ namespace Hogs.RPG.Services.TowerServices
             using var scope = _scopeFactory.CreateScope();
             var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
             var petService = scope.ServiceProvider.GetRequiredService<PetServices.PetService>();
+            var achievementService = scope.ServiceProvider.GetRequiredService<AchievementServices.AchievementService>();
 
             var rewardLines = new System.Text.StringBuilder();
 
@@ -663,8 +665,15 @@ namespace Hogs.RPG.Services.TowerServices
 
                 player.Gold += gold;
                 player.XP += FlatXp;
+
+                if (session.Mode == TowerMode.Solo && session.Floor > player.BestSoloTowerFloor)
+                    player.BestSoloTowerFloor = session.Floor;
+                else if (session.Mode == TowerMode.Duo && session.Floor > player.BestDuoTowerFloor)
+                    player.BestDuoTowerFloor = session.Floor;
+
                 await playerRepo.UpdatePlayerAsync(player);
                 await petService.AddXPAsync(p.DiscordId, FlatPetXp);
+                await achievementService.CheckAndAwardAsync(p.DiscordId);
 
                 string status = p.CurrentHp <= 0 ? "💀 Fell" : "🏃 Survived";
                 rewardLines.AppendLine($"{status} **{p.Username}** — 💰 +{gold} gold | ⭐ +{FlatXp} XP | 🐾 +{FlatPetXp} pet XP");

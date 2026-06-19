@@ -200,6 +200,10 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
         public DateTime? LastSoloTowerRun { get; set; }
         public DateTime? LastDuoTowerRun { get; set; }
 
+        // Tower of Doom personal bests
+        public int BestSoloTowerFloor { get; set; } = 0;
+        public int BestDuoTowerFloor { get; set; } = 0;
+
         // =========================
         // 🔄 BUFF SERIALIZATION
         // =========================
