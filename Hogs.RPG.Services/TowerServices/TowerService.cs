@@ -275,16 +275,26 @@ namespace Hogs.RPG.Services.TowerServices
             else
                 eventType = RollEventType();
 
-            string combatLog = eventType switch
+            TowerBossDefinition? bossDef = null;
+            string combatLog;
+
+            if (eventType == TowerFloorEventType.Boss)
             {
-                TowerFloorEventType.Combat      => ResolveCombat(session, false, false),
-                TowerFloorEventType.Elite       => ResolveCombat(session, true, false),
-                TowerFloorEventType.Boss        => await ResolveBossAsync(session),
-                TowerFloorEventType.TreasureRoom => ResolveTreasureRoom(session),
-                TowerFloorEventType.CursedFloor => ResolveCursedFloor(session),
-                TowerFloorEventType.RestSite    => ResolveRestSite(session),
-                _                               => ResolveCombat(session, false, false)
-            };
+                bossDef = TowerBossRegistry.GetForFloor(session.Floor);
+                combatLog = await ResolveBossAsync(session, bossDef);
+            }
+            else
+            {
+                combatLog = eventType switch
+                {
+                    TowerFloorEventType.Combat       => ResolveCombat(session, false, false),
+                    TowerFloorEventType.Elite        => ResolveCombat(session, true, false),
+                    TowerFloorEventType.TreasureRoom => ResolveTreasureRoom(session),
+                    TowerFloorEventType.CursedFloor  => ResolveCursedFloor(session),
+                    TowerFloorEventType.RestSite     => ResolveRestSite(session),
+                    _                                => ResolveCombat(session, false, false)
+                };
+            }
 
             // Accumulate gold
             foreach (var p in session.Participants)
@@ -297,12 +307,12 @@ namespace Hogs.RPG.Services.TowerServices
 
             if (anyDead)
             {
-                await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType));
+                await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType, bossDef));
                 await EndRunAsync(session, thread);
                 return;
             }
 
-            await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType));
+            await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType, bossDef));
 
             if (session.Floor % 10 == 0)
             {
@@ -423,9 +433,8 @@ namespace Hogs.RPG.Services.TowerServices
             return log.ToString().TrimEnd();
         }
 
-        private async Task<string> ResolveBossAsync(TowerSession session)
+        private async Task<string> ResolveBossAsync(TowerSession session, TowerBossDefinition bossDef)
         {
-            var bossDef = TowerBossRegistry.GetForFloor(session.Floor);
             var log = new System.Text.StringBuilder();
 
             log.AppendLine($"💀 **{bossDef.Name}** appears!");
@@ -865,7 +874,7 @@ namespace Hogs.RPG.Services.TowerServices
                 .Build();
         }
 
-        private Embed BuildFloorEmbed(TowerSession session, string combatLog, TowerFloorEventType eventType)
+        private Embed BuildFloorEmbed(TowerSession session, string combatLog, TowerFloorEventType eventType, TowerBossDefinition? bossDef = null)
         {
             string emoji = eventType switch
             {
@@ -881,6 +890,9 @@ namespace Hogs.RPG.Services.TowerServices
                 .WithTitle($"{emoji} Floor {session.Floor}")
                 .WithDescription(combatLog)
                 .WithColor(eventType == TowerFloorEventType.Boss ? Color.DarkRed : Color.DarkGrey);
+
+            if (bossDef != null && !string.IsNullOrWhiteSpace(bossDef.ImageUrl))
+                builder.WithImageUrl(bossDef.ImageUrl);
 
             foreach (var p in session.Participants)
             {
