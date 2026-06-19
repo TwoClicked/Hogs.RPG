@@ -31,13 +31,13 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
     [SlashCommand("solo", "Start a solo Tower of Doom run")]
     public async Task Solo()
     {
-        await DeferAsync();
-
         if (Context.Channel.Id != TOWER_CHANNEL_ID)
         {
-            await FollowupAsync($"❌ Tower runs can only be started in <#{TOWER_CHANNEL_ID}>.", ephemeral: true);
+            await RespondAsync($"❌ Tower runs can only be started in <#{TOWER_CHANNEL_ID}>.", ephemeral: true);
             return;
         }
+
+        await DeferAsync();
 
         var userId = Context.User.Id;
 
@@ -83,13 +83,13 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
     [SlashCommand("duo", "Create a duo Tower of Doom lobby")]
     public async Task Duo()
     {
-        await DeferAsync();
-
         if (Context.Channel.Id != TOWER_CHANNEL_ID)
         {
-            await FollowupAsync($"❌ Tower runs can only be started in <#{TOWER_CHANNEL_ID}>.", ephemeral: true);
+            await RespondAsync($"❌ Tower runs can only be started in <#{TOWER_CHANNEL_ID}>.", ephemeral: true);
             return;
         }
+
+        await DeferAsync();
 
         var userId = Context.User.Id;
 
