@@ -7,6 +7,9 @@ using Hogs.RPG.Core.GameData.Tower;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.TowerServices;
 
+// =========================
+// SLASH COMMANDS  (/tower solo, /tower duo, /tower buffs)
+// =========================
 [Group("tower", "Tower of Doom")]
 public class TowerModule : InteractionModuleBase<SocketInteractionContext>
 {
@@ -15,14 +18,12 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
     private readonly TowerService _towerService;
     private readonly SigilRepository _sigilRepo;
     private readonly PlayerRepository _playerRepo;
-    private readonly DiscordSocketClient _client;
 
-    public TowerModule(TowerService towerService, SigilRepository sigilRepo, PlayerRepository playerRepo, DiscordSocketClient client)
+    public TowerModule(TowerService towerService, SigilRepository sigilRepo, PlayerRepository playerRepo)
     {
         _towerService = towerService;
         _sigilRepo = sigilRepo;
         _playerRepo = playerRepo;
-        _client = client;
     }
 
     // =========================
@@ -67,7 +68,7 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        var embed = BuildLobbyEmbed(session);
+        var embed = TowerModuleHelpers.BuildLobbyEmbed(session);
         var components = new ComponentBuilder()
             .WithButton("✅ Ready", $"tower_ready:{session.SessionId}", ButtonStyle.Success)
             .WithButton("▶️ Start", $"tower_start:{session.SessionId}", ButtonStyle.Primary, disabled: true)
@@ -119,15 +120,72 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        var embed = BuildLobbyEmbed(session);
+        var embed = TowerModuleHelpers.BuildLobbyEmbed(session);
         var components = new ComponentBuilder()
-            .WithButton("🚪 Join",    $"tower_join:{session.SessionId}",  ButtonStyle.Secondary)
-            .WithButton("✅ Ready",   $"tower_ready:{session.SessionId}", ButtonStyle.Success)
-            .WithButton("▶️ Start",  $"tower_start:{session.SessionId}", ButtonStyle.Primary, disabled: true)
+            .WithButton("🚪 Join",   $"tower_join:{session.SessionId}",  ButtonStyle.Secondary)
+            .WithButton("✅ Ready",  $"tower_ready:{session.SessionId}", ButtonStyle.Success)
+            .WithButton("▶️ Start", $"tower_start:{session.SessionId}", ButtonStyle.Primary, disabled: true)
             .Build();
 
         var msg = await FollowupAsync(embed: embed, components: components);
         session.LobbyMessageId = msg.Id;
+    }
+
+    // =========================
+    // /tower buffs (sigils)
+    // =========================
+    [SlashCommand("buffs", "View your permanent Tower Sigils")]
+    public async Task Buffs()
+    {
+        await DeferAsync(ephemeral: true);
+
+        var userId = Context.User.Id;
+        var sigils = await _sigilRepo.GetSigilsAsync(userId);
+
+        var embed = new EmbedBuilder()
+            .WithTitle("✨ Your Tower Sigils")
+            .WithColor(Color.Gold)
+            .WithDescription("Sigils are permanent bonuses earned by defeating bosses in the Tower of Doom.\nEach sigil stacks up to **3 times**.");
+
+        foreach (var def in SigilRegistry.All)
+        {
+            var owned = sigils.FirstOrDefault(s => s.SigilId == def.Id);
+            int count = owned?.Count ?? 0;
+
+            string stacks = count > 0
+                ? string.Concat(Enumerable.Repeat("🔷", count)) + string.Concat(Enumerable.Repeat("⬛", SigilRegistry.MaxStacks - count))
+                : string.Concat(Enumerable.Repeat("⬛", SigilRegistry.MaxStacks));
+
+            string title = count > 0 ? $"{def.Emoji} {def.Name}" : $"🔒 {def.Name}";
+            string body = count > 0
+                ? $"{stacks} {count}/{SigilRegistry.MaxStacks} stacks\n*{def.LoreText}*"
+                : $"{stacks} 0/{SigilRegistry.MaxStacks} — *Defeat boss floors in the Tower of Doom*";
+
+            embed.AddField(title, body, false);
+        }
+
+        embed.WithFooter("5% drop chance from Tower boss floors (25, 50, 75...)");
+
+        await FollowupAsync(embed: embed.Build(), ephemeral: true);
+    }
+}
+
+// =========================
+// BUTTON HANDLERS (separate class — [Group] modules don't handle ComponentInteractions)
+// =========================
+public class TowerButtonModule : InteractionModuleBase<SocketInteractionContext>
+{
+    private const ulong TOWER_CHANNEL_ID = 1517665507631956151;
+
+    private readonly TowerService _towerService;
+    private readonly PlayerRepository _playerRepo;
+    private readonly DiscordSocketClient _client;
+
+    public TowerButtonModule(TowerService towerService, PlayerRepository playerRepo, DiscordSocketClient client)
+    {
+        _towerService = towerService;
+        _playerRepo = playerRepo;
+        _client = client;
     }
 
     // =========================
@@ -315,47 +373,47 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
     }
 
     // =========================
-    // /tower buffs (sigils)
-    // =========================
-    [SlashCommand("buffs", "View your permanent Tower Sigils")]
-    public async Task Buffs()
-    {
-        await DeferAsync(ephemeral: true);
-
-        var userId = Context.User.Id;
-        var sigils = await _sigilRepo.GetSigilsAsync(userId);
-
-        var embed = new EmbedBuilder()
-            .WithTitle("✨ Your Tower Sigils")
-            .WithColor(Color.Gold)
-            .WithDescription("Sigils are permanent bonuses earned by defeating bosses in the Tower of Doom.\nEach sigil stacks up to **3 times**.");
-
-        foreach (var def in SigilRegistry.All)
-        {
-            var owned = sigils.FirstOrDefault(s => s.SigilId == def.Id);
-            int count = owned?.Count ?? 0;
-
-            string stacks = count > 0
-                ? string.Concat(Enumerable.Repeat("🔷", count)) + string.Concat(Enumerable.Repeat("⬛", SigilRegistry.MaxStacks - count))
-                : string.Concat(Enumerable.Repeat("⬛", SigilRegistry.MaxStacks));
-
-            string title = count > 0 ? $"{def.Emoji} {def.Name}" : $"🔒 {def.Name}";
-            string body = count > 0
-                ? $"{stacks} {count}/{SigilRegistry.MaxStacks} stacks — **Total: {def.BonusPerStack.Replace("+", $"+{count * GetMultiplier(def.Id, count)}")}**\n*{def.LoreText}*"
-                : $"{stacks} 0/{SigilRegistry.MaxStacks} — *Defeat boss floors in the Tower of Doom*";
-
-            embed.AddField(title, body, false);
-        }
-
-        embed.WithFooter("5% drop chance from Tower boss floors (25, 50, 75...)");
-
-        await FollowupAsync(embed: embed.Build(), ephemeral: true);
-    }
-
-    // =========================
     // HELPERS
     // =========================
-    private Embed BuildLobbyEmbed(TowerSession session)
+    private async Task RefreshLobbyMessage(string sessionId)
+    {
+        var session = _towerService.GetSession(sessionId);
+        if (session == null) return;
+
+        bool allReady = _towerService.AllReady(sessionId);
+        bool hasTwoPlayers = session.Participants.Count == 2;
+
+        var components = new ComponentBuilder();
+
+        if (session.Mode == TowerMode.Duo)
+            components.WithButton("🚪 Join",   $"tower_join:{sessionId}",  ButtonStyle.Secondary, disabled: hasTwoPlayers);
+
+        components.WithButton("✅ Ready",  $"tower_ready:{sessionId}", ButtonStyle.Success);
+        components.WithButton("▶️ Start", $"tower_start:{sessionId}", ButtonStyle.Primary, disabled: !allReady || (session.Mode == TowerMode.Duo && !hasTwoPlayers));
+
+        var towerChannel = _client.GetChannel(TOWER_CHANNEL_ID) as ITextChannel;
+        if (towerChannel == null) return;
+
+        try
+        {
+            var msg = await towerChannel.GetMessageAsync(session.LobbyMessageId) as IUserMessage;
+            if (msg != null)
+                await msg.ModifyAsync(m =>
+                {
+                    m.Embed = TowerModuleHelpers.BuildLobbyEmbed(session);
+                    m.Components = components.Build();
+                });
+        }
+        catch { /* best effort */ }
+    }
+}
+
+// =========================
+// SHARED HELPERS
+// =========================
+public static class TowerModuleHelpers
+{
+    public static Embed BuildLobbyEmbed(TowerSession session)
     {
         var builder = new EmbedBuilder()
             .WithTitle($"🗼 Tower of Doom — {session.Mode} Run")
@@ -373,47 +431,5 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
         builder.WithFooter("Rewards: 15 gold/floor · 2500 XP · 250 Pet XP on run end");
 
         return builder.Build();
-    }
-
-    private async Task RefreshLobbyMessage(string sessionId)
-    {
-        var session = _towerService.GetSession(sessionId);
-        if (session == null) return;
-
-        bool allReady = _towerService.AllReady(sessionId);
-        bool hasTwoPlayers = session.Participants.Count == 2;
-
-        var components = new ComponentBuilder();
-
-        if (session.Mode == TowerMode.Duo)
-            components.WithButton("🚪 Join",   $"tower_join:{sessionId}",  ButtonStyle.Secondary, disabled: hasTwoPlayers);
-
-        components.WithButton("✅ Ready",  $"tower_ready:{sessionId}", ButtonStyle.Success);
-        components.WithButton("▶️ Start", $"tower_start:{sessionId}", ButtonStyle.Primary, disabled: !allReady || (session.Mode == TowerMode.Duo && !hasTwoPlayers));
-
-        if (Context.Channel is ITextChannel textChannel)
-        {
-            try
-            {
-                var msg = await textChannel.GetMessageAsync(session.LobbyMessageId) as IUserMessage;
-                if (msg != null)
-                    await msg.ModifyAsync(m =>
-                    {
-                        m.Embed = BuildLobbyEmbed(session);
-                        m.Components = components.Build();
-                    });
-            }
-            catch { /* best effort */ }
-        }
-    }
-
-    private int GetMultiplier(string sigilId, int count)
-    {
-        // Returns the per-stack value so we can show total bonus
-        return sigilId switch
-        {
-            "sigil_leech" => 1,
-            _ => 2
-        };
     }
 }
