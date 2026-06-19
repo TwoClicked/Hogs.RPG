@@ -26,6 +26,8 @@ namespace Hogs.RPG.Services
             int SmithingLevel,
             int AlchemistLevel,
             int AchievementCount,
+            int SoloTowerFloor,
+            int DuoTowerFloor,
             int TotalPlayers
         );
 
@@ -151,6 +153,15 @@ namespace Hogs.RPG.Services
         public async Task<List<Player>> GetTopTrails(int count = 5)
             => await _playerRepository.GetTopTrailsAsync(count);
 
+        // =========================
+        // 🗼 TOWER OF DOOM
+        // =========================
+        public async Task<List<Player>> GetTopSoloTowerFloor(int count = 5)
+            => await _playerRepository.GetTopSoloTowerFloorAsync(count);
+
+        public async Task<List<Player>> GetTopDuoTowerFloor(int count = 5)
+            => await _playerRepository.GetTopDuoTowerFloorAsync(count);
+
 
         //Player individual ranks across all categories
         public async Task<PlayerRanks> GetPlayerRanksAsync(ulong discordId)
@@ -167,7 +178,8 @@ namespace Hogs.RPG.Services
             var alchemistRank = await _playerRepository.GetRankByAlchemistLevelAsync(discordId);
             var smithingRank = await _playerRepository.GetRankBySmithingLevelAsync(discordId);
             var achievementRank = await _achievementRepository.GetRankAsync(discordId);
-
+            var soloTowerRank = await _playerRepository.GetRankBySoloTowerFloorAsync(discordId);
+            var duoTowerRank = await _playerRepository.GetRankByDuoTowerFloorAsync(discordId);
 
             // Gear score rank — compute from buffered list (same as top-5 display)
             var allForGear = await _playerRepository.GetTopForGearScoreAsync(1000);
@@ -187,7 +199,7 @@ namespace Hogs.RPG.Services
             var myPet = petScores.FirstOrDefault(x => x.DiscordId == discordId);
             int petRank = myPet == default ? total : petScores.IndexOf(myPet) + 1;
 
-            return new PlayerRanks(goldRank, levelRank, gearRank, dungeonsRank, raidsRank,bossDmgRank, petRank, deathsRank, trailsRank, smithingRank, alchemistRank,achievementRank, total);
+            return new PlayerRanks(goldRank, levelRank, gearRank, dungeonsRank, raidsRank, bossDmgRank, petRank, deathsRank, trailsRank, smithingRank, alchemistRank, achievementRank, soloTowerRank, duoTowerRank, total);
         }
     }
 }

@@ -262,6 +262,42 @@ namespace Hogs.RPG.Data.Repositories
             return await _context.Players.CountAsync(p => p.TrailsCompleted > player.TrailsCompleted) + 1;
         }
 
+        public async Task<List<Player>> GetTopSoloTowerFloorAsync(int count)
+        {
+            var players = await _context.Players
+                .Where(p => p.BestSoloTowerFloor > 0)
+                .OrderByDescending(p => p.BestSoloTowerFloor)
+                .Take(count)
+                .ToListAsync();
+            foreach (var p in players) p.DeserializeBuffs();
+            return players;
+        }
+
+        public async Task<List<Player>> GetTopDuoTowerFloorAsync(int count)
+        {
+            var players = await _context.Players
+                .Where(p => p.BestDuoTowerFloor > 0)
+                .OrderByDescending(p => p.BestDuoTowerFloor)
+                .Take(count)
+                .ToListAsync();
+            foreach (var p in players) p.DeserializeBuffs();
+            return players;
+        }
+
+        public async Task<int> GetRankBySoloTowerFloorAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p => p.BestSoloTowerFloor > player.BestSoloTowerFloor) + 1;
+        }
+
+        public async Task<int> GetRankByDuoTowerFloorAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p => p.BestDuoTowerFloor > player.BestDuoTowerFloor) + 1;
+        }
+
         public async Task<int> GetTotalPlayerCountAsync()
             => await _context.Players.CountAsync();
     }

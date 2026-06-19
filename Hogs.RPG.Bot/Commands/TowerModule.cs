@@ -7,7 +7,6 @@ using Hogs.RPG.Core.GameData.Tower;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.TowerServices;
 
-#if false // Disabled until boss images are added
 [Group("tower", "Tower of Doom")]
 public class TowerModule : InteractionModuleBase<SocketInteractionContext>
 {
@@ -393,4 +392,3 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
         };
     }
 }
-#endif

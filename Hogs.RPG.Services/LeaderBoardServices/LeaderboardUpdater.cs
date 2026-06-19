@@ -93,6 +93,8 @@ public class LeaderboardUpdater
         var trails = await service.GetTopTrails(5);
         var smithing = await service.GetTopSmithingLevel(5);
         var achievements = await service.GetTopAchievements(5);
+        var soloTower = await service.GetTopSoloTowerFloor(5);
+        var duoTower = await service.GetTopDuoTowerFloor(5);
 
 
         List<Hogs.RPG.Core.Entities.PlayerObjects.Player> alchemist = await service.GetTopAlchemistLevel(5);
@@ -122,6 +124,10 @@ public class LeaderboardUpdater
         embed.AddField("⚒️ Smithing Level", FormatSmithing(smithing), true);
         embed.AddField("🧪 Alchemist Level", FormatAlchemist(alchemist), true);
         embed.AddField("🏆 Achievements", FormatAchievements(achievements), true);
+
+        // Row 5
+        embed.AddField("🗼 Solo Tower", FormatTowerFloor(soloTower, solo: true), true);
+        embed.AddField("🗼 Duo Tower", FormatTowerFloor(duoTower, solo: false), true);
 
         _mainMsgId = await SendOrUpdate(channel, embed.Build(), _mainMsgId);
     }
@@ -226,6 +232,16 @@ public class LeaderboardUpdater
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.TrailsCompleted}**"));
+    }
+
+    private string FormatTowerFloor(List<Player> players, bool solo)
+    {
+        if (!players.Any()) return "*No data yet*";
+        return string.Join("\n", players.Select((p, i) =>
+        {
+            int floor = solo ? p.BestSoloTowerFloor : p.BestDuoTowerFloor;
+            return $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **Floor {floor}**";
+        }));
     }
 
     // =========================
