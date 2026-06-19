@@ -335,12 +335,12 @@ namespace Hogs.RPG.Services.TowerServices
             int floor = session.Floor;
             bool isDuo = session.Mode == TowerMode.Duo;
 
-            int baseEnemyHp  = isDuo ? 150 + (floor * 25) : 100 + (floor * 20);
-            int baseEnemyAtk = 5 + (floor * 3);
-            int baseEnemyDef = 3 + (floor * 2);
+            int baseEnemyHp  = isDuo ? 200 + (floor * 40) : 150 + (floor * 30);
+            int baseEnemyAtk = 15 + (floor * 8);
+            int baseEnemyDef = 5 + (floor * 3);
 
-            float hpMult  = isBoss ? bossDef!.HpMultiplier  : isElite ? 1.5f : 1f;
-            float atkMult = isBoss ? bossDef!.AtkMultiplier : isElite ? 1.4f : 1f;
+            float hpMult  = isBoss ? bossDef!.HpMultiplier  : isElite ? 1.6f : 1f;
+            float atkMult = isBoss ? bossDef!.AtkMultiplier : isElite ? 1.6f : 1f;
 
             int enemyHp  = (int)(baseEnemyHp  * hpMult);
             int enemyAtk = (int)(baseEnemyAtk * atkMult);
@@ -386,7 +386,10 @@ namespace Hogs.RPG.Services.TowerServices
                     continue;
                 }
 
-                int rawEnemyDmg = (int)(enemyAtk * (100.0 / (100.0 + p.BaseDefense)));
+                // Armor penetration scales with floor — high defense stops being a wall at deeper floors
+                float penetration = Math.Min(0.70f, floor * 0.012f);
+                int effectiveDef = (int)(p.BaseDefense * (1f - penetration));
+                int rawEnemyDmg = (int)(enemyAtk * (100.0 / (100.0 + effectiveDef)));
                 rawEnemyDmg = Math.Max(1, rawEnemyDmg);
 
                 // IronSkin reduction
