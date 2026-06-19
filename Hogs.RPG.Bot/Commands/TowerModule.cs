@@ -10,15 +10,19 @@ using Hogs.RPG.Services.TowerServices;
 [Group("tower", "Tower of Doom")]
 public class TowerModule : InteractionModuleBase<SocketInteractionContext>
 {
+    private const ulong TOWER_CHANNEL_ID = 1517665507631956151;
+
     private readonly TowerService _towerService;
     private readonly SigilRepository _sigilRepo;
     private readonly PlayerRepository _playerRepo;
+    private readonly DiscordSocketClient _client;
 
-    public TowerModule(TowerService towerService, SigilRepository sigilRepo, PlayerRepository playerRepo)
+    public TowerModule(TowerService towerService, SigilRepository sigilRepo, PlayerRepository playerRepo, DiscordSocketClient client)
     {
         _towerService = towerService;
         _sigilRepo = sigilRepo;
         _playerRepo = playerRepo;
+        _client = client;
     }
 
     // =========================
@@ -28,6 +32,12 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
     public async Task Solo()
     {
         await DeferAsync();
+
+        if (Context.Channel.Id != TOWER_CHANNEL_ID)
+        {
+            await FollowupAsync($"❌ Tower runs can only be started in <#{TOWER_CHANNEL_ID}>.", ephemeral: true);
+            return;
+        }
 
         var userId = Context.User.Id;
 
@@ -50,7 +60,7 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        var session = _towerService.CreateLobby(userId, Context.User.GlobalName ?? Context.User.Username, TowerMode.Solo, Context.Channel.Id);
+        var session = _towerService.CreateLobby(userId, Context.User.GlobalName ?? Context.User.Username, TowerMode.Solo, TOWER_CHANNEL_ID);
         if (session == null)
         {
             await FollowupAsync("❌ Could not create a lobby.", ephemeral: true);
@@ -75,6 +85,12 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
     {
         await DeferAsync();
 
+        if (Context.Channel.Id != TOWER_CHANNEL_ID)
+        {
+            await FollowupAsync($"❌ Tower runs can only be started in <#{TOWER_CHANNEL_ID}>.", ephemeral: true);
+            return;
+        }
+
         var userId = Context.User.Id;
 
         if (_towerService.IsInSession(userId))
@@ -96,7 +112,7 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        var session = _towerService.CreateLobby(userId, Context.User.GlobalName ?? Context.User.Username, TowerMode.Duo, Context.Channel.Id);
+        var session = _towerService.CreateLobby(userId, Context.User.GlobalName ?? Context.User.Username, TowerMode.Duo, TOWER_CHANNEL_ID);
         if (session == null)
         {
             await FollowupAsync("❌ Could not create a lobby.", ephemeral: true);
@@ -203,19 +219,28 @@ public class TowerModule : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        // Remove lobby buttons
-        if (Context.Channel is ITextChannel textChannel)
+        // Remove lobby buttons from the lobby message
+        var towerChannel = _client.GetChannel(TOWER_CHANNEL_ID) as ITextChannel;
+        if (towerChannel != null)
         {
             try
             {
-                var msg = await textChannel.GetMessageAsync(session.LobbyMessageId) as IUserMessage;
-                if (msg != null)
-                    await msg.ModifyAsync(m => { m.Components = new ComponentBuilder().Build(); });
+                var lobbyMsg = await towerChannel.GetMessageAsync(session.LobbyMessageId) as IUserMessage;
+                if (lobbyMsg != null)
+                    await lobbyMsg.ModifyAsync(m => { m.Components = new ComponentBuilder().Build(); });
             }
             catch { /* best effort */ }
         }
 
-        await FollowupAsync("✅ Run started! Check the new thread.", ephemeral: true);
+        // Mention participants in the thread
+        var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
+        if (thread != null)
+        {
+            var mentions = string.Join(" ", session.Participants.Select(p => $"<@{p.DiscordId}>"));
+            await thread.SendMessageAsync($"{mentions}\n🗼 **Your Tower run has begun! Good luck climbing.**");
+        }
+
+        await FollowupAsync($"✅ Run started! Head to <#{session.ThreadId}>.", ephemeral: true);
     }
 
     // =========================
