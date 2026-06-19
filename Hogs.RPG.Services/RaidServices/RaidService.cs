@@ -408,7 +408,8 @@ namespace Hogs.RPG.Services.RaidServices
                 if (dpsPet != null)
                     PetRegistry.All.TryGetValue(dpsPet.PetId, out dpsPetDef);
 
-                (damage, _) = _petPassiveService.ModifyOutgoingDamage(damage, dpsPet, dpsPetDef, session.BossCurrentHp, session.BossMaxHp);
+                string petTriggerText;
+                (damage, petTriggerText) = _petPassiveService.ModifyOutgoingDamage(damage, dpsPet, dpsPetDef, session.BossCurrentHp, session.BossMaxHp);
 
                 if (dps.PendingAction == "reckless")
                 {
@@ -429,6 +430,7 @@ namespace Hogs.RPG.Services.RaidServices
                     result.DpsText = dps.FocusStacks > 0
                         ? $"💀 Reckless Strike! ({dps.FocusStacks}x Focus) dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self.{lsSuffix}"
                         : $"💀 Reckless Strike dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self.{lsSuffix}";
+                    if (!string.IsNullOrEmpty(petTriggerText)) result.DpsText += "\n" + petTriggerText;
                     dps.FocusStacks = 0;
                     dps.RecklessCooldownRoundsRemaining = 5;
                 }
@@ -448,6 +450,7 @@ namespace Hogs.RPG.Services.RaidServices
                         result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Pet lifesteal: **+{petLifesteal} HP**.";
                     else
                         result.DpsText = $"⚔️ DPS dealt **{damage}** damage!";
+                    if (!string.IsNullOrEmpty(petTriggerText)) result.DpsText += "\n" + petTriggerText;
                 }
             }
 
@@ -573,11 +576,12 @@ namespace Hogs.RPG.Services.RaidServices
                 int finalDamage = (int)(rawDamage * (1f - damageReduction));
                 finalDamage = Math.Max(1, finalDamage);
                 var tankPet = await _petService.GetEquippedPetAsync(tank.DiscordId);
-                var (modifiedFinalDamage, _) = _petPassiveService.ModifyIncomingDamage(finalDamage, tankPet);
+                var (modifiedFinalDamage, shieldTriggerText) = _petPassiveService.ModifyIncomingDamage(finalDamage, tankPet);
                 finalDamage = modifiedFinalDamage;
                 finalDamage = Math.Max(1, finalDamage);
                 tank.CurrentHp = Math.Max(0, tank.CurrentHp - finalDamage);
                 result.BossText += $"🗡️ Boss attacks **Tank** for **{finalDamage}** damage.";
+                if (!string.IsNullOrEmpty(shieldTriggerText)) result.BossText += "\n" + shieldTriggerText;
                 int reflect = _petPassiveService.ApplyOnHitTaken(finalDamage, tankPet);
                 if (reflect > 0)
                 {
