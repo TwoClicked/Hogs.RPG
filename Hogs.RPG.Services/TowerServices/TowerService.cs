@@ -20,6 +20,8 @@ namespace Hogs.RPG.Services.TowerServices
 
         private readonly Dictionary<string, TowerSession> _sessions = new();
         private readonly Dictionary<ulong, string> _playerSession = new();
+        private readonly List<ulong> _completedThreadIds = new();
+        private DateTime _lastCleanupDate = DateTime.MinValue;
 
         private const int FloorIntervalSeconds = 10;
         private const int GoldPerFloor = 15;
@@ -60,7 +62,57 @@ namespace Hogs.RPG.Services.TowerServices
 
                 foreach (var s in stale)
                     RemoveSession(s.SessionId);
+
+                // Daily thread cleanup at 03:00 UTC
+                try
+                {
+                    var now = DateTime.UtcNow;
+                    if (now.Hour == 3 && _lastCleanupDate.Date != now.Date)
+                    {
+                        _lastCleanupDate = now;
+                        await CleanupCompletedThreadsAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Tower thread cleanup error: {ex.Message}");
+                }
             }
+        }
+
+        // =========================
+        // 🧹 DAILY THREAD CLEANUP
+        // =========================
+        private async Task CleanupCompletedThreadsAsync()
+        {
+            Console.WriteLine("🧹 Running daily Tower thread cleanup...");
+
+            List<ulong> toClean;
+            lock (_completedThreadIds)
+            {
+                toClean = _completedThreadIds.ToList();
+                _completedThreadIds.Clear();
+            }
+
+            int deleted = 0;
+            foreach (var threadId in toClean)
+            {
+                try
+                {
+                    var thread = _client.GetChannel(threadId) as IThreadChannel;
+                    if (thread != null)
+                    {
+                        await thread.DeleteAsync();
+                        deleted++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Could not delete tower thread {threadId}: {ex.Message}");
+                }
+            }
+
+            Console.WriteLine($"🧹 Tower cleanup done: {deleted} thread(s) deleted.");
         }
 
         // =========================
@@ -687,6 +739,11 @@ namespace Hogs.RPG.Services.TowerServices
                 .WithColor(Color.DarkRed)
                 .WithFooter("The tower remains. Come back tomorrow.")
                 .Build());
+
+            await thread.ModifyAsync(t => t.Archived = true);
+
+            lock (_completedThreadIds)
+                _completedThreadIds.Add(thread.Id);
 
             RemoveSession(session.SessionId);
         }
