@@ -110,7 +110,14 @@ namespace Hogs.RPG.Services.Game
             // Relic bonuses
             var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
+            bool isFirstJoin = !boss.Participants.Contains(userId);
             double bossHpPercent = (double)boss.CurrentHealth / boss.Definition.MaxHealth;
+
+            if (isFirstJoin && bossHpPercent < 0.25)
+            {
+                boss.CurrentHealth += 10000;
+            }
+
             if (bossHpPercent < 0.50 && relicBonuses.ExecutionerBonusPercent > 0)
                 damage = (int)(damage * (1f + relicBonuses.ExecutionerBonusPercent));
 
