@@ -218,6 +218,9 @@ namespace Hogs.RPG.Services.Game
                 session.EnemyHealth = Math.Max(0, session.EnemyHealth - playerDamage);
                 text = $"⚔ You deal {playerDamage} damage!\n";
 
+                if (!string.IsNullOrEmpty(outgoingTriggerText))
+                    text += outgoingTriggerText + "\n";
+
                 // =========================
                 // 💎 RELIC: LIFESTEAL
                 // =========================
@@ -278,6 +281,9 @@ namespace Hogs.RPG.Services.Game
 
             session.PlayerHealth = Math.Max(0, session.PlayerHealth - enemyDamage);
             text += $"👹 Enemy hits you for {enemyDamage}!";
+
+            if (!string.IsNullOrEmpty(shieldTriggerText))
+                text += "\n" + shieldTriggerText;
 
             int reflect = petPassiveService.ApplyOnHitTaken(enemyDamage, pet);
             if (reflect > 0)
