@@ -3,6 +3,7 @@ using Hogs.RPG.Data;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services;
 using Hogs.RPG.Services.AchievementServices;
+using Hogs.RPG.Services.TowerServices;
 using Hogs.RPG.Services.AlchemyServices;
 using Hogs.RPG.Services.AuctionServices;
 using Hogs.RPG.Services.DungeonServices;
@@ -58,6 +59,7 @@ namespace Hogs.RPG.Bot.Setup
             // =========================
             services.AddScoped<PlayerRepository>();
             services.AddScoped<PetRepository>();
+            services.AddScoped<SigilRepository>();
             services.AddScoped<InventoryRepository>();
             services.AddScoped<BossStateRepository>();
             services.AddScoped<ShopRepository>();
@@ -122,6 +124,9 @@ namespace Hogs.RPG.Bot.Setup
 
             // DungeonService keeps in-memory state → must stay singleton
             services.AddSingleton<DungeonService>();
+
+            // TowerService keeps in-memory session state and runs the floor timer
+            services.AddSingleton<TowerService>();
         }
     }
 }

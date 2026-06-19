@@ -5,6 +5,7 @@ using Hogs.RPG.Core.Entities.GlobalBossObjects;
 using Hogs.RPG.Core.Entities.JobObjects;
 using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Core.Entities.RaidObjects;
+using Hogs.RPG.Core.Entities.SigilObjects;
 using Hogs.RPG.Core.Entities.TradeObjects;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,6 +28,7 @@ namespace Hogs.RPG.Data
 
         public DbSet<PlayerAuctionListing> PlayerAuctionListings { get; set; }
         public DbSet<PlayerAchievement> PlayerAchievements { get; set; }
+        public DbSet<PlayerSigil> PlayerSigils { get; set; }
         public GameDbContext(DbContextOptions<GameDbContext> options)
             : base(options)
         {
@@ -81,6 +83,10 @@ namespace Hogs.RPG.Data
             modelBuilder.Entity<PlayerAchievement>()
             .HasIndex(x => new { x.DiscordId, x.AchievementId })
             .IsUnique();
+
+            modelBuilder.Entity<PlayerSigil>()
+                .HasIndex(x => new { x.DiscordId, x.SigilId })
+                .IsUnique();
         }
     }
 }

@@ -196,6 +196,10 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
         public DateTime? LastDungeonAt { get; set; }
         public DateTime? LastPetDungeonAt { get; set; }
 
+        // Tower of Doom daily cooldowns
+        public DateTime? LastSoloTowerRun { get; set; }
+        public DateTime? LastDuoTowerRun { get; set; }
+
         // =========================
         // 🔄 BUFF SERIALIZATION
         // =========================
