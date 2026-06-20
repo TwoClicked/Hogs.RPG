@@ -1,4 +1,5 @@
 using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.GameData.Tower;
 
 namespace Hogs.RPG.Core.Entities.TowerObjects
 {
@@ -14,5 +15,12 @@ namespace Hogs.RPG.Core.Entities.TowerObjects
         public ulong LobbyMessageId { get; set; }
         public DateTime? NextFloorAt { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Boss fight state
+        public TowerBossDefinition? ActiveBoss { get; set; }
+        public int BossCurrentHp { get; set; }
+        public int BossMaxHp { get; set; }
+        public int BossRound { get; set; }
+        public DateTime? NextBossRoundAt { get; set; }
     }
 }

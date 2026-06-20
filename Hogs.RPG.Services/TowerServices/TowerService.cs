@@ -55,6 +55,16 @@ namespace Hogs.RPG.Services.TowerServices
                     catch (Exception ex) { Console.WriteLine($"❌ Tower floor error [{session.SessionId}]: {ex.Message}"); }
                 }
 
+                var bossDue = _sessions.Values
+                    .Where(s => s.Status == TowerStatus.Running && s.NextBossRoundAt.HasValue && s.NextBossRoundAt <= DateTime.UtcNow)
+                    .ToList();
+
+                foreach (var session in bossDue)
+                {
+                    try { await ResolveBossRoundAsync(session); }
+                    catch (Exception ex) { Console.WriteLine($"❌ Tower boss round error [{session.SessionId}]: {ex.Message}"); }
+                }
+
                 // Expire stale lobbies after 10 minutes
                 var stale = _sessions.Values
                     .Where(s => s.Status == TowerStatus.Lobby && (DateTime.UtcNow - s.CreatedAt).TotalMinutes > 10)
@@ -275,28 +285,26 @@ namespace Hogs.RPG.Services.TowerServices
             else
                 eventType = RollEventType();
 
-            TowerBossDefinition? bossDef = null;
-            string combatLog;
-
+            // Boss floors are multi-round — hand off to StartBossFightAsync and return
             if (eventType == TowerFloorEventType.Boss)
             {
-                bossDef = TowerBossRegistry.GetForFloor(session.Floor);
-                combatLog = await ResolveBossAsync(session, bossDef);
-            }
-            else
-            {
-                combatLog = eventType switch
-                {
-                    TowerFloorEventType.Combat       => ResolveCombat(session, false, false),
-                    TowerFloorEventType.Elite        => ResolveCombat(session, true, false),
-                    TowerFloorEventType.TreasureRoom => ResolveTreasureRoom(session),
-                    TowerFloorEventType.CursedFloor  => ResolveCursedFloor(session),
-                    TowerFloorEventType.RestSite     => ResolveRestSite(session),
-                    _                                => ResolveCombat(session, false, false)
-                };
+                var bossThread = _client.GetChannel(session.ThreadId) as IThreadChannel;
+                if (bossThread == null) return;
+                await StartBossFightAsync(session, TowerBossRegistry.GetForFloor(session.Floor), bossThread);
+                return; // gold accumulates on boss kill in ResolveBossRoundAsync
             }
 
-            // Accumulate gold
+            string combatLog = eventType switch
+            {
+                TowerFloorEventType.Combat       => ResolveCombat(session, false, false),
+                TowerFloorEventType.Elite        => ResolveCombat(session, true, false),
+                TowerFloorEventType.TreasureRoom => ResolveTreasureRoom(session),
+                TowerFloorEventType.CursedFloor  => ResolveCursedFloor(session),
+                TowerFloorEventType.RestSite     => ResolveRestSite(session),
+                _                                => ResolveCombat(session, false, false)
+            };
+
+            // Accumulate gold (boss floors accumulate on kill)
             foreach (var p in session.Participants)
                 p.AccumulatedGold += GoldPerFloor;
 
@@ -313,7 +321,7 @@ namespace Hogs.RPG.Services.TowerServices
 
                 if (alive != null && dead.Count < session.Participants.Count)
                 {
-                    await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType, bossDef));
+                    await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType));
 
                     foreach (var fallen in dead)
                     {
@@ -357,12 +365,12 @@ namespace Hogs.RPG.Services.TowerServices
 
             if (anyDead)
             {
-                await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType, bossDef));
+                await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType));
                 await EndRunAsync(session, thread);
                 return;
             }
 
-            await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType, bossDef));
+            await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType));
 
             if (session.Floor % 10 == 0)
             {
@@ -492,33 +500,261 @@ namespace Hogs.RPG.Services.TowerServices
             return log.ToString().TrimEnd();
         }
 
-        private async Task<string> ResolveBossAsync(TowerSession session, TowerBossDefinition bossDef)
+        // =========================
+        // MULTI-ROUND BOSS FIGHT
+        // =========================
+        private async Task StartBossFightAsync(TowerSession session, TowerBossDefinition bossDef, IThreadChannel thread)
         {
+            int floor = session.Floor;
+            bool isDuo = session.Mode == TowerMode.Duo;
+
+            int bossHp = isDuo ? 80 + floor * 16 : 50 + floor * 12;
+            bossHp = (int)(bossHp * bossDef.HpMultiplier);
+
+            session.BossCurrentHp = bossHp;
+            session.BossMaxHp = bossHp;
+            session.ActiveBoss = bossDef;
+            session.BossRound = 0;
+
+            var intro = new EmbedBuilder()
+                .WithTitle($"💀 Floor {floor} — Boss Encounter!")
+                .WithColor(Color.DarkRed)
+                .WithDescription($"**{bossDef.Name}** emerges from the darkness!\n*{bossDef.Description}*\n\n{bossDef.SpecialMechanicText}\n\n⚔️ **Round 1 begins in 5 seconds...**");
+
+            if (!string.IsNullOrWhiteSpace(bossDef.ImageUrl))
+                intro.WithImageUrl(bossDef.ImageUrl);
+
+            foreach (var p in session.Participants)
+                intro.AddField(p.Username, $"❤️ {FormatHpBar(p.CurrentHp, p.MaxHp)}", true);
+
+            intro.AddField($"👹 {bossDef.Name}", FormatHpBar(session.BossCurrentHp, session.BossMaxHp), false);
+
+            await thread.SendMessageAsync(embed: intro.Build());
+
+            session.NextBossRoundAt = DateTime.UtcNow.AddSeconds(5);
+        }
+
+        private async Task ResolveBossRoundAsync(TowerSession session)
+        {
+            session.NextBossRoundAt = null;
+            session.BossRound++;
+
+            var bossDef = session.ActiveBoss!;
+            var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
+            if (thread == null) return;
+
+            string combatLog = ResolveBossRoundCombat(session);
+
+            bool bossDefeated = session.BossCurrentHp <= 0;
+            bool anyDead = session.Participants.Any(p => p.CurrentHp <= 0);
+
+            // Duo: if one partner dies during boss fight, pass buffs/debuffs to survivor
+            if (anyDead && !bossDefeated && session.Mode == TowerMode.Duo)
+            {
+                var dead = session.Participants.Where(p => p.CurrentHp <= 0).ToList();
+                var alive = session.Participants.FirstOrDefault(p => p.CurrentHp > 0);
+                if (alive != null && dead.Count < session.Participants.Count)
+                {
+                    await thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, false, false));
+                    foreach (var fallen in dead)
+                    {
+                        foreach (var buff in fallen.Buffs)
+                        {
+                            var existing = alive.Buffs.FirstOrDefault(b => b.Type == buff.Type);
+                            if (existing != null) existing.Stacks = Math.Min(existing.Stacks + buff.Stacks, 5);
+                            else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = Math.Min(buff.Stacks, 5) });
+                        }
+                        foreach (var debuff in fallen.Debuffs)
+                            AddDebuffSafe(alive, debuff.Type, debuff.FloorsRemaining);
+                    }
+                    string fallenNames = string.Join(" & ", dead.Select(p => $"**{p.Username}**"));
+                    await thread.SendMessageAsync(embed: new EmbedBuilder()
+                        .WithTitle("💀 A partner has fallen!")
+                        .WithDescription($"{fallenNames} fell to the boss — their buffs and debuffs pass to **{alive.Username}**.\n\nThe fight continues alone...")
+                        .WithColor(Color.DarkRed).Build());
+                    session.Participants.RemoveAll(p => p.CurrentHp <= 0);
+                    anyDead = false;
+                }
+            }
+
+            if (anyDead)
+            {
+                await thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, false, true));
+                await EndRunAsync(session, thread);
+                return;
+            }
+
+            if (bossDefeated)
+            {
+                string specialText = ApplyBossSpecialEffect(session, bossDef);
+                if (!string.IsNullOrEmpty(specialText)) combatLog += "\n\n" + specialText;
+
+                string sigilText = await HandleSigilDropAsync(session);
+                if (!string.IsNullOrEmpty(sigilText)) combatLog += "\n" + sigilText;
+
+                foreach (var p in session.Participants)
+                    p.AccumulatedGold += GoldPerFloor;
+
+                session.ActiveBoss = null;
+                session.BossRound = 0;
+
+                await thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, true, false));
+
+                if (session.Floor % 10 == 0)
+                {
+                    session.Status = TowerStatus.Checkpoint;
+                    await PostCheckpointAsync(session, thread);
+                }
+                else
+                {
+                    session.NextFloorAt = DateTime.UtcNow.AddSeconds(FloorIntervalSeconds);
+                }
+                return;
+            }
+
+            await thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, false, false));
+            session.NextBossRoundAt = DateTime.UtcNow.AddSeconds(5);
+        }
+
+        private string ResolveBossRoundCombat(TowerSession session)
+        {
+            var bossDef = session.ActiveBoss!;
+            int floor = session.Floor;
+            bool isDuo = session.Mode == TowerMode.Duo;
+
+            int enemyAtk = (int)((17 + floor * 9) * bossDef.AtkMultiplier);
+            int enemyDef = 5 + floor * 3;
+
             var log = new System.Text.StringBuilder();
 
-            log.AppendLine($"💀 **{bossDef.Name}** appears!");
-            log.AppendLine($"*{bossDef.Description}*");
-            log.AppendLine();
-            log.AppendLine(bossDef.SpecialMechanicText);
-            log.AppendLine();
-            log.Append(ResolveCombat(session, false, true, bossDef));
+            // Player attacks boss
+            foreach (var p in session.Participants)
+            {
+                var bleeding = p.Debuffs.FirstOrDefault(d => d.Type == TowerDebuffType.Bleeding);
+                if (bleeding != null)
+                {
+                    int bleedDmg = Math.Max(1, (int)(p.MaxHp * Math.Min(0.25f, 0.05f * bleeding.Stacks)));
+                    p.CurrentHp = Math.Max(0, p.CurrentHp - bleedDmg);
+                    string stackNote = bleeding.Stacks > 1 ? $" (x{bleeding.Stacks})" : "";
+                    log.AppendLine($"🩸 **{p.Username}** bleeds for **{bleedDmg}** HP!{stackNote}");
+                    if (p.CurrentHp <= 0) { log.AppendLine($"💀 **{p.Username}** bled out!"); continue; }
+                }
 
-            // Apply boss special effects by registry index (immune to renames)
+                int playerDmg = CalcPlayerDamage(p, enemyDef, true);
+                log.AppendLine($"⚔️ **{p.Username}** deals **{playerDmg}** damage!");
+                session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - playerDmg);
+
+                int lifesteal = CalcLifesteal(p, playerDmg);
+                if (lifesteal > 0)
+                {
+                    p.CurrentHp = Math.Min(p.MaxHp, p.CurrentHp + lifesteal);
+                    log.AppendLine($"  🩸 Lifesteal heals **{lifesteal}** HP.");
+                }
+            }
+
+            log.AppendLine();
+
+            if (session.BossCurrentHp <= 0)
+            {
+                log.AppendLine($"💥 **{bossDef.Name}** has been slain!");
+                return log.ToString().TrimEnd();
+            }
+
+            // Boss attacks each player
+            foreach (var p in session.Participants)
+            {
+                if (p.CurrentHp <= 0) continue;
+
+                float dodgeChance = Math.Min(0.45f, GetBuffStacks(p, TowerBuffType.Evasion) * 0.15f);
+                if (dodgeChance > 0 && _random.NextDouble() < dodgeChance)
+                {
+                    log.AppendLine($"💨 **{p.Username}** dodges the attack!");
+                    continue;
+                }
+
+                float penetration = Math.Min(0.70f, floor * 0.012f);
+                int effectiveDef = (int)(p.BaseDefense * (1f - penetration));
+                int rawEnemyDmg = (int)(enemyAtk * (100.0 / (100.0 + effectiveDef)));
+                rawEnemyDmg = Math.Max(1, rawEnemyDmg);
+
+                float ironSkinReduction = Math.Min(0.60f, GetBuffStacks(p, TowerBuffType.IronSkin) * 0.15f);
+                rawEnemyDmg = (int)(rawEnemyDmg * (1f - ironSkinReduction));
+                rawEnemyDmg = Math.Max(1, rawEnemyDmg);
+
+                if (isDuo) rawEnemyDmg = (int)(rawEnemyDmg * 0.65f);
+
+                p.CurrentHp = Math.Max(0, p.CurrentHp - rawEnemyDmg);
+                p.TookDamageThisFloor = true;
+                log.AppendLine($"👹 **{bossDef.Name}** hits **{p.Username}** for **{rawEnemyDmg}** damage!");
+
+                // Thorns now matters — reflects back to the boss across multiple rounds
+                float thornsPercent = GetBuffStacks(p, TowerBuffType.Thorns) * 0.15f;
+                if (thornsPercent > 0)
+                {
+                    int reflect = (int)(rawEnemyDmg * thornsPercent);
+                    session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - reflect);
+                    log.AppendLine($"  🌵 Thorns reflects **{reflect}** damage back at {bossDef.Name}!");
+                }
+            }
+
+            foreach (var p in session.Participants)
+            {
+                if (p.TookDamageThisFloor) p.FrenzyStacks = 0;
+                else if (HasActiveBuff(p, TowerBuffType.Frenzy)) p.FrenzyStacks++;
+            }
+
+            return log.ToString().TrimEnd();
+        }
+
+        private Embed BuildBossRoundEmbed(TowerSession session, TowerBossDefinition bossDef, string combatLog, bool bossDefeated, bool allDead)
+        {
+            string title = bossDefeated
+                ? $"🏆 Floor {session.Floor} — {bossDef.Name} Defeated!"
+                : allDead ? $"💀 Floor {session.Floor} — Slain by {bossDef.Name}"
+                : $"💀 Floor {session.Floor} — {bossDef.Name} · Round {session.BossRound}";
+
+            var builder = new EmbedBuilder()
+                .WithTitle(title)
+                .WithDescription(combatLog)
+                .WithColor(bossDefeated ? Color.Gold : Color.DarkRed);
+
+            if (!string.IsNullOrWhiteSpace(bossDef.ImageUrl))
+                builder.WithImageUrl(bossDef.ImageUrl);
+
+            foreach (var p in session.Participants)
+            {
+                string status = p.CurrentHp <= 0 ? "💀 DEAD" : $"❤️ {FormatHpBar(p.CurrentHp, p.MaxHp)}";
+                builder.AddField(p.Username, $"{status}\n{FormatBuffDebuffLine(p)}", true);
+            }
+
+            if (!bossDefeated && !allDead)
+                builder.AddField($"👹 {bossDef.Name}", FormatHpBar(session.BossCurrentHp, session.BossMaxHp), false)
+                       .WithFooter("Next round in 5 seconds...");
+            else if (bossDefeated)
+                builder.AddField($"👹 {bossDef.Name}", "💀 Defeated!", false)
+                       .WithFooter($"Continuing the climb in {FloorIntervalSeconds} seconds...");
+
+            return builder.Build();
+        }
+
+        private string ApplyBossSpecialEffect(TowerSession session, TowerBossDefinition bossDef)
+        {
             int bossIndex = ((session.Floor / 25) - 1) % TowerBossRegistry.All.Count;
-            if (bossIndex == 1) // Boss 2 — Weakened
+            if (bossIndex == 1)
             {
                 foreach (var p in session.Participants)
                     AddDebuffSafe(p, TowerDebuffType.Weakened, 3);
-                log.AppendLine("\n😵 All players are **Weakened** for 3 floors!");
+                return "😵 With its dying breath, **Weakened** seeps into all players for 3 floors!";
             }
-            else if (bossIndex == 3) // Boss 4 — Bleeding
+            if (bossIndex == 3)
             {
                 foreach (var p in session.Participants)
                     AddDebuffSafe(p, TowerDebuffType.Bleeding, -1);
-                log.AppendLine("\n🩸 All players are **Bleeding** for the rest of the run!");
+                return "🩸 The boss's venom seeps in — all players are **Bleeding** for the rest of the run!";
             }
-            else if (bossIndex == 4) // Boss 5 — Strip a buff
+            if (bossIndex == 4)
             {
+                var lines = new List<string>();
                 foreach (var p in session.Participants)
                 {
                     if (p.Buffs.Count > 0)
@@ -526,44 +762,42 @@ namespace Hogs.RPG.Services.TowerServices
                         int idx = _random.Next(p.Buffs.Count);
                         string removed = TowerBuffPool.Get(p.Buffs[idx].Type).Name;
                         p.Buffs.RemoveAt(idx);
-                        log.AppendLine($"\n💀 **{p.Username}** loses **{removed}**!");
+                        lines.Add($"💀 **{p.Username}** loses **{removed}**!");
                     }
                 }
+                return string.Join("\n", lines);
             }
+            return "";
+        }
 
-            // Sigil drop check (5% chance per participant)
-            if (session.Floor % 25 == 0)
+        private async Task<string> HandleSigilDropAsync(TowerSession session)
+        {
+            if (session.Floor % 25 != 0) return "";
+
+            var log = new System.Text.StringBuilder();
+            using var scope = _scopeFactory.CreateScope();
+            var sigilRepo = scope.ServiceProvider.GetRequiredService<SigilRepository>();
+            var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+
+            foreach (var p in session.Participants)
             {
-                using var scope = _scopeFactory.CreateScope();
-                var sigilRepo = scope.ServiceProvider.GetRequiredService<SigilRepository>();
-                var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
-
-                foreach (var p in session.Participants)
+                if (_random.NextDouble() < 0.05)
                 {
-                    if (_random.NextDouble() < 0.05)
+                    var sigilDef = SigilRegistry.Random(_random);
+                    int current = await sigilRepo.GetCountAsync(p.DiscordId, sigilDef.Id);
+                    if (current >= SigilRegistry.MaxStacks)
                     {
-                        var sigilDef = SigilRegistry.Random(_random);
-                        int current = await sigilRepo.GetCountAsync(p.DiscordId, sigilDef.Id);
-
-                        if (current >= SigilRegistry.MaxStacks)
-                        {
-                            var player = await playerRepo.GetByDiscordIdAsync(p.DiscordId);
-                            if (player != null)
-                            {
-                                player.Gold += SigilRegistry.CompensationGold;
-                                await playerRepo.UpdatePlayerAsync(player);
-                            }
-                            log.AppendLine($"\n{sigilDef.Emoji} **{p.Username}** found a **{sigilDef.Name}** but already has 3 stacks! Compensated with **{SigilRegistry.CompensationGold} gold**.");
-                        }
-                        else
-                        {
-                            await sigilRepo.IncrementAsync(p.DiscordId, sigilDef.Id);
-                            log.AppendLine($"\n✨ **{p.Username}** found a **{sigilDef.Name}**! ({current + 1}/3 stacks) — {sigilDef.BonusPerStack}");
-                        }
+                        var player = await playerRepo.GetByDiscordIdAsync(p.DiscordId);
+                        if (player != null) { player.Gold += SigilRegistry.CompensationGold; await playerRepo.UpdatePlayerAsync(player); }
+                        log.AppendLine($"{sigilDef.Emoji} **{p.Username}** found a **{sigilDef.Name}** but already has 3 stacks! Compensated with **{SigilRegistry.CompensationGold} gold**.");
+                    }
+                    else
+                    {
+                        await sigilRepo.IncrementAsync(p.DiscordId, sigilDef.Id);
+                        log.AppendLine($"✨ **{p.Username}** found a **{sigilDef.Name}**! ({current + 1}/3 stacks) — {sigilDef.BonusPerStack}");
                     }
                 }
             }
-
             return log.ToString().TrimEnd();
         }
 
