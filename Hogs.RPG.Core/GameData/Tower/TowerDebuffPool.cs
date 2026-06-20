@@ -16,9 +16,9 @@ namespace Hogs.RPG.Core.GameData.Tower
         public static readonly List<TowerDebuffDefinition> All = new()
         {
             new() { Type = TowerDebuffType.Bleeding,  Emoji = "🩸", Name = "Bleeding",  Description = "Lose 5% max HP at the start of each floor",         DefaultDuration = -1 },
-            new() { Type = TowerDebuffType.Weakened,  Emoji = "😵", Name = "Weakened",  Description = "Deal 20% less damage",                               DefaultDuration =  3 },
-            new() { Type = TowerDebuffType.Shackled,  Emoji = "🔗", Name = "Shackled",  Description = "Your next Rest is automatically skipped",              DefaultDuration = -1 },
-            new() { Type = TowerDebuffType.Cursed,    Emoji = "👁️", Name = "Cursed",    Description = "One random buff is disabled for 3 floors",            DefaultDuration =  3 },
+            new() { Type = TowerDebuffType.Weakened,  Emoji = "😵", Name = "Weakened",  Description = "Deal 20% less damage per stack",                     DefaultDuration = -1 },
+            new() { Type = TowerDebuffType.Shackled,  Emoji = "🔗", Name = "Shackled",  Description = "Your next Rest is automatically skipped",             DefaultDuration = -1 },
+            new() { Type = TowerDebuffType.Cursed,    Emoji = "👁️", Name = "Cursed",    Description = "One random buff is disabled for 3 floors per stack",  DefaultDuration = -1 },
         };
 
         public static TowerDebuffDefinition Get(TowerDebuffType type) =>

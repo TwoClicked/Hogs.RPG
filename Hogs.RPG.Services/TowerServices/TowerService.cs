@@ -380,12 +380,15 @@ namespace Hogs.RPG.Services.TowerServices
             int roll = _random.Next(100);
             return roll switch
             {
-                < 50 => TowerFloorEventType.Combat,
-                < 65 => TowerFloorEventType.TreasureRoom,
+                < 45 => TowerFloorEventType.Combat,
+                < 60 => TowerFloorEventType.TreasureRoom,
                 < 80 => TowerFloorEventType.CursedFloor,
                 _    => TowerFloorEventType.RestSite
             };
         }
+
+        private TowerDebuffType RollCombatDebuff() =>
+            _random.Next(2) == 0 ? TowerDebuffType.Bleeding : TowerDebuffType.Weakened;
 
         // =========================
         // COMBAT
@@ -582,7 +585,7 @@ namespace Hogs.RPG.Services.TowerServices
 
             foreach (var p in session.Participants)
             {
-                var debuff = RollRandomDebuff();
+                var debuff = RollCombatDebuff();
                 var def = TowerDebuffPool.Get(debuff);
                 AddDebuffSafe(p, debuff, def.DefaultDuration);
                 log.AppendLine($"👁️ **{p.Username}** is afflicted with **{def.Emoji} {def.Name}**! — {def.Description}");
