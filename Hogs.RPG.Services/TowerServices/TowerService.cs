@@ -270,6 +270,13 @@ namespace Hogs.RPG.Services.TowerServices
 
                 p.Debuffs.RemoveAll(d => d.FloorsRemaining == 0);
 
+                // 5% chance each floor to shake off a random debuff
+                if (p.Debuffs.Count > 0 && _random.NextDouble() < 0.05)
+                {
+                    int luckyIndex = _random.Next(p.Debuffs.Count);
+                    p.Debuffs.RemoveAt(luckyIndex);
+                }
+
                 foreach (var buff in p.Buffs)
                     if (buff.DisabledForFloors > 0) buff.DisabledForFloors--;
             }
@@ -849,7 +856,7 @@ namespace Hogs.RPG.Services.TowerServices
 
             foreach (var p in session.Participants)
             {
-                int healed = (int)(p.MaxHp * 0.20f);
+                int healed = (int)(p.MaxHp * 0.50f);
                 p.CurrentHp = Math.Min(p.MaxHp, p.CurrentHp + healed);
                 log.AppendLine($"💚 **{p.Username}** recovers **{healed}** HP. ({p.CurrentHp}/{p.MaxHp})");
             }
@@ -948,7 +955,7 @@ namespace Hogs.RPG.Services.TowerServices
                         resultMsg = "🔗 You are **Shackled** — your rest is skipped. The shackles break.";
                         break;
                     }
-                    int healed = (int)(p.MaxHp * 0.30f);
+                    int healed = (int)(p.MaxHp * 0.50f);
                     p.CurrentHp = Math.Min(p.MaxHp, p.CurrentHp + healed);
                     p.CheckpointDone = true;
                     resultMsg = $"💚 You rest and recover **{healed}** HP. ({p.CurrentHp}/{p.MaxHp})";
