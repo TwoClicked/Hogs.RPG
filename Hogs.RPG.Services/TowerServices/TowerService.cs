@@ -494,23 +494,21 @@ namespace Hogs.RPG.Services.TowerServices
             log.AppendLine();
             log.Append(ResolveCombat(session, false, true, bossDef));
 
-            // Apply boss special effects
-            if (bossDef.Name == "Void Wraith")
+            // Apply boss special effects by registry index (immune to renames)
+            int bossIndex = ((session.Floor / 25) - 1) % TowerBossRegistry.All.Count;
+            if (bossIndex == 1) // Boss 2 — Weakened
             {
                 foreach (var p in session.Participants)
-                    p.Debuffs.Add(new TowerDebuff { Type = TowerDebuffType.Weakened, FloorsRemaining = 3 });
+                    AddDebuffSafe(p, TowerDebuffType.Weakened, 3);
                 log.AppendLine("\n😵 All players are **Weakened** for 3 floors!");
             }
-            else if (bossDef.Name == "Serpent Queen Vasara")
+            else if (bossIndex == 3) // Boss 4 — Bleeding
             {
                 foreach (var p in session.Participants)
-                {
-                    if (!p.Debuffs.Any(d => d.Type == TowerDebuffType.Bleeding))
-                        p.Debuffs.Add(new TowerDebuff { Type = TowerDebuffType.Bleeding, FloorsRemaining = -1 });
-                }
+                    AddDebuffSafe(p, TowerDebuffType.Bleeding, -1);
                 log.AppendLine("\n🩸 All players are **Bleeding** for the rest of the run!");
             }
-            else if (bossDef.Name == "The Doom Sovereign")
+            else if (bossIndex == 4) // Boss 5 — Strip a buff
             {
                 foreach (var p in session.Participants)
                 {
@@ -585,7 +583,7 @@ namespace Hogs.RPG.Services.TowerServices
             {
                 var debuff = RollRandomDebuff();
                 var def = TowerDebuffPool.Get(debuff);
-                p.Debuffs.Add(new TowerDebuff { Type = debuff, FloorsRemaining = def.DefaultDuration });
+                AddDebuffSafe(p, debuff, def.DefaultDuration);
                 log.AppendLine($"👁️ **{p.Username}** is afflicted with **{def.Emoji} {def.Name}**! — {def.Description}");
             }
 
@@ -612,21 +610,34 @@ namespace Hogs.RPG.Services.TowerServices
         // =========================
         private async Task PostCheckpointAsync(TowerSession session, IThreadChannel thread)
         {
+            var shackleNotices = new List<string>();
+
+            var shackledIds = new HashSet<ulong>();
             foreach (var p in session.Participants)
             {
                 p.CheckpointDone = false;
                 p.PendingBuffChoices = RollThreeBuffs();
+
+                // Auto-consume Shackled — player loses their rest option this checkpoint
+                if (p.Debuffs.Any(d => d.Type == TowerDebuffType.Shackled))
+                {
+                    p.Debuffs.RemoveAll(d => d.Type == TowerDebuffType.Shackled);
+                    shackledIds.Add(p.DiscordId);
+                    shackleNotices.Add($"🔗 **{p.Username}** is Shackled — Rest is unavailable this checkpoint.");
+                }
             }
+
+            string shackleText = shackleNotices.Count > 0 ? "\n" + string.Join("\n", shackleNotices) : "";
 
             var embed = new EmbedBuilder()
                 .WithTitle($"🏁 Checkpoint — Floor {session.Floor}")
-                .WithDescription("The tower falls silent. Choose your reward before pushing on.")
+                .WithDescription("The tower falls silent. Choose your reward before pushing on." + shackleText)
                 .WithColor(Color.Gold);
 
             foreach (var p in session.Participants)
                 embed.AddField($"{p.Username} — ❤️ {p.CurrentHp}/{p.MaxHp}", FormatBuffDebuffLine(p), false);
 
-            var components = BuildCheckpointComponents(session);
+            var components = BuildCheckpointComponents(session, shackledIds);
 
             // In duo, mention each player above their row of buttons so it's obvious whose is whose
             string mention = session.Mode == TowerMode.Duo
@@ -662,7 +673,9 @@ namespace Hogs.RPG.Services.TowerServices
                     if (shackled)
                     {
                         p.Debuffs.RemoveAll(d => d.Type == TowerDebuffType.Shackled);
-                        return (false, "🔗 You are **Shackled** — you cannot rest here. The debuff has been consumed.");
+                        p.CheckpointDone = true;
+                        resultMsg = "🔗 You are **Shackled** — your rest is skipped. The shackles break.";
+                        break;
                     }
                     int healed = (int)(p.MaxHp * 0.30f);
                     p.CurrentHp = Math.Min(p.MaxHp, p.CurrentHp + healed);
@@ -751,7 +764,7 @@ namespace Hogs.RPG.Services.TowerServices
         {
             var debuff = RollRandomDebuff();
             var debuffDef = TowerDebuffPool.Get(debuff);
-            p.Debuffs.Add(new TowerDebuff { Type = debuff, FloorsRemaining = debuffDef.DefaultDuration });
+            AddDebuffSafe(p, debuff, debuffDef.DefaultDuration);
 
             int roll = _random.Next(3);
             string reward;
@@ -895,6 +908,26 @@ namespace Hogs.RPG.Services.TowerServices
         private TowerDebuffType RollRandomDebuff() =>
             TowerDebuffPool.All[_random.Next(TowerDebuffPool.All.Count)].Type;
 
+        // Adds a debuff, extending duration if the type is already present (no stacking duplicates)
+        private void AddDebuffSafe(TowerParticipant p, TowerDebuffType type, int floorsRemaining)
+        {
+            // Shackled can only happen once per run
+            if (type == TowerDebuffType.Shackled && p.HasBeenShackled) return;
+
+            var existing = p.Debuffs.FirstOrDefault(d => d.Type == type);
+            if (existing != null)
+            {
+                // Permanent debuffs stay permanent; otherwise extend by the new duration
+                if (existing.FloorsRemaining >= 0 && floorsRemaining > 0)
+                    existing.FloorsRemaining += floorsRemaining;
+            }
+            else
+            {
+                p.Debuffs.Add(new TowerDebuff { Type = type, FloorsRemaining = floorsRemaining });
+                if (type == TowerDebuffType.Shackled) p.HasBeenShackled = true;
+            }
+        }
+
         private List<TowerBuffType> RollThreeBuffs()
         {
             var pool = TowerBuffPool.All.Select(b => b.Type).ToList();
@@ -986,7 +1019,7 @@ namespace Hogs.RPG.Services.TowerServices
             return builder.Build();
         }
 
-        private MessageComponent BuildCheckpointComponents(TowerSession session)
+        private MessageComponent BuildCheckpointComponents(TowerSession session, HashSet<ulong>? shackledIds = null)
         {
             var builder = new ComponentBuilder();
 
@@ -994,7 +1027,7 @@ namespace Hogs.RPG.Services.TowerServices
             // Solo: row 0. Duo: player 1 = row 0, player 2 = row 1.
             foreach (var (p, row) in session.Participants.Select((p, i) => (p, i)))
             {
-                bool shackled = p.Debuffs.Any(d => d.Type == TowerDebuffType.Shackled);
+                bool shackled = shackledIds?.Contains(p.DiscordId) ?? false;
                 bool hasDebuffs = p.Debuffs.Count > 0;
 
                 builder.WithButton($"💰 Scavenge ({session.Floor * 10}g)", $"tower_cp:{session.SessionId}:{p.DiscordId}:scavenge", ButtonStyle.Secondary, row: row);
