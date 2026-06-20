@@ -32,6 +32,7 @@ namespace Hogs.RPG.Core.Entities.TowerObjects
     {
         public TowerDebuffType Type { get; set; }
         public int FloorsRemaining { get; set; } = -1;
+        public int Stacks { get; set; } = 1;
         public int? AffectedBuffIndex { get; set; }
     }
 }

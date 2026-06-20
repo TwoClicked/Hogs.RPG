@@ -414,9 +414,10 @@ namespace Hogs.RPG.Services.TowerServices
                 var bleeding = p.Debuffs.FirstOrDefault(d => d.Type == TowerDebuffType.Bleeding);
                 if (bleeding != null)
                 {
-                    int bleedDmg = Math.Max(1, (int)(p.MaxHp * 0.05f));
+                    int bleedDmg = Math.Max(1, (int)(p.MaxHp * 0.05f * bleeding.Stacks));
                     p.CurrentHp = Math.Max(0, p.CurrentHp - bleedDmg);
-                    log.AppendLine($"🩸 **{p.Username}** bleeds for **{bleedDmg}** HP!");
+                    string stackNote = bleeding.Stacks > 1 ? $" (x{bleeding.Stacks})" : "";
+                    log.AppendLine($"🩸 **{p.Username}** bleeds for **{bleedDmg}** HP!{stackNote}");
                 }
 
                 // Player damage
@@ -860,9 +861,10 @@ namespace Hogs.RPG.Services.TowerServices
             int dmg = (int)(p.BaseAttack * (100.0 / (100.0 + def)));
             dmg = Math.Max(1, dmg);
 
-            // Weakened
-            if (p.Debuffs.Any(d => d.Type == TowerDebuffType.Weakened))
-                dmg = (int)(dmg * 0.80f);
+            // Weakened — each stack reduces damage by 20%, capped at 80% total reduction
+            var weakened = p.Debuffs.FirstOrDefault(d => d.Type == TowerDebuffType.Weakened);
+            if (weakened != null)
+                dmg = (int)(dmg * Math.Max(0.20f, 1f - weakened.Stacks * 0.20f));
 
             // Executioner on elite/boss floors
             if (isSpecialFloor && HasActiveBuff(p, TowerBuffType.Executioner))
@@ -908,7 +910,7 @@ namespace Hogs.RPG.Services.TowerServices
         private TowerDebuffType RollRandomDebuff() =>
             TowerDebuffPool.All[_random.Next(TowerDebuffPool.All.Count)].Type;
 
-        // Adds a debuff, extending duration if the type is already present (no stacking duplicates)
+        // Adds a debuff stack. Same type merges into one entry and increments Stacks.
         private void AddDebuffSafe(TowerParticipant p, TowerDebuffType type, int floorsRemaining)
         {
             // Shackled can only happen once per run
@@ -917,13 +919,14 @@ namespace Hogs.RPG.Services.TowerServices
             var existing = p.Debuffs.FirstOrDefault(d => d.Type == type);
             if (existing != null)
             {
-                // Permanent debuffs stay permanent; otherwise extend by the new duration
+                existing.Stacks++;
+                // For temporary debuffs, also refresh the duration
                 if (existing.FloorsRemaining >= 0 && floorsRemaining > 0)
-                    existing.FloorsRemaining += floorsRemaining;
+                    existing.FloorsRemaining = Math.Max(existing.FloorsRemaining, floorsRemaining);
             }
             else
             {
-                p.Debuffs.Add(new TowerDebuff { Type = type, FloorsRemaining = floorsRemaining });
+                p.Debuffs.Add(new TowerDebuff { Type = type, FloorsRemaining = floorsRemaining, Stacks = 1 });
                 if (type == TowerDebuffType.Shackled) p.HasBeenShackled = true;
             }
         }
@@ -953,8 +956,8 @@ namespace Hogs.RPG.Services.TowerServices
             var debuffs = p.Debuffs.Select(d =>
             {
                 var def = TowerDebuffPool.Get(d.Type);
-                string dur = d.FloorsRemaining < 0 ? " (∞)" : $" ({d.FloorsRemaining}f)";
-                return $"{def.Emoji} {def.Name}{dur}";
+                string stacks = d.Stacks > 1 ? $" x{d.Stacks}" : "";
+                return $"{def.Emoji} {def.Name}{stacks}";
             });
 
             var parts = new List<string>();
