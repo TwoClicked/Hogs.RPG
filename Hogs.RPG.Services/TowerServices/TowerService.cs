@@ -856,7 +856,7 @@ namespace Hogs.RPG.Services.TowerServices
 
             foreach (var p in session.Participants)
             {
-                int healed = (int)(p.MaxHp * 0.50f);
+                int healed = (int)(p.MaxHp * 0.25f);
                 p.CurrentHp = Math.Min(p.MaxHp, p.CurrentHp + healed);
                 log.AppendLine($"💚 **{p.Username}** recovers **{healed}** HP. ({p.CurrentHp}/{p.MaxHp})");
             }
