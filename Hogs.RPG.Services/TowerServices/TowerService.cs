@@ -1157,6 +1157,7 @@ namespace Hogs.RPG.Services.TowerServices
 
             if (session.Status == TowerStatus.PreBoss)
             {
+                session.Status = TowerStatus.Running;
                 if (thread != null && session.ActiveBoss != null)
                     await StartBossFightAsync(session, session.ActiveBoss, thread);
                 return;
