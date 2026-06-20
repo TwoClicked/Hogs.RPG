@@ -350,7 +350,48 @@ public class TowerButtonModule : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
+        if (choice == "removedebuff")
+        {
+            var session2 = _towerService.GetSession(sessionId);
+            var p2 = session2?.Participants.FirstOrDefault(x => x.DiscordId == playerId);
+            if (p2 != null && p2.Debuffs.Count > 1)
+            {
+                var components2 = _towerService.BuildDebuffPickComponents(sessionId, playerId, p2.Debuffs);
+                var desc2 = string.Join("\n", p2.Debuffs.Select(d =>
+                {
+                    var def = TowerDebuffPool.Get(d.Type);
+                    return $"{def.Emoji} **{def.Name}**";
+                }));
+                await FollowupAsync(embed: new EmbedBuilder()
+                    .WithTitle("🗑️ Choose a Debuff to Remove")
+                    .WithDescription(desc2)
+                    .WithColor(Color.DarkRed)
+                    .Build(),
+                    components: components2,
+                    ephemeral: true);
+                return;
+            }
+        }
+
         var (success, message) = await _towerService.HandleCheckpointChoiceAsync(sessionId, playerId, choice);
+        await FollowupAsync(message, ephemeral: true);
+    }
+
+    [ComponentInteraction("tower_rmdebuff:*:*:*")]
+    public async Task HandleDebuffRemove(string sessionId, string playerIdStr, string indexStr)
+    {
+        await DeferAsync(ephemeral: true);
+
+        ulong playerId = ulong.Parse(playerIdStr);
+        int index = int.Parse(indexStr);
+
+        if (Context.User.Id != playerId)
+        {
+            await FollowupAsync("❌ This button is not for you.", ephemeral: true);
+            return;
+        }
+
+        var (success, message) = await _towerService.HandleDebuffRemoveAsync(sessionId, playerId, index);
         await FollowupAsync(message, ephemeral: true);
     }
 

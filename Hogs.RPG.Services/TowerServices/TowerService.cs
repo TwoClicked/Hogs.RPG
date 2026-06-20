@@ -305,6 +305,56 @@ namespace Hogs.RPG.Services.TowerServices
 
             bool anyDead = session.Participants.Any(p => p.CurrentHp <= 0);
 
+            // Duo: if one partner dies, pass their buffs/debuffs to the survivor and let them continue
+            if (anyDead && session.Mode == TowerMode.Duo)
+            {
+                var dead = session.Participants.Where(p => p.CurrentHp <= 0).ToList();
+                var alive = session.Participants.FirstOrDefault(p => p.CurrentHp > 0);
+
+                if (alive != null && dead.Count < session.Participants.Count)
+                {
+                    await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType, bossDef));
+
+                    foreach (var fallen in dead)
+                    {
+                        // Merge buffs
+                        foreach (var buff in fallen.Buffs)
+                        {
+                            var existing = alive.Buffs.FirstOrDefault(b => b.Type == buff.Type);
+                            if (existing != null) existing.Stacks = Math.Min(existing.Stacks + buff.Stacks, 5);
+                            else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = buff.Stacks });
+                        }
+                        // Merge debuffs (avoid duplicates of same type)
+                        foreach (var debuff in fallen.Debuffs)
+                        {
+                            if (!alive.Debuffs.Any(d => d.Type == debuff.Type))
+                                alive.Debuffs.Add(new TowerDebuff { Type = debuff.Type, FloorsRemaining = debuff.FloorsRemaining });
+                        }
+                    }
+
+                    string fallenNames = string.Join(" & ", dead.Select(p => $"**{p.Username}**"));
+                    await thread.SendMessageAsync(embed: new EmbedBuilder()
+                        .WithTitle("💀 A partner has fallen!")
+                        .WithDescription($"{fallenNames} has died — their buffs and debuffs have been passed to **{alive.Username}**.\n\nThe climb continues alone.")
+                        .WithColor(Color.DarkRed)
+                        .Build());
+
+                    // Remove dead participants so the run continues solo
+                    session.Participants.RemoveAll(p => p.CurrentHp <= 0);
+
+                    if (session.Floor % 10 == 0)
+                    {
+                        session.Status = TowerStatus.Checkpoint;
+                        await PostCheckpointAsync(session, thread);
+                    }
+                    else
+                    {
+                        session.NextFloorAt = DateTime.UtcNow.AddSeconds(FloorIntervalSeconds);
+                    }
+                    return;
+                }
+            }
+
             if (anyDead)
             {
                 await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType, bossDef));
@@ -346,7 +396,7 @@ namespace Hogs.RPG.Services.TowerServices
             bool isDuo = session.Mode == TowerMode.Duo;
 
             int baseEnemyHp  = isDuo ? 200 + (floor * 40) : 150 + (floor * 30);
-            int baseEnemyAtk = 15 + (floor * 8);
+            int baseEnemyAtk = 17 + (floor * 9);
             int baseEnemyDef = 5 + (floor * 3);
 
             float hpMult  = isBoss ? bossDef!.HpMultiplier  : isElite ? 1.6f : 1f;
@@ -578,7 +628,12 @@ namespace Hogs.RPG.Services.TowerServices
 
             var components = BuildCheckpointComponents(session);
 
-            await thread.SendMessageAsync(embed: embed.Build(), components: components);
+            // In duo, mention each player above their row of buttons so it's obvious whose is whose
+            string mention = session.Mode == TowerMode.Duo
+                ? string.Join("  |  ", session.Participants.Select(p => $"<@{p.DiscordId}>"))
+                : null;
+
+            await thread.SendMessageAsync(text: mention, embed: embed.Build(), components: components);
         }
 
         public async Task<(bool success, string message)> HandleCheckpointChoiceAsync(
@@ -623,6 +678,24 @@ namespace Hogs.RPG.Services.TowerServices
                 case "gamble":
                     resultMsg = ApplyGamble(session, p);
                     p.CheckpointDone = true;
+                    break;
+
+                case "removedebuff":
+                    if (p.Debuffs.Count == 0)
+                        return (false, "❌ You have no debuffs to remove.");
+                    if (p.Debuffs.Count == 1)
+                    {
+                        var removed = TowerDebuffPool.Get(p.Debuffs[0].Type);
+                        p.Debuffs.RemoveAt(0);
+                        p.CheckpointDone = true;
+                        resultMsg = $"🗑️ **{removed.Emoji} {removed.Name}** has been cleansed.";
+                    }
+                    else
+                    {
+                        // Multiple debuffs — let player pick which to remove
+                        resultMsg = "removedebuff_pick";
+                        return (true, resultMsg);
+                    }
                     break;
 
                 default:
@@ -847,12 +920,14 @@ namespace Hogs.RPG.Services.TowerServices
             var debuffs = p.Debuffs.Select(d =>
             {
                 var def = TowerDebuffPool.Get(d.Type);
-                string dur = d.FloorsRemaining < 0 ? "" : $" ({d.FloorsRemaining}f)";
+                string dur = d.FloorsRemaining < 0 ? " x∞" : $" x{d.FloorsRemaining}";
                 return $"{def.Emoji} {def.Name}{dur}";
             });
 
-            var all = buffs.Concat(debuffs).ToList();
-            return all.Count > 0 ? string.Join(" · ", all) : "*No active effects*";
+            var parts = new List<string>();
+            if (buffs.Any()) parts.Add(string.Join(" · ", buffs));
+            if (debuffs.Any()) parts.Add(string.Join(" · ", debuffs));
+            return parts.Count > 0 ? string.Join("\n", parts) : "*No active effects*";
         }
 
         private string FormatHpBar(int current, int max)
@@ -915,17 +990,50 @@ namespace Hogs.RPG.Services.TowerServices
         {
             var builder = new ComponentBuilder();
 
+            // Each player gets their own row. Discord allows max 5 rows of 5 buttons.
+            // Solo: row 0. Duo: player 1 = row 0, player 2 = row 1.
             foreach (var (p, row) in session.Participants.Select((p, i) => (p, i)))
             {
                 bool shackled = p.Debuffs.Any(d => d.Type == TowerDebuffType.Shackled);
+                bool hasDebuffs = p.Debuffs.Count > 0;
 
                 builder.WithButton($"💰 Scavenge ({session.Floor * 10}g)", $"tower_cp:{session.SessionId}:{p.DiscordId}:scavenge", ButtonStyle.Secondary, row: row);
-                builder.WithButton("💚 Rest",    $"tower_cp:{session.SessionId}:{p.DiscordId}:rest",     ButtonStyle.Success,   row: row, disabled: shackled);
-                builder.WithButton("✨ Pick Buff", $"tower_cp:{session.SessionId}:{p.DiscordId}:buff",   ButtonStyle.Primary,   row: row);
-                builder.WithButton("🎲 Gamble",  $"tower_cp:{session.SessionId}:{p.DiscordId}:gamble",  ButtonStyle.Danger,    row: row);
+                builder.WithButton("💚 Rest",         $"tower_cp:{session.SessionId}:{p.DiscordId}:rest",          ButtonStyle.Success,   row: row, disabled: shackled);
+                builder.WithButton("✨ Pick Buff",    $"tower_cp:{session.SessionId}:{p.DiscordId}:buff",          ButtonStyle.Primary,   row: row);
+                builder.WithButton("🎲 Gamble",       $"tower_cp:{session.SessionId}:{p.DiscordId}:gamble",        ButtonStyle.Danger,    row: row);
+                builder.WithButton("🗑️ Remove Debuff", $"tower_cp:{session.SessionId}:{p.DiscordId}:removedebuff", ButtonStyle.Secondary, row: row, disabled: !hasDebuffs);
             }
 
             return builder.Build();
+        }
+
+        public MessageComponent BuildDebuffPickComponents(string sessionId, ulong playerId, List<TowerDebuff> debuffs)
+        {
+            var builder = new ComponentBuilder();
+            for (int i = 0; i < debuffs.Count; i++)
+            {
+                var def = TowerDebuffPool.Get(debuffs[i].Type);
+                builder.WithButton($"{def.Emoji} Remove {def.Name}", $"tower_rmdebuff:{sessionId}:{playerId}:{i}", ButtonStyle.Danger, row: 0);
+            }
+            return builder.Build();
+        }
+
+        public async Task<(bool success, string message)> HandleDebuffRemoveAsync(string sessionId, ulong userId, int index)
+        {
+            if (!_sessions.TryGetValue(sessionId, out var session))
+                return (false, "Session not found.");
+
+            var p = session.Participants.FirstOrDefault(x => x.DiscordId == userId);
+            if (p == null) return (false, "You are not in this run.");
+            if (p.CheckpointDone) return (false, "You have already made your checkpoint choice.");
+            if (index < 0 || index >= p.Debuffs.Count) return (false, "Invalid choice.");
+
+            var def = TowerDebuffPool.Get(p.Debuffs[index].Type);
+            p.Debuffs.RemoveAt(index);
+            p.CheckpointDone = true;
+
+            await TryResumeIfAllDoneAsync(session);
+            return (true, $"🗑️ **{def.Emoji} {def.Name}** has been cleansed.");
         }
 
         public MessageComponent BuildBuffPickComponents(string sessionId, ulong playerId, List<TowerBuffType> choices)
