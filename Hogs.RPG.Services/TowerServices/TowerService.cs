@@ -414,7 +414,7 @@ namespace Hogs.RPG.Services.TowerServices
                 var bleeding = p.Debuffs.FirstOrDefault(d => d.Type == TowerDebuffType.Bleeding);
                 if (bleeding != null)
                 {
-                    int bleedDmg = Math.Max(1, (int)(p.MaxHp * 0.05f * bleeding.Stacks));
+                    int bleedDmg = Math.Max(1, (int)(p.MaxHp * Math.Min(0.25f, 0.05f * bleeding.Stacks)));
                     p.CurrentHp = Math.Max(0, p.CurrentHp - bleedDmg);
                     string stackNote = bleeding.Stacks > 1 ? $" (x{bleeding.Stacks})" : "";
                     log.AppendLine($"🩸 **{p.Username}** bleeds for **{bleedDmg}** HP!{stackNote}");
