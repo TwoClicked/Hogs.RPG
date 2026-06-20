@@ -953,7 +953,7 @@ namespace Hogs.RPG.Services.TowerServices
             var debuffs = p.Debuffs.Select(d =>
             {
                 var def = TowerDebuffPool.Get(d.Type);
-                string dur = d.FloorsRemaining < 0 ? " x∞" : $" x{d.FloorsRemaining}";
+                string dur = d.FloorsRemaining < 0 ? " (∞)" : $" ({d.FloorsRemaining}f)";
                 return $"{def.Emoji} {def.Name}{dur}";
             });
 
