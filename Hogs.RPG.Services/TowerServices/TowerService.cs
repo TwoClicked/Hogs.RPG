@@ -340,10 +340,11 @@ namespace Hogs.RPG.Services.TowerServices
                         }
                     }
 
+                    alive.PartnerDied = true;
                     string fallenNames = string.Join(" & ", dead.Select(p => $"**{p.Username}**"));
                     await thread.SendMessageAsync(embed: new EmbedBuilder()
                         .WithTitle("💀 A partner has fallen!")
-                        .WithDescription($"{fallenNames} has died — their buffs and debuffs have been passed to **{alive.Username}**.\n\nThe climb continues alone.")
+                        .WithDescription($"{fallenNames} has died — their buffs and debuffs have been passed to **{alive.Username}**.\n\nThe climb continues alone. ⚠️ **Incoming damage doubled!**")
                         .WithColor(Color.DarkRed)
                         .Build());
 
@@ -474,8 +475,12 @@ namespace Hogs.RPG.Services.TowerServices
                 rawEnemyDmg = (int)(rawEnemyDmg * (1f - ironSkinReduction));
                 rawEnemyDmg = Math.Max(1, rawEnemyDmg);
 
-                // Duo split — enemy spreads damage across two players
-                if (isDuo) rawEnemyDmg = (int)(rawEnemyDmg * 0.65f);
+                // Duo split — enemy spreads damage across two players.
+                // If the partner already died, the survivor has no backup and takes double instead.
+                if (p.PartnerDied)
+                    rawEnemyDmg *= 2;
+                else if (isDuo)
+                    rawEnemyDmg = (int)(rawEnemyDmg * 0.65f);
 
                 p.CurrentHp = Math.Max(0, p.CurrentHp - rawEnemyDmg);
                 p.TookDamageThisFloor = true;
@@ -567,10 +572,11 @@ namespace Hogs.RPG.Services.TowerServices
                         foreach (var debuff in fallen.Debuffs)
                             AddDebuffSafe(alive, debuff.Type, debuff.FloorsRemaining);
                     }
+                    alive.PartnerDied = true;
                     string fallenNames = string.Join(" & ", dead.Select(p => $"**{p.Username}**"));
                     await thread.SendMessageAsync(embed: new EmbedBuilder()
                         .WithTitle("💀 A partner has fallen!")
-                        .WithDescription($"{fallenNames} fell to the boss — their buffs and debuffs pass to **{alive.Username}**.\n\nThe fight continues alone...")
+                        .WithDescription($"{fallenNames} fell to the boss — their buffs and debuffs pass to **{alive.Username}**.\n\nThe fight continues alone... ⚠️ **Incoming damage doubled!**")
                         .WithColor(Color.DarkRed).Build());
                     session.Participants.RemoveAll(p => p.CurrentHp <= 0);
                     anyDead = false;
@@ -681,7 +687,10 @@ namespace Hogs.RPG.Services.TowerServices
                 rawEnemyDmg = (int)(rawEnemyDmg * (1f - ironSkinReduction));
                 rawEnemyDmg = Math.Max(1, rawEnemyDmg);
 
-                if (isDuo) rawEnemyDmg = (int)(rawEnemyDmg * 0.65f);
+                if (p.PartnerDied)
+                    rawEnemyDmg *= 2;
+                else if (isDuo)
+                    rawEnemyDmg = (int)(rawEnemyDmg * 0.65f);
 
                 p.CurrentHp = Math.Max(0, p.CurrentHp - rawEnemyDmg);
                 p.TookDamageThisFloor = true;
@@ -880,14 +889,33 @@ namespace Hogs.RPG.Services.TowerServices
             foreach (var p in session.Participants)
                 embed.AddField($"{p.Username} — ❤️ {p.CurrentHp}/{p.MaxHp}", FormatBuffDebuffLine(p), false);
 
-            var components = BuildCheckpointComponents(session, shackledIds);
+            if (session.Mode == TowerMode.Duo && session.Participants.Count > 1)
+            {
+                // In duo: send one shared status embed, then a separate button message per player
+                await thread.SendMessageAsync(embed: embed.Build());
 
-            // In duo, mention each player above their row of buttons so it's obvious whose is whose
-            string mention = session.Mode == TowerMode.Duo
-                ? string.Join("  |  ", session.Participants.Select(p => $"<@{p.DiscordId}>"))
-                : null;
+                foreach (var p in session.Participants)
+                {
+                    bool shackled = shackledIds.Contains(p.DiscordId);
+                    bool canRemoveDebuff = p.Debuffs.Count > 0 && p.DebuffRemovesRemaining > 0;
+                    string removeLabel = $"🗑️ Remove Debuff ({p.DebuffRemovesRemaining} left)";
 
-            await thread.SendMessageAsync(text: mention, embed: embed.Build(), components: components);
+                    var playerComponents = new ComponentBuilder()
+                        .WithButton($"💰 Scavenge ({session.Floor * 10}g)", $"tower_cp:{session.SessionId}:{p.DiscordId}:scavenge", ButtonStyle.Secondary, row: 0)
+                        .WithButton("💚 Rest",      $"tower_cp:{session.SessionId}:{p.DiscordId}:rest",          ButtonStyle.Success,   row: 0, disabled: shackled)
+                        .WithButton("✨ Pick Buff", $"tower_cp:{session.SessionId}:{p.DiscordId}:buff",          ButtonStyle.Primary,   row: 0)
+                        .WithButton("🎲 Gamble",    $"tower_cp:{session.SessionId}:{p.DiscordId}:gamble",        ButtonStyle.Danger,    row: 0)
+                        .WithButton(removeLabel,     $"tower_cp:{session.SessionId}:{p.DiscordId}:removedebuff", ButtonStyle.Secondary, row: 0, disabled: !canRemoveDebuff)
+                        .Build();
+
+                    await thread.SendMessageAsync($"<@{p.DiscordId}> — choose your reward:", components: playerComponents);
+                }
+            }
+            else
+            {
+                var components = BuildCheckpointComponents(session, shackledIds);
+                await thread.SendMessageAsync(embed: embed.Build(), components: components);
+            }
         }
 
         public async Task<(bool success, string message)> HandleCheckpointChoiceAsync(
