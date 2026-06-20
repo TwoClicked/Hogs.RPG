@@ -292,13 +292,13 @@ namespace Hogs.RPG.Services.TowerServices
             else
                 eventType = RollEventType();
 
-            // Boss floors are multi-round — hand off to StartBossFightAsync and return
+            // Boss floors — show pre-boss choice (full heal or remove debuff stack) then start the fight
             if (eventType == TowerFloorEventType.Boss)
             {
                 var bossThread = _client.GetChannel(session.ThreadId) as IThreadChannel;
                 if (bossThread == null) return;
-                await StartBossFightAsync(session, TowerBossRegistry.GetForFloor(session.Floor), bossThread);
-                return; // gold accumulates on boss kill in ResolveBossRoundAsync
+                await PostPreBossChoiceAsync(session, TowerBossRegistry.GetForFloor(session.Floor), bossThread);
+                return;
             }
 
             string combatLog = eventType switch
@@ -865,6 +865,129 @@ namespace Hogs.RPG.Services.TowerServices
         }
 
         // =========================
+        // PRE-BOSS CHOICE
+        // =========================
+        private async Task PostPreBossChoiceAsync(TowerSession session, TowerBossDefinition bossDef, IThreadChannel thread)
+        {
+            session.ActiveBoss = bossDef;
+            session.Status = TowerStatus.PreBoss;
+
+            foreach (var p in session.Participants)
+                p.CheckpointDone = false;
+
+            var embed = new EmbedBuilder()
+                .WithTitle($"⚔️ Boss Incoming — Floor {session.Floor}")
+                .WithDescription($"⚔️ **{bossDef.Name}** guards this floor. Prepare yourself before engaging.")
+                .WithColor(Color.DarkRed);
+
+            foreach (var p in session.Participants)
+                embed.AddField($"{p.Username} — ❤️ {p.CurrentHp}/{p.MaxHp}", FormatBuffDebuffLine(p), false);
+
+            if (session.Mode == TowerMode.Duo && session.Participants.Count > 1)
+            {
+                await thread.SendMessageAsync(embed: embed.Build());
+                foreach (var p in session.Participants)
+                {
+                    var pc = BuildPreBossComponents(session.SessionId, p);
+                    await thread.SendMessageAsync($"<@{p.DiscordId}> — choose before the battle:", components: pc);
+                }
+            }
+            else
+            {
+                var p = session.Participants[0];
+                await thread.SendMessageAsync(embed: embed.Build(), components: BuildPreBossComponents(session.SessionId, p));
+            }
+        }
+
+        private MessageComponent BuildPreBossComponents(string sessionId, TowerParticipant p)
+        {
+            bool hasDebuffs = p.Debuffs.Count > 0;
+            return new ComponentBuilder()
+                .WithButton("💚 Full Heal",           $"tower_preboss:{sessionId}:{p.DiscordId}:heal",        ButtonStyle.Success,   row: 0)
+                .WithButton("🗑️ Remove Debuff Stack", $"tower_preboss:{sessionId}:{p.DiscordId}:removedebuff", ButtonStyle.Secondary, row: 0, disabled: !hasDebuffs)
+                .Build();
+        }
+
+        public async Task<(bool success, string message)> HandlePreBossChoiceAsync(string sessionId, ulong userId, string choice)
+        {
+            if (!_sessions.TryGetValue(sessionId, out var session))
+                return (false, "Session not found.");
+
+            var p = session.Participants.FirstOrDefault(x => x.DiscordId == userId);
+            if (p == null) return (false, "You are not in this run.");
+            if (p.CheckpointDone) return (false, "You have already made your choice.");
+
+            string resultMsg;
+
+            switch (choice)
+            {
+                case "heal":
+                    p.CurrentHp = p.MaxHp;
+                    p.CheckpointDone = true;
+                    resultMsg = $"💚 You recover fully. (**{p.MaxHp}/{p.MaxHp}** HP)";
+                    break;
+
+                case "removedebuff":
+                    if (p.Debuffs.Count == 0)
+                        return (false, "You have no debuffs.");
+
+                    if (p.Debuffs.Count == 1)
+                    {
+                        var debuff = p.Debuffs[0];
+                        var def = TowerDebuffPool.Get(debuff.Type);
+                        debuff.Stacks--;
+                        if (debuff.Stacks <= 0) p.Debuffs.RemoveAt(0);
+                        string stackMsg0 = debuff.Stacks > 0 ? $" (reduced to x{debuff.Stacks})" : " (fully cleansed)";
+                        p.CheckpointDone = true;
+                        resultMsg = $"🗑️ **{def.Emoji} {def.Name}**{stackMsg0}.";
+                    }
+                    else
+                    {
+                        return (true, "preboss_removedebuff_pick");
+                    }
+                    break;
+
+                default:
+                    return (false, "Unknown choice.");
+            }
+
+            await TryResumeIfAllDoneAsync(session);
+            return (true, resultMsg);
+        }
+
+        public async Task<(bool success, string message)> HandlePreBossDebuffPickAsync(string sessionId, ulong userId, int index)
+        {
+            if (!_sessions.TryGetValue(sessionId, out var session))
+                return (false, "Session not found.");
+
+            var p = session.Participants.FirstOrDefault(x => x.DiscordId == userId);
+            if (p == null) return (false, "You are not in this run.");
+            if (p.CheckpointDone) return (false, "You have already made your choice.");
+            if (index < 0 || index >= p.Debuffs.Count) return (false, "Invalid choice.");
+
+            var debuff = p.Debuffs[index];
+            var def = TowerDebuffPool.Get(debuff.Type);
+            debuff.Stacks--;
+            if (debuff.Stacks <= 0) p.Debuffs.RemoveAt(index);
+
+            p.CheckpointDone = true;
+            string stackMsg = debuff.Stacks > 0 ? $" (reduced to x{debuff.Stacks})" : " (fully cleansed)";
+            await TryResumeIfAllDoneAsync(session);
+            return (true, $"🗑️ **{def.Emoji} {def.Name}**{stackMsg}.");
+        }
+
+        public MessageComponent BuildPreBossDebuffPickComponents(string sessionId, ulong playerId, List<TowerDebuff> debuffs)
+        {
+            var builder = new ComponentBuilder();
+            for (int i = 0; i < debuffs.Count; i++)
+            {
+                var def = TowerDebuffPool.Get(debuffs[i].Type);
+                builder.WithButton($"{def.Emoji} {def.Name} (x{debuffs[i].Stacks})", $"tower_preboss_rm:{sessionId}:{playerId}:{i}", ButtonStyle.Danger, row: 0);
+            }
+            return builder.Build();
+        }
+
+        // =========================
         // CHECKPOINT
         // =========================
         private async Task PostCheckpointAsync(TowerSession session, IThreadChannel thread)
@@ -1030,10 +1153,18 @@ namespace Hogs.RPG.Services.TowerServices
         {
             if (!session.Participants.All(p => p.CheckpointDone)) return;
 
+            var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
+
+            if (session.Status == TowerStatus.PreBoss)
+            {
+                if (thread != null && session.ActiveBoss != null)
+                    await StartBossFightAsync(session, session.ActiveBoss, thread);
+                return;
+            }
+
             session.Status = TowerStatus.Running;
             session.NextFloorAt = DateTime.UtcNow.AddSeconds(FloorIntervalSeconds);
 
-            var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
             if (thread != null)
             {
                 await thread.SendMessageAsync(embed: new EmbedBuilder()

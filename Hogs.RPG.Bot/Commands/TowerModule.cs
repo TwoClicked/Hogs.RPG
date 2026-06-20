@@ -419,6 +419,67 @@ public class TowerButtonModule : InteractionModuleBase<SocketInteractionContext>
     }
 
     // =========================
+    // PRE-BOSS CHOICE BUTTONS
+    // =========================
+    [ComponentInteraction("tower_preboss:*:*:*")]
+    public async Task HandlePreBossChoice(string sessionId, string playerIdStr, string choice)
+    {
+        await DeferAsync(ephemeral: true);
+
+        ulong playerId = ulong.Parse(playerIdStr);
+        if (Context.User.Id != playerId)
+        {
+            await FollowupAsync("❌ This button is not for you.", ephemeral: true);
+            return;
+        }
+
+        if (choice == "removedebuff")
+        {
+            var session = _towerService.GetSession(sessionId);
+            var p = session?.Participants.FirstOrDefault(x => x.DiscordId == playerId);
+            if (p != null && p.Debuffs.Count > 1)
+            {
+                var components = _towerService.BuildPreBossDebuffPickComponents(sessionId, playerId, p.Debuffs);
+                var desc = string.Join("\n", p.Debuffs.Select(d =>
+                {
+                    var def = TowerDebuffPool.Get(d.Type);
+                    return $"{def.Emoji} **{def.Name}** (x{d.Stacks})";
+                }));
+                await FollowupAsync(embed: new EmbedBuilder()
+                    .WithTitle("🗑️ Choose a Debuff to Reduce")
+                    .WithDescription(desc)
+                    .WithColor(Color.DarkRed)
+                    .Build(),
+                    components: components,
+                    ephemeral: true);
+                return;
+            }
+        }
+
+        var (success, message) = await _towerService.HandlePreBossChoiceAsync(sessionId, playerId, choice);
+        if (message == "preboss_removedebuff_pick") return;
+        await FollowupAsync(message, ephemeral: true);
+    }
+
+    [ComponentInteraction("tower_preboss_rm:*:*:*")]
+    public async Task HandlePreBossDebuffPick(string sessionId, string playerIdStr, string indexStr)
+    {
+        await DeferAsync(ephemeral: true);
+
+        ulong playerId = ulong.Parse(playerIdStr);
+        int index = int.Parse(indexStr);
+
+        if (Context.User.Id != playerId)
+        {
+            await FollowupAsync("❌ This button is not for you.", ephemeral: true);
+            return;
+        }
+
+        var (success, message) = await _towerService.HandlePreBossDebuffPickAsync(sessionId, playerId, index);
+        await FollowupAsync(message, ephemeral: true);
+    }
+
+    // =========================
     // HELPERS
     // =========================
     private async Task RefreshLobbyMessage(string sessionId)
