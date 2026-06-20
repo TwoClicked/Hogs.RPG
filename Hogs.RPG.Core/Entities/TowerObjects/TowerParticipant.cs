@@ -19,6 +19,7 @@ namespace Hogs.RPG.Core.Entities.TowerObjects
         public List<TowerBuff> Buffs { get; set; } = new();
         public List<TowerDebuff> Debuffs { get; set; } = new();
         public bool HasBeenShackled { get; set; } = false;
+        public int DebuffRemovesRemaining { get; set; } = 5;
     }
 
     public class TowerBuff

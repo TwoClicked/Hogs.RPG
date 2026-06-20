@@ -142,9 +142,6 @@ namespace Hogs.RPG.Services.DungeonServices
             if (session.ToxicAttackReductionTurnsRemaining > 0)
                 playerDamage = (int)(playerDamage * 0.80);
 
-            var (modifiedPlayerDamage, outgoingTriggerText) = petPassiveService.ModifyOutgoingDamage(playerDamage, pet, petDef, session.EnemyHealth, session.EnemyMaxHealth);
-            playerDamage = modifiedPlayerDamage;
-
             var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
 
             // =========================
@@ -166,6 +163,10 @@ namespace Hogs.RPG.Services.DungeonServices
             double enemyHpPercent = (double)session.EnemyHealth / session.EnemyMaxHealth;
             if (enemyHpPercent < 0.50 && relicBonuses.ExecutionerBonusPercent > 0)
                 playerDamage = (int)(playerDamage * (1f + relicBonuses.ExecutionerBonusPercent));
+
+            // Pet passives see the fully-scaled damage so trigger texts match the final number
+            var (modifiedPlayerDamage, outgoingTriggerText) = petPassiveService.ModifyOutgoingDamage(playerDamage, pet, petDef, session.EnemyHealth, session.EnemyMaxHealth);
+            playerDamage = modifiedPlayerDamage;
 
             session.EnemyHealth = Math.Max(0, session.EnemyHealth - playerDamage);
             var text = $"⚔ You deal {playerDamage} damage!\n";
@@ -199,9 +200,6 @@ namespace Hogs.RPG.Services.DungeonServices
             int enemyDamage = (int)(enemyAttack * (100.0 / (100 + session.Defense)));
             enemyDamage = Math.Max(5, enemyDamage);
 
-            var (modifiedEnemyDamage, shieldTriggerText) = petPassiveService.ModifyIncomingDamage(enemyDamage, pet);
-            enemyDamage = modifiedEnemyDamage;
-
             string behaviorText = null;
             if (session.IsBoss)
                 behaviorText = HandleBossBehavior(session, dungeon.Boss, ref enemyDamage);
@@ -211,6 +209,10 @@ namespace Hogs.RPG.Services.DungeonServices
                 enemyDamage = (int)(enemyDamage * 2);
                 behaviorText = string.IsNullOrEmpty(behaviorText) ? "💢 Critical hit!" : behaviorText + "\n💢 Critical hit!";
             }
+
+            // Guardian Shield applies to the final damage so (before → after) always matches what the player takes
+            var (modifiedEnemyDamage, shieldTriggerText) = petPassiveService.ModifyIncomingDamage(enemyDamage, pet);
+            enemyDamage = modifiedEnemyDamage;
 
             session.PlayerHealth = Math.Max(0, session.PlayerHealth - enemyDamage);
             text += $"👹 Enemy hits you for {enemyDamage}!";

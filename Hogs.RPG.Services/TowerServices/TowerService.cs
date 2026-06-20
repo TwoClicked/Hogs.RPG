@@ -421,6 +421,11 @@ namespace Hogs.RPG.Services.TowerServices
                     p.CurrentHp = Math.Max(0, p.CurrentHp - bleedDmg);
                     string stackNote = bleeding.Stacks > 1 ? $" (x{bleeding.Stacks})" : "";
                     log.AppendLine($"🩸 **{p.Username}** bleeds for **{bleedDmg}** HP!{stackNote}");
+                    if (p.CurrentHp <= 0)
+                    {
+                        log.AppendLine($"💀 **{p.Username}** bled out!");
+                        continue; // dead — skip attack and lifesteal
+                    }
                 }
 
                 // Player damage
@@ -700,12 +705,18 @@ namespace Hogs.RPG.Services.TowerServices
                 case "removedebuff":
                     if (p.Debuffs.Count == 0)
                         return (false, "❌ You have no debuffs to remove.");
+                    if (p.DebuffRemovesRemaining <= 0)
+                        return (false, "❌ You have used all 5 Remove Debuff charges for this run.");
                     if (p.Debuffs.Count == 1)
                     {
-                        var removed = TowerDebuffPool.Get(p.Debuffs[0].Type);
-                        p.Debuffs.RemoveAt(0);
+                        var d0 = p.Debuffs[0];
+                        var removed = TowerDebuffPool.Get(d0.Type);
+                        d0.Stacks--;
+                        if (d0.Stacks <= 0) p.Debuffs.RemoveAt(0);
+                        p.DebuffRemovesRemaining--;
+                        string stackMsg0 = d0.Stacks > 0 ? $" (reduced to x{d0.Stacks})" : " (fully cleansed)";
                         p.CheckpointDone = true;
-                        resultMsg = $"🗑️ **{removed.Emoji} {removed.Name}** has been cleansed.";
+                        resultMsg = $"🗑️ **{removed.Emoji} {removed.Name}**{stackMsg0}. Removes left: **{p.DebuffRemovesRemaining}**";
                     }
                     else
                     {
@@ -768,7 +779,7 @@ namespace Hogs.RPG.Services.TowerServices
         {
             var debuff = RollRandomDebuff();
             var debuffDef = TowerDebuffPool.Get(debuff);
-            AddDebuffSafe(p, debuff, debuffDef.DefaultDuration);
+            AddDebuffSafe(p, debuff, debuffDef.DefaultDuration, session.Floor);
 
             int roll = _random.Next(3);
             string reward;
@@ -914,10 +925,10 @@ namespace Hogs.RPG.Services.TowerServices
             TowerDebuffPool.All[_random.Next(TowerDebuffPool.All.Count)].Type;
 
         // Adds a debuff stack. Same type merges into one entry and increments Stacks.
-        private void AddDebuffSafe(TowerParticipant p, TowerDebuffType type, int floorsRemaining)
+        private void AddDebuffSafe(TowerParticipant p, TowerDebuffType type, int floorsRemaining, int currentFloor = 0)
         {
-            // Shackled can only happen once per run
-            if (type == TowerDebuffType.Shackled && p.HasBeenShackled) return;
+            // Shackled: once per run, and only after floor 30
+            if (type == TowerDebuffType.Shackled && (p.HasBeenShackled || currentFloor < 30)) return;
 
             var existing = p.Debuffs.FirstOrDefault(d => d.Type == type);
             if (existing != null)
@@ -1035,12 +1046,14 @@ namespace Hogs.RPG.Services.TowerServices
             {
                 bool shackled = shackledIds?.Contains(p.DiscordId) ?? false;
                 bool hasDebuffs = p.Debuffs.Count > 0;
+                bool canRemoveDebuff = hasDebuffs && p.DebuffRemovesRemaining > 0;
+                string removeLabel = $"🗑️ Remove Debuff ({p.DebuffRemovesRemaining} left)";
 
                 builder.WithButton($"💰 Scavenge ({session.Floor * 10}g)", $"tower_cp:{session.SessionId}:{p.DiscordId}:scavenge", ButtonStyle.Secondary, row: row);
                 builder.WithButton("💚 Rest",         $"tower_cp:{session.SessionId}:{p.DiscordId}:rest",          ButtonStyle.Success,   row: row, disabled: shackled);
                 builder.WithButton("✨ Pick Buff",    $"tower_cp:{session.SessionId}:{p.DiscordId}:buff",          ButtonStyle.Primary,   row: row);
                 builder.WithButton("🎲 Gamble",       $"tower_cp:{session.SessionId}:{p.DiscordId}:gamble",        ButtonStyle.Danger,    row: row);
-                builder.WithButton("🗑️ Remove Debuff", $"tower_cp:{session.SessionId}:{p.DiscordId}:removedebuff", ButtonStyle.Secondary, row: row, disabled: !hasDebuffs);
+                builder.WithButton(removeLabel,        $"tower_cp:{session.SessionId}:{p.DiscordId}:removedebuff", ButtonStyle.Secondary, row: row, disabled: !canRemoveDebuff);
             }
 
             return builder.Build();
@@ -1067,12 +1080,19 @@ namespace Hogs.RPG.Services.TowerServices
             if (p.CheckpointDone) return (false, "You have already made your checkpoint choice.");
             if (index < 0 || index >= p.Debuffs.Count) return (false, "Invalid choice.");
 
-            var def = TowerDebuffPool.Get(p.Debuffs[index].Type);
-            p.Debuffs.RemoveAt(index);
+            var debuff = p.Debuffs[index];
+            var def = TowerDebuffPool.Get(debuff.Type);
+
+            debuff.Stacks--;
+            if (debuff.Stacks <= 0)
+                p.Debuffs.RemoveAt(index);
+
+            p.DebuffRemovesRemaining--;
             p.CheckpointDone = true;
 
+            string stackMsg = debuff.Stacks > 0 ? $" (reduced to x{debuff.Stacks})" : " (fully cleansed)";
             await TryResumeIfAllDoneAsync(session);
-            return (true, $"🗑️ **{def.Emoji} {def.Name}** has been cleansed.");
+            return (true, $"🗑️ **{def.Emoji} {def.Name}**{stackMsg}. Removes left: **{p.DebuffRemovesRemaining}**");
         }
 
         public MessageComponent BuildBuffPickComponents(string sessionId, ulong playerId, List<TowerBuffType> choices)

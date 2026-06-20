@@ -403,6 +403,20 @@ namespace Hogs.RPG.Services.RaidServices
                 if (bossHpPercent < 0.50 && relicBonuses.ExecutionerBonusPercent > 0)
                     damage = (int)(damage * (1f + relicBonuses.ExecutionerBonusPercent));
 
+                // Apply focus + reckless BEFORE pet passives so trigger texts (DoubleStrike, Executioner) show final numbers
+                bool isReckless = dps.PendingAction == "reckless";
+                int focusStacksUsed = dps.FocusStacks;
+                if (isReckless)
+                {
+                    damage *= 2;
+                    if (focusStacksUsed > 0) damage = (int)(damage * (1.5f * focusStacksUsed));
+                }
+                else if (focusStacksUsed > 0)
+                {
+                    damage = (int)(damage * (1.5f * focusStacksUsed));
+                }
+                dps.FocusStacks = 0;
+
                 var dpsPet = await _petService.GetEquippedPetAsync(dps.DiscordId);
                 PetDefinition dpsPetDef = null;
                 if (dpsPet != null)
@@ -411,10 +425,8 @@ namespace Hogs.RPG.Services.RaidServices
                 string petTriggerText;
                 (damage, petTriggerText) = _petPassiveService.ModifyOutgoingDamage(damage, dpsPet, dpsPetDef, session.BossCurrentHp, session.BossMaxHp);
 
-                if (dps.PendingAction == "reckless")
+                if (isReckless)
                 {
-                    damage = damage * 2;
-                    if (dps.FocusStacks > 0) damage = (int)(damage * (1.5f * dps.FocusStacks));
                     int recoilDamage = (int)(damage * 0.25f);
                     dps.CurrentHp = Math.Max(0, dps.CurrentHp - recoilDamage);
                     session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - damage);
@@ -427,16 +439,14 @@ namespace Hogs.RPG.Services.RaidServices
                         : relicHeal > 0 ? $" 🩸 Life steal healed for **{relicHeal}**."
                         : petLifesteal > 0 ? $" 🩸 Pet lifesteal: **+{petLifesteal} HP**."
                         : "";
-                    result.DpsText = dps.FocusStacks > 0
-                        ? $"💀 Reckless Strike! ({dps.FocusStacks}x Focus) dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self.{lsSuffix}"
+                    result.DpsText = focusStacksUsed > 0
+                        ? $"💀 Reckless Strike! ({focusStacksUsed}x Focus) dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self.{lsSuffix}"
                         : $"💀 Reckless Strike dealt **{damage}** damage! 🩸 Recoil: **{recoilDamage}** to self.{lsSuffix}";
                     if (!string.IsNullOrEmpty(petTriggerText)) result.DpsText += "\n" + petTriggerText;
-                    dps.FocusStacks = 0;
                     dps.RecklessCooldownRoundsRemaining = 5;
                 }
                 else
                 {
-                    if (dps.FocusStacks > 0) { damage = (int)(damage * (1.5f * dps.FocusStacks)); dps.FocusStacks = 0; }
                     session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - damage);
                     int petLifesteal = _petPassiveService.ApplyOnHitEffects(damage, dpsPlayer, dpsPet);
                     if (petLifesteal > 0) dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + petLifesteal);

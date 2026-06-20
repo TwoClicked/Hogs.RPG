@@ -354,6 +354,11 @@ public class TowerButtonModule : InteractionModuleBase<SocketInteractionContext>
         {
             var session2 = _towerService.GetSession(sessionId);
             var p2 = session2?.Participants.FirstOrDefault(x => x.DiscordId == playerId);
+            if (p2 != null && p2.DebuffRemovesRemaining <= 0)
+            {
+                await FollowupAsync("❌ You have used all 5 Remove Debuff charges for this run.", ephemeral: true);
+                return;
+            }
             if (p2 != null && p2.Debuffs.Count > 1)
             {
                 var components2 = _towerService.BuildDebuffPickComponents(sessionId, playerId, p2.Debuffs);
