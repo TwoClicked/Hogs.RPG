@@ -2,7 +2,7 @@ namespace Hogs.RPG.Core.Enums
 {
     public enum TowerMode { Solo, Duo }
 
-    public enum TowerStatus { Lobby, Running, Checkpoint, PreBoss, Dead }
+    public enum TowerStatus { Lobby, Running, Checkpoint, PreBoss, StartPick, Dead }
 
     public enum TowerFloorEventType
     {
@@ -11,7 +11,8 @@ namespace Hogs.RPG.Core.Enums
         TreasureRoom,
         CursedFloor,
         RestSite,
-        Boss
+        Boss,
+        Merchant
     }
 
     public enum TowerBuffType

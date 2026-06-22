@@ -233,8 +233,7 @@ namespace Hogs.RPG.Services.TowerServices
             );
 
             session.ThreadId = thread.Id;
-            session.Status = TowerStatus.Running;
-            session.NextFloorAt = DateTime.UtcNow.AddSeconds(3);
+            session.Status = TowerStatus.StartPick;
 
             // Mark daily cooldowns
             foreach (var p in session.Participants)
@@ -249,6 +248,7 @@ namespace Hogs.RPG.Services.TowerServices
             }
 
             await thread.SendMessageAsync(embed: BuildStartEmbed(session));
+            await PostStartBuffChoiceAsync(session, thread);
 
             return (true, "");
         }
@@ -293,6 +293,8 @@ namespace Hogs.RPG.Services.TowerServices
                 eventType = TowerFloorEventType.Boss;
             else if (isElite)
                 eventType = TowerFloorEventType.Elite;
+            else if (session.Floor > 30 && _random.NextDouble() < 0.10)
+                eventType = TowerFloorEventType.Merchant;
             else
                 eventType = RollEventType();
 
@@ -312,6 +314,7 @@ namespace Hogs.RPG.Services.TowerServices
                 TowerFloorEventType.TreasureRoom => ResolveTreasureRoom(session),
                 TowerFloorEventType.CursedFloor  => ResolveCursedFloor(session),
                 TowerFloorEventType.RestSite     => ResolveRestSite(session),
+                TowerFloorEventType.Merchant     => ResolveMerchantFloor(session),
                 _                                => ResolveCombat(session, false, false)
             };
 
@@ -386,6 +389,9 @@ namespace Hogs.RPG.Services.TowerServices
             }
 
             await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType));
+
+            if (eventType == TowerFloorEventType.Merchant)
+                await PostMerchantShopAsync(session, thread);
 
             if (session.Floor % 10 == 0)
             {
@@ -873,6 +879,149 @@ namespace Hogs.RPG.Services.TowerServices
             return log.ToString().TrimEnd();
         }
 
+        private string ResolveMerchantFloor(TowerSession session)
+        {
+            var log = new System.Text.StringBuilder();
+            log.AppendLine("🛒 **A traveling merchant emerges from the shadows!**");
+            log.AppendLine("\"Gold for gear, climber? I don't ask where it came from.\"");
+            return log.ToString().TrimEnd();
+        }
+
+        // =========================
+        // MERCHANT SHOP
+        // =========================
+        private static readonly Dictionary<string, int> ShopPrices = BuildShopPrices();
+
+        private static Dictionary<string, int> BuildShopPrices()
+        {
+            var prices = new Dictionary<string, int>
+            {
+                ["health"] = 100,
+                ["attack"] = 100,
+                ["defense"] = 100,
+                ["bandage"] = 300,
+                ["zoomerjuice"] = 250,
+            };
+            foreach (var buffDef in TowerBuffPool.All)
+                prices[$"buff_{buffDef.Type}"] = 250;
+            return prices;
+        }
+
+        private async Task PostMerchantShopAsync(TowerSession session, IThreadChannel thread)
+        {
+            foreach (var p in session.Participants)
+            {
+                var components = BuildMerchantComponents(session.SessionId, p);
+                string mention = session.Mode == TowerMode.Duo ? $"<@{p.DiscordId}> — " : "";
+                await thread.SendMessageAsync(
+                    $"{mention}🛒 The merchant opens their cloak. You have **{p.AccumulatedGold}** gold to spend. Each item can only be bought once.",
+                    components: components);
+            }
+        }
+
+        public MessageComponent BuildMerchantComponents(string sessionId, TowerParticipant p)
+        {
+            var builder = new ComponentBuilder();
+            int row = 0, col = 0;
+
+            void AddItem(string key, string label, bool unlocked)
+            {
+                int cost = ShopPrices[key];
+                bool purchased = p.PurchasedShopItems.Contains(key);
+                bool canAfford = p.AccumulatedGold >= cost;
+
+                builder.WithButton(
+                    purchased ? $"✅ {label}" : $"{label} ({cost}g)",
+                    $"tower_shop:{sessionId}:{p.DiscordId}:{key}",
+                    purchased ? ButtonStyle.Success : ButtonStyle.Secondary,
+                    row: row,
+                    disabled: purchased || !canAfford || !unlocked);
+
+                col++;
+                if (col >= 5) { col = 0; row++; }
+            }
+
+            bool hasBleeding = p.Debuffs.Any(d => d.Type == TowerDebuffType.Bleeding);
+            bool hasWeakened = p.Debuffs.Any(d => d.Type == TowerDebuffType.Weakened);
+
+            AddItem("health", "❤️ Increase Health (+100)", true);
+            AddItem("attack", "⚔️ Increase Attack (+20)", true);
+            AddItem("defense", "🛡️ Increase Defense (+20)", true);
+            AddItem("bandage", "🩹 Bandage", hasBleeding);
+            AddItem("zoomerjuice", "🧃 Zoomer Juice", hasWeakened);
+
+            foreach (var buffDef in TowerBuffPool.All)
+                AddItem($"buff_{buffDef.Type}", $"{buffDef.Emoji} {buffDef.Name}", true);
+
+            return builder.Build();
+        }
+
+        public async Task<(bool success, string message)> HandleMerchantPurchaseAsync(string sessionId, ulong userId, string itemKey)
+        {
+            if (!_sessions.TryGetValue(sessionId, out var session))
+                return (false, "Session not found.");
+
+            var p = session.Participants.FirstOrDefault(x => x.DiscordId == userId);
+            if (p == null) return (false, "You are not in this run.");
+
+            if (!ShopPrices.TryGetValue(itemKey, out int cost))
+                return (false, "Unknown item.");
+
+            if (p.PurchasedShopItems.Contains(itemKey))
+                return (false, "❌ You've already bought that.");
+
+            if (p.AccumulatedGold < cost)
+                return (false, $"❌ You need **{cost}** gold for that.");
+
+            string resultMsg;
+
+            if (itemKey == "bandage")
+            {
+                if (!p.Debuffs.Any(d => d.Type == TowerDebuffType.Bleeding))
+                    return (false, "❌ You aren't bleeding.");
+                p.Debuffs.RemoveAll(d => d.Type == TowerDebuffType.Bleeding);
+                resultMsg = "🩹 The bleeding stops completely.";
+            }
+            else if (itemKey == "zoomerjuice")
+            {
+                if (!p.Debuffs.Any(d => d.Type == TowerDebuffType.Weakened))
+                    return (false, "❌ You aren't weakened.");
+                p.Debuffs.RemoveAll(d => d.Type == TowerDebuffType.Weakened);
+                resultMsg = "🧃 You feel revitalized.";
+            }
+            else if (itemKey == "health")
+            {
+                p.MaxHp += 100;
+                p.CurrentHp += 100;
+                resultMsg = "❤️ You feel sturdier. **+100 Max HP**";
+            }
+            else if (itemKey == "attack")
+            {
+                p.BaseAttack += 20;
+                resultMsg = "⚔️ Your weapon feels sharper. **+20 Attack**";
+            }
+            else if (itemKey == "defense")
+            {
+                p.BaseDefense += 20;
+                resultMsg = "🛡️ Your armor feels tougher. **+20 Defense**";
+            }
+            else if (itemKey.StartsWith("buff_") && Enum.TryParse<TowerBuffType>(itemKey.Substring(5), out var buffType))
+            {
+                AddBuff(p, buffType);
+                var def = TowerBuffPool.Get(buffType);
+                resultMsg = $"✨ You purchase **{def.Emoji} {def.Name}**! — {def.Description}";
+            }
+            else
+            {
+                return (false, "Unknown item.");
+            }
+
+            p.AccumulatedGold -= cost;
+            p.PurchasedShopItems.Add(itemKey);
+
+            return (true, $"{resultMsg}\n💰 Gold remaining: **{p.AccumulatedGold}**");
+        }
+
         // =========================
         // PRE-BOSS CHOICE
         // =========================
@@ -1143,7 +1292,7 @@ namespace Hogs.RPG.Services.TowerServices
 
             var p = session.Participants.FirstOrDefault(x => x.DiscordId == userId);
             if (p == null) return (false, "You are not in this run.");
-            if (p.CheckpointDone) return (false, "You have already made your checkpoint choice.");
+            if (p.CheckpointDone) return (false, "You have already made your choice.");
             if (p.PendingBuffChoices == null || buffIndex >= p.PendingBuffChoices.Count)
                 return (false, "Invalid buff choice.");
 
@@ -1169,6 +1318,22 @@ namespace Hogs.RPG.Services.TowerServices
                 session.Status = TowerStatus.Running;
                 if (thread != null && session.ActiveBoss != null)
                     await StartBossFightAsync(session, session.ActiveBoss, thread);
+                return;
+            }
+
+            if (session.Status == TowerStatus.StartPick)
+            {
+                session.Status = TowerStatus.Running;
+                session.NextFloorAt = DateTime.UtcNow.AddSeconds(3);
+
+                if (thread != null)
+                {
+                    await thread.SendMessageAsync(embed: new EmbedBuilder()
+                        .WithTitle("▶️ The climb begins!")
+                        .WithDescription("Floor 1 in a few seconds...")
+                        .WithColor(Color.DarkGrey)
+                        .Build());
+                }
                 return;
             }
 
@@ -1404,9 +1569,38 @@ namespace Hogs.RPG.Services.TowerServices
             string names = string.Join(" & ", session.Participants.Select(p => p.Username));
             return new EmbedBuilder()
                 .WithTitle($"🗼 Tower of Doom — {session.Mode} Run")
-                .WithDescription($"**{names}** begin their ascent.\n\nThe first floor awaits in a few seconds...")
+                .WithDescription($"**{names}** begin their ascent.\n\nChoose your starting buff before the climb begins...")
                 .WithColor(Color.DarkRed)
                 .Build();
+        }
+
+        private async Task PostStartBuffChoiceAsync(TowerSession session, IThreadChannel thread)
+        {
+            foreach (var p in session.Participants)
+            {
+                p.CheckpointDone = false;
+                p.PendingBuffChoices = RollThreeBuffs();
+            }
+
+            foreach (var p in session.Participants)
+            {
+                var components = BuildBuffPickComponents(session.SessionId, p.DiscordId, p.PendingBuffChoices!);
+                var desc = string.Join("\n", p.PendingBuffChoices!.Select(b =>
+                {
+                    var def = TowerBuffPool.Get(b);
+                    return $"{def.Emoji} **{def.Name}** — {def.Description}";
+                }));
+
+                string mention = session.Mode == TowerMode.Duo ? $"<@{p.DiscordId}> — " : "";
+                await thread.SendMessageAsync(
+                    text: $"{mention}✨ Choose your starting buff:",
+                    embed: new EmbedBuilder()
+                        .WithTitle("✨ Choose a Starting Buff")
+                        .WithDescription(desc)
+                        .WithColor(Color.Blue)
+                        .Build(),
+                    components: components);
+            }
         }
 
         private Embed BuildFloorEmbed(TowerSession session, string combatLog, TowerFloorEventType eventType, TowerBossDefinition? bossDef = null)
@@ -1418,6 +1612,7 @@ namespace Hogs.RPG.Services.TowerServices
                 TowerFloorEventType.TreasureRoom => "🎁",
                 TowerFloorEventType.CursedFloor  => "☠️",
                 TowerFloorEventType.RestSite     => "💚",
+                TowerFloorEventType.Merchant     => "🛒",
                 _                               => "⚔️"
             };
 

@@ -419,6 +419,47 @@ public class TowerButtonModule : InteractionModuleBase<SocketInteractionContext>
     }
 
     // =========================
+    // MERCHANT SHOP BUTTONS
+    // =========================
+    [ComponentInteraction("tower_shop:*:*:*")]
+    public async Task HandleMerchantPurchase(string sessionId, string playerIdStr, string itemKey)
+    {
+        ulong playerId = ulong.Parse(playerIdStr);
+
+        if (Context.User.Id != playerId)
+        {
+            await RespondAsync("❌ This shop is not for you.", ephemeral: true);
+            return;
+        }
+
+        if (Context.Interaction is not SocketMessageComponent component)
+            return;
+
+        var (success, message) = await _towerService.HandleMerchantPurchaseAsync(sessionId, playerId, itemKey);
+
+        if (!success)
+        {
+            await RespondAsync(message, ephemeral: true);
+            return;
+        }
+
+        var session = _towerService.GetSession(sessionId);
+        var p = session?.Participants.FirstOrDefault(x => x.DiscordId == playerId);
+
+        if (p != null)
+        {
+            var refreshedComponents = _towerService.BuildMerchantComponents(sessionId, p);
+            await component.UpdateAsync(msg => msg.Components = refreshedComponents);
+        }
+        else
+        {
+            await component.DeferAsync();
+        }
+
+        await component.FollowupAsync(message, ephemeral: true);
+    }
+
+    // =========================
     // PRE-BOSS CHOICE BUTTONS
     // =========================
     [ComponentInteraction("tower_preboss:*:*:*")]
