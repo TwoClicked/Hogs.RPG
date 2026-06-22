@@ -67,6 +67,19 @@ namespace Hogs.RPG.Data.Repositories
             return players;
         }
 
+        public async Task<List<Player>> GetTopGoldSpentAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.TotalGoldSpent)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players)
+                p.DeserializeBuffs();
+
+            return players;
+        }
+
         public async Task<List<Player>> GetTopXPAsync(int count)
         {
             var players = await _context.Players
@@ -168,6 +181,13 @@ namespace Hogs.RPG.Data.Repositories
             var player = await GetByDiscordIdAsync(discordId);
             if (player == null) return 0;
             return await _context.Players.CountAsync(p => p.Gold > player.Gold) + 1;
+        }
+
+        public async Task<int> GetRankByGoldSpentAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p => p.TotalGoldSpent > player.TotalGoldSpent) + 1;
         }
 
         public async Task<int> GetRankByLevelAsync(ulong discordId)

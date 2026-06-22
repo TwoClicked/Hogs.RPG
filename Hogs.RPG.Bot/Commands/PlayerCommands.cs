@@ -344,7 +344,7 @@ namespace Hogs.RPG.Bot.Commands
                 // Row 4
                 .AddField("⚒️ Smithing", $"Lv. {player.SmithingLevel}\n{Rank(ranks.SmithingLevel)}", true)
                 .AddField("🏆 Achievements", $"{player.AchievementCount}\n{Rank(ranks.AchievementCount)}", true)
-                .AddField("\u200b", "\u200b", true);
+                .AddField("\ud83d\udcb8 Gold Spent", $"{player.TotalGoldSpent:N0}\n{Rank(ranks.GoldSpent)}", true);
 
             await ModifyOriginalResponseAsync(msg =>
             {

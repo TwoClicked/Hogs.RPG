@@ -95,6 +95,7 @@ public class LeaderboardUpdater
         var achievements = await service.GetTopAchievements(5);
         var soloTower = await service.GetTopSoloTowerFloor(5);
         var duoTower = await service.GetTopDuoTowerFloor(5);
+        var goldSpent = await service.GetTopGoldSpent(5);
 
 
         List<Hogs.RPG.Core.Entities.PlayerObjects.Player> alchemist = await service.GetTopAlchemistLevel(5);
@@ -128,6 +129,7 @@ public class LeaderboardUpdater
         // Row 5
         embed.AddField("🗼 Solo Tower", FormatTowerFloor(soloTower, solo: true), true);
         embed.AddField("🗼 Duo Tower", FormatTowerFloor(duoTower, solo: false), true);
+        embed.AddField("💸 Gold Spent", FormatGoldSpent(goldSpent), true);
 
         _mainMsgId = await SendOrUpdate(channel, embed.Build(), _mainMsgId);
     }
@@ -164,6 +166,13 @@ public class LeaderboardUpdater
         if (!players.Any()) return "*No data yet*";
         return string.Join("\n", players.Select((p, i) =>
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.Gold:N0}**"));
+    }
+
+    private string FormatGoldSpent(List<Player> players)
+    {
+        if (!players.Any()) return "*No data yet*";
+        return string.Join("\n", players.Select((p, i) =>
+            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.TotalGoldSpent:N0}**"));
     }
 
     private string FormatXP(List<Player> players)

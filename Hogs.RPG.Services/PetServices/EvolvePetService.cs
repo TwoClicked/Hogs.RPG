@@ -1,6 +1,7 @@
 ﻿using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.AchievementServices;
 
 namespace Hogs.RPG.Services.PetServices
 {
@@ -8,16 +9,20 @@ namespace Hogs.RPG.Services.PetServices
     {
         private readonly PetRepository _repo;
         private readonly PetService _petService;
+        private readonly PlayerRepository _playerRepository;
+        private readonly AchievementService _achievementService;
 
         private const string AttackPetId = "armored_capybara";
         private const string DefensePetId = "el_tata_de_frog";
         private const string HealthPetId = "ice_wolf";
         private const string Tier3PetId = "capytara";
 
-        public EvolvePetService(PetRepository repo, PetService petService)
+        public EvolvePetService(PetRepository repo, PetService petService, PlayerRepository playerRepository, AchievementService achievementService)
         {
             _repo = repo;
             _petService = petService;
+            _playerRepository = playerRepository;
+            _achievementService = achievementService;
         }
 
         // =========================
@@ -56,6 +61,14 @@ namespace Hogs.RPG.Services.PetServices
 
             if (!PetRegistry.All.TryGetValue(Tier3PetId, out var capytara))
                 return (false, "❌ Evolution failed — Tier 3 pet not found in registry.");
+
+            var player = await _playerRepository.GetByDiscordIdAsync(userId);
+            if (player != null)
+            {
+                player.CapyTaraEvolved = true;
+                await _playerRepository.UpdatePlayerAsync(player);
+                await _achievementService.CheckAndAwardAsync(userId);
+            }
 
             return (true,
                 $"✨ **Evolution Complete!**\n\n" +

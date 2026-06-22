@@ -28,6 +28,7 @@ namespace Hogs.RPG.Services
             int AchievementCount,
             int SoloTowerFloor,
             int DuoTowerFloor,
+            int GoldSpent,
             int TotalPlayers
         );
 
@@ -63,6 +64,14 @@ namespace Hogs.RPG.Services
         public async Task<List<Player>> GetTopGold(int count = 10)
         {
             return await _playerRepository.GetTopGoldAsync(count);
+        }
+
+        // =========================
+        // 💸 GOLD SPENT
+        // =========================
+        public async Task<List<Player>> GetTopGoldSpent(int count = 10)
+        {
+            return await _playerRepository.GetTopGoldSpentAsync(count);
         }
 
         // =========================
@@ -180,6 +189,7 @@ namespace Hogs.RPG.Services
             var achievementRank = await _achievementRepository.GetRankAsync(discordId);
             var soloTowerRank = await _playerRepository.GetRankBySoloTowerFloorAsync(discordId);
             var duoTowerRank = await _playerRepository.GetRankByDuoTowerFloorAsync(discordId);
+            var goldSpentRank = await _playerRepository.GetRankByGoldSpentAsync(discordId);
 
             // Gear score rank — compute from buffered list (same as top-5 display)
             var allForGear = await _playerRepository.GetTopForGearScoreAsync(1000);
@@ -199,7 +209,7 @@ namespace Hogs.RPG.Services
             var myPet = petScores.FirstOrDefault(x => x.DiscordId == discordId);
             int petRank = myPet == default ? total : petScores.IndexOf(myPet) + 1;
 
-            return new PlayerRanks(goldRank, levelRank, gearRank, dungeonsRank, raidsRank, bossDmgRank, petRank, deathsRank, trailsRank, smithingRank, alchemistRank, achievementRank, soloTowerRank, duoTowerRank, total);
+            return new PlayerRanks(goldRank, levelRank, gearRank, dungeonsRank, raidsRank, bossDmgRank, petRank, deathsRank, trailsRank, smithingRank, alchemistRank, achievementRank, soloTowerRank, duoTowerRank, goldSpentRank, total);
         }
     }
 }
