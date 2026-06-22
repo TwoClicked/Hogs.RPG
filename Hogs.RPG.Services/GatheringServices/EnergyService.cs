@@ -47,18 +47,19 @@ namespace Hogs.RPG.Services.GatheringServices
             var now = DateTimeOffset.UtcNow;
             var minutesPassed = (now - lastUpdate).TotalMinutes;
 
-            int regenRate = AchievementMilestones.GetBonus(player.AchievementCount).RegenRate;
-            int energyRecovered = (int)(minutesPassed / RegenMinutes) * regenRate;
-
-            if (energyRecovered <= 0)
+            int intervalsPassed = (int)(minutesPassed / RegenMinutes);
+            if (intervalsPassed <= 0)
                 return;
+
+            int regenRate = AchievementMilestones.GetBonus(player.AchievementCount).RegenRate;
+            int energyRecovered = intervalsPassed * regenRate;
 
             int max = GetMaxEnergy(player);
 
             player.Energy = Math.Min(max, player.Energy + energyRecovered);
 
             player.LastEnergyUpdate = lastUpdate
-                .AddMinutes(energyRecovered * RegenMinutes)
+                .AddMinutes(intervalsPassed * RegenMinutes)
                 .ToString("o");
         }
 

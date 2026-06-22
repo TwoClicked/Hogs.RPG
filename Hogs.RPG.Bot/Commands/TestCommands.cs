@@ -163,6 +163,32 @@ namespace Hogs.RPG.Bot.Commands
             await FollowupAsync($"✅ Backfilled pet data for **{updated}** players.", ephemeral: true);
         }
 
+        [SlashCommand("backfill-capytara", "Award the Evolution achievement to existing CapyTara owners (Admin Only)")]
+        public async Task BackfillCapytara()
+        {
+            if (!await EnsureAdminAsync()) return;
+
+            await DeferAsync(ephemeral: true);
+
+            var players = await _playerRepository.GetAllPlayersAsync();
+            int fixedCount = 0;
+
+            foreach (var player in players)
+            {
+                if (player.CapyTaraEvolved) continue;
+
+                var pets = await _petService.GetPetsAsync(player.DiscordId);
+                if (!pets.Any(p => p.PetId == "capytara")) continue;
+
+                player.CapyTaraEvolved = true;
+                await _playerRepository.UpdatePlayerAsync(player);
+                await _achievementService.CheckAndAwardAsync(player.DiscordId);
+                fixedCount++;
+            }
+
+            await FollowupAsync($"✅ Backfilled CapyTara evolution flag for **{fixedCount}** players.", ephemeral: true);
+        }
+
         // =========================
         // GIVE ITEM
         // =========================
