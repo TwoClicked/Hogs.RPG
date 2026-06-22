@@ -189,6 +189,31 @@ namespace Hogs.RPG.Bot.Commands
             await FollowupAsync($"✅ Backfilled CapyTara evolution flag for **{fixedCount}** players.", ephemeral: true);
         }
 
+        [SlashCommand("fix-energy-drift", "Reset energy timestamps stuck in the future from the old regen bug (Admin Only)")]
+        public async Task FixEnergyDrift()
+        {
+            if (!await EnsureAdminAsync()) return;
+
+            await DeferAsync(ephemeral: true);
+
+            var players = await _playerRepository.GetAllPlayersAsync();
+            int fixedCount = 0;
+            var now = DateTimeOffset.UtcNow;
+
+            foreach (var player in players)
+            {
+                if (string.IsNullOrEmpty(player.LastEnergyUpdate)) continue;
+                if (!DateTimeOffset.TryParse(player.LastEnergyUpdate, out var lastUpdate)) continue;
+                if (lastUpdate <= now) continue;
+
+                player.LastEnergyUpdate = now.ToString("o");
+                await _playerRepository.UpdatePlayerAsync(player);
+                fixedCount++;
+            }
+
+            await FollowupAsync($"✅ Reset future-drifted energy timestamps for **{fixedCount}** players.", ephemeral: true);
+        }
+
         // =========================
         // GIVE ITEM
         // =========================
