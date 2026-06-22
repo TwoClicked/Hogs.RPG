@@ -8,6 +8,10 @@ namespace Hogs.RPG.Core.GameData.Tower
         public string Name { get; set; } = "";
         public string Emoji { get; set; } = "";
         public string Description { get; set; } = "";
+
+        // Hard ceiling on stacks for buffs whose formula clamps at a fixed percentage.
+        // Buffs with no real ceiling (e.g. Bloodthirst, Executioner) use a high default.
+        public int MaxStacks { get; set; } = 99;
     }
 
     public static class TowerBuffPool
@@ -16,11 +20,11 @@ namespace Hogs.RPG.Core.GameData.Tower
         {
             new() { Type = TowerBuffType.Bloodthirst,  Emoji = "🩸", Name = "Bloodthirst",   Description = "Lifesteal 10% of damage dealt per stack" },
             new() { Type = TowerBuffType.Executioner,  Emoji = "💀", Name = "Executioner",   Description = "+25% damage on elite and boss floors per stack" },
-            new() { Type = TowerBuffType.DoubleStrike, Emoji = "⚡", Name = "Double Strike", Description = "20% chance to hit twice (stacks add 10% each)" },
-            new() { Type = TowerBuffType.IronSkin,     Emoji = "🛡️", Name = "Iron Skin",     Description = "Reduce incoming damage by 15% per stack" },
+            new() { Type = TowerBuffType.DoubleStrike, Emoji = "⚡", Name = "Double Strike", Description = "20% chance to hit twice (stacks add 10% each)", MaxStacks = 3 },
+            new() { Type = TowerBuffType.IronSkin,     Emoji = "🛡️", Name = "Iron Skin",     Description = "Reduce incoming damage by 15% per stack", MaxStacks = 4 },
             new() { Type = TowerBuffType.Thorns,       Emoji = "🌵", Name = "Thorns",        Description = "Reflect 15% of damage taken back per stack" },
             new() { Type = TowerBuffType.Precision,    Emoji = "🎯", Name = "Precision",     Description = "Ignore 33% of enemy defense per stack" },
-            new() { Type = TowerBuffType.Evasion,      Emoji = "💨", Name = "Evasion",       Description = "15% dodge chance per stack (max 45%)" },
+            new() { Type = TowerBuffType.Evasion,      Emoji = "💨", Name = "Evasion",       Description = "15% dodge chance per stack (max 45%)", MaxStacks = 3 },
             new() { Type = TowerBuffType.Frenzy,       Emoji = "🔥", Name = "Frenzy",        Description = "+5% damage per consecutive floor cleared without taking a hit" },
         };
 

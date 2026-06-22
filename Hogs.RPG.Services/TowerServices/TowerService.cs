@@ -271,11 +271,14 @@ namespace Hogs.RPG.Services.TowerServices
 
                 p.Debuffs.RemoveAll(d => d.FloorsRemaining == 0);
 
-                // 5% chance each floor to shake off a random debuff
+                // 5% chance each floor to shake off one stack of a random debuff
                 if (p.Debuffs.Count > 0 && _random.NextDouble() < 0.05)
                 {
                     int luckyIndex = _random.Next(p.Debuffs.Count);
-                    p.Debuffs.RemoveAt(luckyIndex);
+                    var luckyDebuff = p.Debuffs[luckyIndex];
+                    luckyDebuff.Stacks--;
+                    if (luckyDebuff.Stacks <= 0)
+                        p.Debuffs.RemoveAt(luckyIndex);
                 }
 
                 foreach (var buff in p.Buffs)
@@ -333,12 +336,13 @@ namespace Hogs.RPG.Services.TowerServices
 
                     foreach (var fallen in dead)
                     {
-                        // Merge buffs
+                        // Merge buffs — respect each buff's own stack cap, not a flat number
                         foreach (var buff in fallen.Buffs)
                         {
+                            int cap = TowerBuffPool.Get(buff.Type).MaxStacks;
                             var existing = alive.Buffs.FirstOrDefault(b => b.Type == buff.Type);
-                            if (existing != null) existing.Stacks = Math.Min(existing.Stacks + buff.Stacks, 5);
-                            else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = buff.Stacks });
+                            if (existing != null) existing.Stacks = Math.Min(existing.Stacks + buff.Stacks, cap);
+                            else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = Math.Min(buff.Stacks, cap) });
                         }
                         // Merge debuffs (avoid duplicates of same type)
                         foreach (var debuff in fallen.Debuffs)
@@ -575,9 +579,10 @@ namespace Hogs.RPG.Services.TowerServices
                     {
                         foreach (var buff in fallen.Buffs)
                         {
+                            int cap = TowerBuffPool.Get(buff.Type).MaxStacks;
                             var existing = alive.Buffs.FirstOrDefault(b => b.Type == buff.Type);
-                            if (existing != null) existing.Stacks = Math.Min(existing.Stacks + buff.Stacks, 5);
-                            else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = Math.Min(buff.Stacks, 5) });
+                            if (existing != null) existing.Stacks = Math.Min(existing.Stacks + buff.Stacks, cap);
+                            else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = Math.Min(buff.Stacks, cap) });
                         }
                         foreach (var debuff in fallen.Debuffs)
                             AddDebuffSafe(alive, debuff.Type, debuff.FloorsRemaining);
