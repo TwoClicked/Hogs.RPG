@@ -141,7 +141,7 @@ namespace Hogs.RPG.Core.GameData.Achievements
             new() { Id = "level_20",    Name = "Warrior",         Icon = "📈", Category = "Progression", Description = "Reach player level 20.",       Condition = ctx => ctx.Player.Level >= 20 },
             new() { Id = "level_30",    Name = "Elite Warrior",   Icon = "📈", Category = "Progression", Description = "Reach player level 30.",       Condition = ctx => ctx.Player.Level >= 30 },
             new() { Id = "level_40",    Name = "Champion",        Icon = "📈", Category = "Progression", Description = "Reach player level 40.",       Condition = ctx => ctx.Player.Level >= 40 },
-            new() { Id = "level_50",    Name = "Tribal Legend",   Icon = "📈", Category = "Progression", Description = "Reach player level 50.",       Condition = ctx => ctx.Player.Level >= 50 },
+            new() { Id = "level_50",    Name = "Tribal Legend",   Icon = "📈", Category = "Progression", Description = "Reach player level 40.",       Condition = ctx => ctx.Player.Level >= 40 },
             new() { Id = "gear_500",    Name = "Geared Up",       Icon = "⚔️", Category = "Progression", Description = "Reach a gear score of 500.",   Condition = ctx => ctx.GearScore >= 500   },
             new() { Id = "gear_1000",   Name = "Well Equipped",   Icon = "⚔️", Category = "Progression", Description = "Reach a gear score of 1,000.", Condition = ctx => ctx.GearScore >= 1000  },
             new() { Id = "gear_2000",   Name = "Battle Ready",    Icon = "⚔️", Category = "Progression", Description = "Reach a gear score of 2,000.", Condition = ctx => ctx.GearScore >= 2000  },
@@ -161,7 +161,7 @@ namespace Hogs.RPG.Core.GameData.Achievements
             new() { Id = "dual_crafter",   Name = "Dual Crafter",          Icon = "🌟", Category = "Legend", Description = "Reach level 50 in both Smithing and Alchemy.",        Condition = ctx => ctx.Player.SmithingLevel >= 50 && ctx.Player.AlchemistLevel >= 50                                              },
             new() { Id = "dual_master",    Name = "Dual Master",           Icon = "🌟", Category = "Legend", Description = "Reach level 99 in both Smithing and Alchemy.",        Condition = ctx => ctx.Player.SmithingLevel >= 99 && ctx.Player.AlchemistLevel >= 99                                              },
             new() { Id = "complete_pkg",   Name = "The Complete Package",  Icon = "🌟", Category = "Legend", Description = "Own CapyTara and 2 T5 relics.",                       Condition = ctx => ctx.Player.CapyTaraEvolved && ctx.Slot1RelicRank >= 5 && ctx.Slot2RelicRank >= 5, IsRetroactiveEligible = false },
-            new() { Id = "the_legend",     Name = "The Legend",            Icon = "🌟", Category = "Legend", Description = "Reach player level 50, 500 dungeons and 100 raids.",  Condition = ctx => ctx.Player.Level >= 50 && ctx.Player.DungeonRunsCompleted >= 500 && ctx.Player.RaidsCompleted >= 100          },
+            new() { Id = "the_legend",     Name = "The Legend",            Icon = "🌟", Category = "Legend", Description = "Reach player level 40, 500 dungeons and 100 raids.",  Condition = ctx => ctx.Player.Level >= 40 && ctx.Player.DungeonRunsCompleted >= 500 && ctx.Player.RaidsCompleted >= 100          },
 
             // =========================
             // 🗼 TOWER OF DOOM

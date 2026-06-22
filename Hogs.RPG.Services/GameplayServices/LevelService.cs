@@ -4,7 +4,7 @@ namespace Hogs.RPG.Services.GameplayServices
 {
     public class LevelService
     {
-        private const int MaxLevel = 50;
+        private const int MaxLevel = 40;
 
         private readonly StatService _statService;
 
