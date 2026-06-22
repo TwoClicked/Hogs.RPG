@@ -527,7 +527,7 @@ namespace Hogs.RPG.Services.TowerServices
             int floor = session.Floor;
             bool isDuo = session.Mode == TowerMode.Duo;
 
-            int bossHp = isDuo ? 80 + floor * 16 : 50 + floor * 12;
+            int bossHp = isDuo ? (80 + floor * 16) * 2 : 50 + floor * 12;
             bossHp = (int)(bossHp * bossDef.HpMultiplier);
 
             session.BossCurrentHp = bossHp;
