@@ -9,6 +9,7 @@ using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Linq;
 
 namespace Hogs.RPG.Services.TowerServices
 {
@@ -355,7 +356,9 @@ namespace Hogs.RPG.Services.TowerServices
                         .WithColor(Color.DarkRed)
                         .Build());
 
-                    // Remove dead participants so the run continues solo
+                    // Move dead participants to FallenParticipants (not discarded) so they still get end-of-run rewards
+                    // and have their player-session lock cleared when the run ends
+                    session.FallenParticipants.AddRange(dead);
                     session.Participants.RemoveAll(p => p.CurrentHp <= 0);
 
                     if (session.Floor % 10 == 0)
@@ -585,6 +588,7 @@ namespace Hogs.RPG.Services.TowerServices
                         .WithTitle("💀 A partner has fallen!")
                         .WithDescription($"{fallenNames} fell to the boss — their buffs and debuffs pass to **{alive.Username}**.\n\nThe fight continues alone... ⚠️ **Incoming damage doubled!**")
                         .WithColor(Color.DarkRed).Build());
+                    session.FallenParticipants.AddRange(dead);
                     session.Participants.RemoveAll(p => p.CurrentHp <= 0);
                     anyDead = false;
                 }
@@ -1223,7 +1227,7 @@ namespace Hogs.RPG.Services.TowerServices
 
             var rewardLines = new System.Text.StringBuilder();
 
-            foreach (var p in session.Participants)
+            foreach (var p in session.Participants.Concat(session.FallenParticipants))
             {
                 int gold = p.AccumulatedGold;
                 var player = await playerRepo.GetByDiscordIdAsync(p.DiscordId);
@@ -1523,7 +1527,7 @@ namespace Hogs.RPG.Services.TowerServices
         private void RemoveSession(string sessionId)
         {
             if (!_sessions.TryGetValue(sessionId, out var session)) return;
-            foreach (var p in session.Participants)
+            foreach (var p in session.Participants.Concat(session.FallenParticipants))
                 _playerSession.Remove(p.DiscordId);
             _sessions.Remove(sessionId);
         }

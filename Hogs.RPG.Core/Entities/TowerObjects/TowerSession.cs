@@ -10,6 +10,7 @@ namespace Hogs.RPG.Core.Entities.TowerObjects
         public TowerStatus Status { get; set; } = TowerStatus.Lobby;
         public int Floor { get; set; } = 0;
         public List<TowerParticipant> Participants { get; set; } = new();
+        public List<TowerParticipant> FallenParticipants { get; set; } = new();
         public ulong ChannelId { get; set; }
         public ulong ThreadId { get; set; }
         public ulong LobbyMessageId { get; set; }
