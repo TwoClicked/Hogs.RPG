@@ -298,7 +298,8 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         [SlashCommand("tradeaddpet", "Add pet to trade")]
-        public async Task TradeAddPet(int petId)
+        public async Task TradeAddPet(
+            [Summary("pet_id", "Select a pet to add"), Autocomplete(typeof(TradeAddPetAutocompleteHandler))] int petId)
         {
             if (!await EnsureTradeChannel()) return;
             if (!await EnsureNotNearBoss()) return;
