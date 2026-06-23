@@ -61,90 +61,90 @@ namespace Hogs.RPG.Core.GameData.Tower
             },
             new()
             {
-                Name = "[Boss Name TBD]",
+                Name = "Wussy The Drowned Warden",
                 Description = "A being of fractured will, said to strip the strength from any who oppose it.",
-                ImageUrl = "",
+                ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1519072933530566778/IMG_3647.png?ex=6a3c3a6a&is=6a3ae8ea&hm=8d7ca1e1e671fe84761992dd9fae5319a25037c2e479f8fdb19f3aa41f2d12e3",
                 HpMultiplier = 5.5f,
                 AtkMultiplier = 3.75f,
                 SpecialMechanicText = "🌀 **Unraveling Grasp!** Tears two buffs from every player on defeat."
             },
             new()
             {
-                Name = "[Boss Name TBD]",
+                Name = "Azrael The Angel of Death",
                 Description = "Its presence alone saps the resolve of the bravest climbers.",
-                ImageUrl = "",
+                ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1518700263773311197/image0.jpg?ex=6a3c30d6&is=6a3adf56&hm=581600c9bc94ed6d4f61da4ded12c621f12bf7acf9a83f25325eaa2f9763100d",
                 HpMultiplier = 6f,
                 AtkMultiplier = 4f,
                 SpecialMechanicText = "😵 **Crushing Despair!** Inflicts Weakened x3 on every player."
             },
             new()
             {
-                Name = "[Boss Name TBD]",
+                Name = "The Faceless Terror",
                 Description = "A rotting horror that leaves nothing but ruin in its wake.",
-                ImageUrl = "",
+                ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1510773840660271265/1780266346003.png?ex=6a3bb308&is=6a3a6188&hm=49374d13fe19f6ec02c2c58a6c00b89d34eb2ffdffa2b98376ae5a3c61000736",
                 HpMultiplier = 6.5f,
                 AtkMultiplier = 4.25f,
                 SpecialMechanicText = "🩸 **Festering Wound!** Inflicts permanent Bleeding and Weakened x2."
             },
             new()
             {
-                Name = "[Boss Name TBD]",
+                Name = "Nyxaroth",
                 Description = "It does not fight to wound — it fights to erase.",
-                ImageUrl = "",
+                ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1504505688842436749/image0.png?ex=6a3bf79c&is=6a3aa61c&hm=a7ab9d5dda32e268377753124e2708a60701155e7c3539297397c13c2b76b0f9",
                 HpMultiplier = 7f,
                 AtkMultiplier = 4.5f,
                 SpecialMechanicText = "💀 **Total Erasure!** Strips every buff from every player."
             },
             new()
             {
-                Name = "[Boss Name TBD]",
+                Name = "Lysandra",
                 Description = "Wherever it walks, the air itself begins to rot.",
-                ImageUrl = "",
+                ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1504501125145956544/image0.png?ex=6a3bf35c&is=6a3aa1dc&hm=a6c884f7524451535de1d4cd1a7d6a95165c10632e2f2f86ada3576397421da2",
                 HpMultiplier = 7.5f,
                 AtkMultiplier = 4.75f,
                 SpecialMechanicText = "🩸 **Plague Bloom!** Inflicts permanent Bleeding on every player."
             },
             new()
             {
-                Name = "[Boss Name TBD]",
+                Name = "Seraphiel",
                 Description = "A predator that hunts strength itself, leaving its prey hollow.",
-                ImageUrl = "",
+                ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1504502760475852911/image0.png?ex=6a3bf4e2&is=6a3aa362&hm=a4058dbdeb4e509de1c57471a2d7e237613fc63cff899b48e94d6447ad5f889c",
                 HpMultiplier = 8f,
                 AtkMultiplier = 5f,
                 SpecialMechanicText = "🌀 **Hollowing Strike!** Strips two buffs and inflicts Weakened x2."
             },
             new()
             {
-                Name = "[Boss Name TBD]",
+                Name = "Skjarr The Brew Cursed",
                 Description = "Ancient and merciless, it remembers every climber who has fallen before.",
-                ImageUrl = "",
+                ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1491147055052095498/5C6805BB-4015-430F-8009-3E63E31C9F3E.png?ex=6a3c25ea&is=6a3ad46a&hm=eae0bf001c0155c6832eb41c8f6bd566b9372871d2f6fd18a3c559e1a867d29c",
                 HpMultiplier = 8.5f,
                 AtkMultiplier = 5.25f,
                 SpecialMechanicText = "💀 **Final Reckoning!** Strips every buff and inflicts permanent Bleeding."
             },
             new()
             {
-                Name = "[Boss Name TBD]",
+                Name = "Viscynia the Fallen Valkyrie",
                 Description = "Its howl alone is enough to wither the strongest will.",
-                ImageUrl = "",
+                ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1487173038515556413/f88ea60e-b6ce-44de-a563-a0232511bf56.jpg?ex=6a3c3152&is=6a3adfd2&hm=74ec03f0d7c9eb5ae8d759fe5962fec6e377c6c5510065e23e787c780d83bb62",
                 HpMultiplier = 9f,
                 AtkMultiplier = 5.5f,
                 SpecialMechanicText = "🩸 **Withering Howl!** Inflicts permanent Bleeding and Weakened x3."
             },
             new()
             {
-                Name = "[Boss Name TBD]",
+                Name = "The Veiled Thunderer",
                 Description = "It feeds on confidence, leaving climbers bare before the dark.",
-                ImageUrl = "",
+                ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1486710664230731930/1774529681198.png?ex=6a3bd434&is=6a3a82b4&hm=d4ea7f365cd888ee28176c8daaee8634e2299019ad997b7c0c751c3768745970",
                 HpMultiplier = 9.5f,
                 AtkMultiplier = 5.75f,
                 SpecialMechanicText = "💀 **Soul Strip!** Strips every buff and inflicts Weakened x3."
             },
             new()
             {
-                Name = "[Boss Name TBD]",
+                Name = "Hræzmir",
                 Description = "The final terror of this stretch of the tower — nothing escapes it whole.",
-                ImageUrl = "",
+                ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1486694307158298767/file_00000000bf70720a9fd5ef91dd9325bd.png?ex=6a3bc4f8&is=6a3a7378&hm=cbb204293e82bba86689e33fb68b629c421921848e8d13d8ef2024491dbf1034",
                 HpMultiplier = 10f,
                 AtkMultiplier = 6f,
                 SpecialMechanicText = "☠️ **Apex Curse!** Strips every buff, inflicts permanent Bleeding, and Weakened x3."
