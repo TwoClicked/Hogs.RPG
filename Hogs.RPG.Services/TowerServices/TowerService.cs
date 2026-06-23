@@ -272,22 +272,32 @@ namespace Hogs.RPG.Services.TowerServices
 
                 p.Debuffs.RemoveAll(d => d.FloorsRemaining == 0);
 
-                // 5% chance each floor to shake off one stack of a random debuff
+                // 5% chance each floor to shake off a random debuff.
+                // Solo loses the whole debuff; duo only loses one stack.
                 if (p.Debuffs.Count > 0 && _random.NextDouble() < 0.05)
                 {
                     int luckyIndex = _random.Next(p.Debuffs.Count);
                     var luckyDebuff = p.Debuffs[luckyIndex];
                     var luckyDef = TowerDebuffPool.Get(luckyDebuff.Type);
-                    luckyDebuff.Stacks--;
 
-                    if (luckyDebuff.Stacks <= 0)
+                    if (session.Mode == TowerMode.Solo)
                     {
                         p.Debuffs.RemoveAt(luckyIndex);
                         shakeOffNotices.Add($"🍀 **{p.Username}** shakes off **{luckyDef.Emoji} {luckyDef.Name}** completely!");
                     }
                     else
                     {
-                        shakeOffNotices.Add($"🍀 **{p.Username}** shakes off a stack of **{luckyDef.Emoji} {luckyDef.Name}** (down to x{luckyDebuff.Stacks}).");
+                        luckyDebuff.Stacks--;
+
+                        if (luckyDebuff.Stacks <= 0)
+                        {
+                            p.Debuffs.RemoveAt(luckyIndex);
+                            shakeOffNotices.Add($"🍀 **{p.Username}** shakes off **{luckyDef.Emoji} {luckyDef.Name}** completely!");
+                        }
+                        else
+                        {
+                            shakeOffNotices.Add($"🍀 **{p.Username}** shakes off a stack of **{luckyDef.Emoji} {luckyDef.Name}** (down to x{luckyDebuff.Stacks}).");
+                        }
                     }
                 }
 
