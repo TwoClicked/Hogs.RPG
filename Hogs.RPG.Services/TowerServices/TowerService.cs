@@ -262,6 +262,7 @@ namespace Hogs.RPG.Services.TowerServices
             session.Floor++;
 
             // Tick debuff durations and clear expired
+            var shakeOffNotices = new List<string>();
             foreach (var p in session.Participants)
             {
                 p.TookDamageThisFloor = false;
@@ -276,13 +277,29 @@ namespace Hogs.RPG.Services.TowerServices
                 {
                     int luckyIndex = _random.Next(p.Debuffs.Count);
                     var luckyDebuff = p.Debuffs[luckyIndex];
+                    var luckyDef = TowerDebuffPool.Get(luckyDebuff.Type);
                     luckyDebuff.Stacks--;
+
                     if (luckyDebuff.Stacks <= 0)
+                    {
                         p.Debuffs.RemoveAt(luckyIndex);
+                        shakeOffNotices.Add($"🍀 **{p.Username}** shakes off **{luckyDef.Emoji} {luckyDef.Name}** completely!");
+                    }
+                    else
+                    {
+                        shakeOffNotices.Add($"🍀 **{p.Username}** shakes off a stack of **{luckyDef.Emoji} {luckyDef.Name}** (down to x{luckyDebuff.Stacks}).");
+                    }
                 }
 
                 foreach (var buff in p.Buffs)
                     if (buff.DisabledForFloors > 0) buff.DisabledForFloors--;
+            }
+
+            if (shakeOffNotices.Count > 0)
+            {
+                var shakeThread = _client.GetChannel(session.ThreadId) as IThreadChannel;
+                if (shakeThread != null)
+                    await shakeThread.SendMessageAsync(string.Join("\n", shakeOffNotices));
             }
 
             bool isBoss = session.Floor % 25 == 0;
