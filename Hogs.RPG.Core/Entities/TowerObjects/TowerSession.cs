@@ -23,5 +23,9 @@ namespace Hogs.RPG.Core.Entities.TowerObjects
         public int BossMaxHp { get; set; }
         public int BossRound { get; set; }
         public DateTime? NextBossRoundAt { get; set; }
+
+        // Merchant shop — appears at most once per run. 0 means it hasn't appeared yet.
+        // Purchases are only valid while Floor == MerchantFloor.
+        public int MerchantFloor { get; set; } = 0;
     }
 }

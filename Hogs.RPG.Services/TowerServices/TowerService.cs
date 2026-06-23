@@ -310,7 +310,7 @@ namespace Hogs.RPG.Services.TowerServices
                 eventType = TowerFloorEventType.Boss;
             else if (isElite)
                 eventType = TowerFloorEventType.Elite;
-            else if (session.Floor > 30 && _random.NextDouble() < 0.10)
+            else if (session.Floor > 30 && session.MerchantFloor == 0 && _random.NextDouble() < 0.10)
                 eventType = TowerFloorEventType.Merchant;
             else
                 eventType = RollEventType();
@@ -898,9 +898,11 @@ namespace Hogs.RPG.Services.TowerServices
 
         private string ResolveMerchantFloor(TowerSession session)
         {
+            session.MerchantFloor = session.Floor;
+
             var log = new System.Text.StringBuilder();
             log.AppendLine("🛒 **A traveling merchant emerges from the shadows!**");
-            log.AppendLine("\"Gold for gear, climber? I don't ask where it came from.\"");
+            log.AppendLine("\"Gold for gear, climber? I don't ask where it came from. But I'm only passing through — buy now or don't.\"");
             return log.ToString().TrimEnd();
         }
 
@@ -931,7 +933,7 @@ namespace Hogs.RPG.Services.TowerServices
                 var components = BuildMerchantComponents(session.SessionId, p);
                 string mention = session.Mode == TowerMode.Duo ? $"<@{p.DiscordId}> — " : "";
                 await thread.SendMessageAsync(
-                    $"{mention}🛒 The merchant opens their cloak. You have **{p.AccumulatedGold}** gold to spend. Each item can only be bought once.",
+                    $"{mention}🛒 The merchant opens their cloak. You have **{p.AccumulatedGold}** gold to spend. Each item can only be bought once, and the merchant leaves for good once you push past this floor — buy now or miss out.",
                     components: components);
             }
         }
@@ -977,6 +979,9 @@ namespace Hogs.RPG.Services.TowerServices
         {
             if (!_sessions.TryGetValue(sessionId, out var session))
                 return (false, "Session not found.");
+
+            if (session.MerchantFloor == 0 || session.Floor != session.MerchantFloor)
+                return (false, "❌ The merchant has already left. They won't be back this run.");
 
             var p = session.Participants.FirstOrDefault(x => x.DiscordId == userId);
             if (p == null) return (false, "You are not in this run.");
