@@ -58,6 +58,96 @@ namespace Hogs.RPG.Core.GameData.Tower
                 HpMultiplier = 5f,
                 AtkMultiplier = 3.5f,
                 SpecialMechanicText = "💀 **Doom Proclamation!** Strips one random buff from each player."
+            },
+            new()
+            {
+                Name = "[Boss Name TBD]",
+                Description = "A being of fractured will, said to strip the strength from any who oppose it.",
+                ImageUrl = "",
+                HpMultiplier = 5.5f,
+                AtkMultiplier = 3.75f,
+                SpecialMechanicText = "🌀 **Unraveling Grasp!** Tears two buffs from every player on defeat."
+            },
+            new()
+            {
+                Name = "[Boss Name TBD]",
+                Description = "Its presence alone saps the resolve of the bravest climbers.",
+                ImageUrl = "",
+                HpMultiplier = 6f,
+                AtkMultiplier = 4f,
+                SpecialMechanicText = "😵 **Crushing Despair!** Inflicts Weakened x3 on every player."
+            },
+            new()
+            {
+                Name = "[Boss Name TBD]",
+                Description = "A rotting horror that leaves nothing but ruin in its wake.",
+                ImageUrl = "",
+                HpMultiplier = 6.5f,
+                AtkMultiplier = 4.25f,
+                SpecialMechanicText = "🩸 **Festering Wound!** Inflicts permanent Bleeding and Weakened x2."
+            },
+            new()
+            {
+                Name = "[Boss Name TBD]",
+                Description = "It does not fight to wound — it fights to erase.",
+                ImageUrl = "",
+                HpMultiplier = 7f,
+                AtkMultiplier = 4.5f,
+                SpecialMechanicText = "💀 **Total Erasure!** Strips every buff from every player."
+            },
+            new()
+            {
+                Name = "[Boss Name TBD]",
+                Description = "Wherever it walks, the air itself begins to rot.",
+                ImageUrl = "",
+                HpMultiplier = 7.5f,
+                AtkMultiplier = 4.75f,
+                SpecialMechanicText = "🩸 **Plague Bloom!** Inflicts permanent Bleeding on every player."
+            },
+            new()
+            {
+                Name = "[Boss Name TBD]",
+                Description = "A predator that hunts strength itself, leaving its prey hollow.",
+                ImageUrl = "",
+                HpMultiplier = 8f,
+                AtkMultiplier = 5f,
+                SpecialMechanicText = "🌀 **Hollowing Strike!** Strips two buffs and inflicts Weakened x2."
+            },
+            new()
+            {
+                Name = "[Boss Name TBD]",
+                Description = "Ancient and merciless, it remembers every climber who has fallen before.",
+                ImageUrl = "",
+                HpMultiplier = 8.5f,
+                AtkMultiplier = 5.25f,
+                SpecialMechanicText = "💀 **Final Reckoning!** Strips every buff and inflicts permanent Bleeding."
+            },
+            new()
+            {
+                Name = "[Boss Name TBD]",
+                Description = "Its howl alone is enough to wither the strongest will.",
+                ImageUrl = "",
+                HpMultiplier = 9f,
+                AtkMultiplier = 5.5f,
+                SpecialMechanicText = "🩸 **Withering Howl!** Inflicts permanent Bleeding and Weakened x3."
+            },
+            new()
+            {
+                Name = "[Boss Name TBD]",
+                Description = "It feeds on confidence, leaving climbers bare before the dark.",
+                ImageUrl = "",
+                HpMultiplier = 9.5f,
+                AtkMultiplier = 5.75f,
+                SpecialMechanicText = "💀 **Soul Strip!** Strips every buff and inflicts Weakened x3."
+            },
+            new()
+            {
+                Name = "[Boss Name TBD]",
+                Description = "The final terror of this stretch of the tower — nothing escapes it whole.",
+                ImageUrl = "",
+                HpMultiplier = 10f,
+                AtkMultiplier = 6f,
+                SpecialMechanicText = "☠️ **Apex Curse!** Strips every buff, inflicts permanent Bleeding, and Weakened x3."
             }
         };
 

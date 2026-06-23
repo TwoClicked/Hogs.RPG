@@ -830,6 +830,112 @@ namespace Hogs.RPG.Services.TowerServices
                 }
                 return string.Join("\n", lines);
             }
+
+            string StripRandomBuffs(int count)
+            {
+                var lines = new List<string>();
+                foreach (var p in session.Participants)
+                {
+                    var removedNames = new List<string>();
+                    for (int i = 0; i < count && p.Buffs.Count > 0; i++)
+                    {
+                        int idx = _random.Next(p.Buffs.Count);
+                        removedNames.Add(TowerBuffPool.Get(p.Buffs[idx].Type).Name);
+                        p.Buffs.RemoveAt(idx);
+                    }
+                    if (removedNames.Count > 0)
+                        lines.Add($"💀 **{p.Username}** loses **{string.Join(", ", removedNames)}**!");
+                }
+                return string.Join("\n", lines);
+            }
+
+            string StripAllBuffs()
+            {
+                var lines = new List<string>();
+                foreach (var p in session.Participants)
+                {
+                    if (p.Buffs.Count == 0) continue;
+                    var removedNames = p.Buffs.Select(b => TowerBuffPool.Get(b.Type).Name).ToList();
+                    p.Buffs.Clear();
+                    lines.Add($"💀 **{p.Username}** loses **everything**: {string.Join(", ", removedNames)}!");
+                }
+                return string.Join("\n", lines);
+            }
+
+            void InflictWeakened(int stacks)
+            {
+                foreach (var p in session.Participants)
+                    for (int i = 0; i < stacks; i++)
+                        AddDebuffSafe(p, TowerDebuffType.Weakened, 3);
+            }
+
+            void InflictBleeding()
+            {
+                foreach (var p in session.Participants)
+                    AddDebuffSafe(p, TowerDebuffType.Bleeding, -1);
+            }
+
+            if (bossIndex == 5)
+                return StripRandomBuffs(2);
+
+            if (bossIndex == 6)
+            {
+                InflictWeakened(3);
+                return "😵 With its dying breath, **Weakened x3** seeps into all players!";
+            }
+
+            if (bossIndex == 7)
+            {
+                InflictBleeding();
+                InflictWeakened(2);
+                return "🩸 The boss's curse lingers — all players are **Bleeding** and **Weakened x2**!";
+            }
+
+            if (bossIndex == 8)
+                return StripAllBuffs();
+
+            if (bossIndex == 9)
+            {
+                InflictBleeding();
+                return "🩸 A final plague spreads — all players are **Bleeding** for the rest of the run!";
+            }
+
+            if (bossIndex == 10)
+            {
+                string stripped = StripRandomBuffs(2);
+                InflictWeakened(2);
+                return $"{stripped}\n😵 All players are also **Weakened x2**!".TrimStart('\n');
+            }
+
+            if (bossIndex == 11)
+            {
+                string stripped = StripAllBuffs();
+                InflictBleeding();
+                return $"{stripped}\n🩸 All players are also **Bleeding** for the rest of the run!".TrimStart('\n');
+            }
+
+            if (bossIndex == 12)
+            {
+                InflictBleeding();
+                InflictWeakened(3);
+                return "🩸 The boss's last curse takes hold — all players are **Bleeding** and **Weakened x3**!";
+            }
+
+            if (bossIndex == 13)
+            {
+                string stripped = StripAllBuffs();
+                InflictWeakened(3);
+                return $"{stripped}\n😵 All players are also **Weakened x3**!".TrimStart('\n');
+            }
+
+            if (bossIndex == 14)
+            {
+                string stripped = StripAllBuffs();
+                InflictBleeding();
+                InflictWeakened(3);
+                return $"{stripped}\n☠️ All players are also **Bleeding** and **Weakened x3**!".TrimStart('\n');
+            }
+
             return "";
         }
 
