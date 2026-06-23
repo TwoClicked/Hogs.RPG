@@ -16,12 +16,14 @@ namespace Hogs.RPG.Bot.Commands
         private readonly RelicService _relicService;
         private readonly PlayerRepository _playerRepository;
         private readonly RelicRepository _repo;
+        private readonly RaidRepository _raidRepository;
 
-        public RelicModule(RelicService relicService, PlayerRepository playerRepository, RelicRepository repo)
+        public RelicModule(RelicService relicService, PlayerRepository playerRepository, RelicRepository repo, RaidRepository raidRepository)
         {
             _relicService = relicService;
             _playerRepository = playerRepository;
             _repo = repo;
+            _raidRepository = raidRepository;
         }
 
         private async Task<bool> EnsurePlayerAsync()
@@ -103,6 +105,14 @@ namespace Hogs.RPG.Bot.Commands
             await DeferAsync(ephemeral: true);
             if (!await EnsurePlayerAsync()) return;
 
+            // RAID LOCK — stops players from re-slotting relics to soften
+            // boss scaling, then re-equipping once the boss stats are locked in.
+            if (await _raidRepository.IsPlayerInActiveRaidAsync(Context.User.Id))
+            {
+                await FollowupAsync("⚔️ You can't change relics while in a raid lobby or an active raid.", ephemeral: true);
+                return;
+            }
+
             var result = await _relicService.EquipRelicAsync(Context.User.Id, relicId, slot - 1);
             await FollowupAsync(result, ephemeral: true);
         }
@@ -116,6 +126,14 @@ namespace Hogs.RPG.Bot.Commands
         {
             await DeferAsync(ephemeral: true);
             if (!await EnsurePlayerAsync()) return;
+
+            // RAID LOCK — stops players from unequipping relics to soften
+            // boss scaling, then re-equipping once the boss stats are locked in.
+            if (await _raidRepository.IsPlayerInActiveRaidAsync(Context.User.Id))
+            {
+                await FollowupAsync("⚔️ You can't change relics while in a raid lobby or an active raid.", ephemeral: true);
+                return;
+            }
 
             var relics = await _relicService.GetRelicsAsync(Context.User.Id);
             var equipped = relics.FirstOrDefault(r => r.IsEquipped && r.SlotIndex == slot - 1);

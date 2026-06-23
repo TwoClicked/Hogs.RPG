@@ -253,31 +253,33 @@ namespace Hogs.RPG.Services.RaidServices
                 await _inventoryRepo.RemoveItemAsync(p.DiscordId, keyItemId, 1);
             }
 
-            int totalAtk = 0, totalDef = 0, totalHp = 0;
-
             foreach (var p in session.Participants)
             {
                 var player = await _playerRepo.GetByDiscordIdAsync(p.DiscordId);
-                var (atk, def, hp) = await _statService.CalculateStatsAsync(player);
-                totalAtk += atk;
-                totalDef += def;
-                totalHp += hp;
-
+                var (_, _, hp) = await _statService.CalculateStatsAsync(player);
                 p.MaxHp = hp;
                 p.CurrentHp = hp;
             }
 
-            int avgAtk = totalAtk / 3;
-            int avgDef = totalDef / 3;
+            // =========================
+            // BOSS SCALING
+            // Pinned to the DPS's attack and the Tank's defense specifically —
+            // the only two stats that actually drive damage in and out of the
+            // fight. A party-wide average let players sandbag the Tank/Healer's
+            // gear to drag the average down while the DPS hit at full power.
+            // =========================
+            var dpsParticipant = session.Participants.First(p => p.Role == RaidRole.Dps);
+            var tankParticipant = session.Participants.First(p => p.Role == RaidRole.Tank);
 
-            session.BossMaxHp = (int)(avgAtk * raidDef.HpMultiplier);
+            var (scalingAtk, _, _) = await _statService.CalculateStatsAsync(await _playerRepo.GetByDiscordIdAsync(dpsParticipant.DiscordId));
+            var (_, scalingDef, _) = await _statService.CalculateStatsAsync(await _playerRepo.GetByDiscordIdAsync(tankParticipant.DiscordId));
+
+            session.BossMaxHp = (int)(scalingAtk * raidDef.HpMultiplier);
             session.BossCurrentHp = session.BossMaxHp;
-            session.BossAttack = (int)(avgDef * raidDef.AttackMultiplier);
-            session.BossDefense = (int)(avgAtk * raidDef.DefenseMultiplier);
+            session.BossAttack = (int)(scalingDef * raidDef.AttackMultiplier);
+            session.BossDefense = (int)(scalingAtk * raidDef.DefenseMultiplier);
 
-            var tank = session.Participants.FirstOrDefault(p => p.Role == RaidRole.Tank);
-            if (tank != null)
-                session.AggroDiscordId = tank.DiscordId;
+            session.AggroDiscordId = tankParticipant.DiscordId;
 
             session.Status = RaidStatus.Active;
             session.CurrentRound = 1;

@@ -73,6 +73,19 @@ namespace Hogs.RPG.Data.Repositories
         }
 
         // =========================
+        // IS PLAYER RAID-LOCKED
+        // Lightweight existence check used to block gear/pet/relic changes
+        // that would otherwise let a player shed stats to soften boss
+        // scaling at raid start, then re-gear once it's locked in.
+        // =========================
+        public async Task<bool> IsPlayerInActiveRaidAsync(ulong discordId)
+        {
+            return await _context.RaidSessions.AnyAsync(s =>
+                (s.Status == RaidStatus.Lobby || s.Status == RaidStatus.Active)
+                && s.Participants.Any(p => p.DiscordId == discordId));
+        }
+
+        // =========================
         // CREATE SESSION
         // =========================
         public async Task<RaidSession> CreateSessionAsync(RaidSession session)

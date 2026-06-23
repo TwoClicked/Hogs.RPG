@@ -13,17 +13,20 @@ namespace Hogs.RPG.Services.GameplayServices
         private readonly InventoryService _inventoryService;
         private readonly EquipmentService _equipmentService;
         private readonly StatService _statService;
+        private readonly RaidRepository _raidRepository;
 
         public EquipService(
             PlayerRepository playerRepository,
             InventoryService inventoryService,
             EquipmentService equipmentService,
-            StatService statService)
+            StatService statService,
+            RaidRepository raidRepository)
         {
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
             _equipmentService = equipmentService;
             _statService = statService;
+            _raidRepository = raidRepository;
         }
 
         // =========================
@@ -35,6 +38,15 @@ namespace Hogs.RPG.Services.GameplayServices
 
             if (player == null)
                 return "You need to start your adventure first.";
+
+            // =========================
+            // RAID LOCK
+            // Blocks gear changes while queued or fighting in a raid — stops
+            // players from stripping gear to soften boss scaling, then
+            // re-gearing once the boss's stats are locked in.
+            // =========================
+            if (await _raidRepository.IsPlayerInActiveRaidAsync(userId))
+                return "⚔️ You can't change gear while in a raid lobby or an active raid.";
 
             var item = _equipmentService.GetEquipment(itemId);
 
@@ -203,6 +215,15 @@ namespace Hogs.RPG.Services.GameplayServices
 
             if (player == null)
                 return "You need to start your adventure first.";
+
+            // =========================
+            // RAID LOCK
+            // Blocks gear changes while queued or fighting in a raid — stops
+            // players from stripping gear to soften boss scaling, then
+            // re-gearing once the boss's stats are locked in.
+            // =========================
+            if (await _raidRepository.IsPlayerInActiveRaidAsync(userId))
+                return "⚔️ You can't change gear while in a raid lobby or an active raid.";
 
             string? currentItemId = slot switch
             {

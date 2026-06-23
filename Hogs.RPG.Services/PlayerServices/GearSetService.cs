@@ -19,6 +19,7 @@ namespace Hogs.RPG.Services.GameplayServices
         private readonly PetService _petService;
         private readonly RelicService _relicService;
         private readonly TradeService _tradeService;
+        private readonly RaidRepository _raidRepository;
 
         private const int GearSwapCooldownSeconds = 120;
 
@@ -29,7 +30,8 @@ namespace Hogs.RPG.Services.GameplayServices
             StatService statService,
             PetService petService,
             RelicService relicService,
-            TradeService tradeService)
+            TradeService tradeService,
+            RaidRepository raidRepository)
         {
             _gearSetRepository = gearSetRepository;
             _playerRepository = playerRepository;
@@ -38,6 +40,7 @@ namespace Hogs.RPG.Services.GameplayServices
             _petService = petService;
             _relicService = relicService;
             _tradeService = tradeService;
+            _raidRepository = raidRepository;
         }
 
         // =========================
@@ -97,6 +100,17 @@ namespace Hogs.RPG.Services.GameplayServices
             if (_tradeService.HasActiveTrade(userId))
             {
                 return "📦 You have an active trade — finish or cancel it with `/tradecancel` before swapping gear sets.";
+            }
+
+            // =========================
+            // RAID LOCK
+            // Blocks gear set swaps while queued or fighting in a raid —
+            // same reasoning as the trade lock: stops players from
+            // softening boss scaling by ducking out of their real gear.
+            // =========================
+            if (await _raidRepository.IsPlayerInActiveRaidAsync(userId))
+            {
+                return "⚔️ You can't swap gear sets while in a raid lobby or an active raid.";
             }
 
             // =========================

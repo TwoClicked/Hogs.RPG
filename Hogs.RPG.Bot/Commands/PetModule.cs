@@ -18,11 +18,13 @@ namespace Hogs.RPG.Bot.Commands
     {
         private readonly PetService _petService;
         private readonly PlayerRepository _playerRepository;
+        private readonly RaidRepository _raidRepository;
 
-        public PetModule(PetService petService, PlayerRepository playerRepository)
+        public PetModule(PetService petService, PlayerRepository playerRepository, RaidRepository raidRepository)
         {
             _petService = petService;
             _playerRepository = playerRepository;
+            _raidRepository = raidRepository;
         }
 
         // =========================
@@ -122,6 +124,14 @@ namespace Hogs.RPG.Bot.Commands
         {
             await DeferAsync(ephemeral: true);
 
+            // RAID LOCK — stops players from unequipping their pet to soften
+            // boss scaling, then re-equipping once the boss stats are locked in.
+            if (await _raidRepository.IsPlayerInActiveRaidAsync(Context.User.Id))
+            {
+                await FollowupAsync("⚔️ You can't change pets while in a raid lobby or an active raid.", ephemeral: true);
+                return;
+            }
+
             var pets = await _petService.GetPetsAsync(Context.User.Id);
 
             if (!pets.Any(p => p.PetId == petId))
@@ -169,6 +179,15 @@ namespace Hogs.RPG.Bot.Commands
         public async Task UnequipPet()
         {
             await DeferAsync(ephemeral: true);
+
+            // RAID LOCK — stops players from unequipping their pet to soften
+            // boss scaling, then re-equipping once the boss stats are locked in.
+            if (await _raidRepository.IsPlayerInActiveRaidAsync(Context.User.Id))
+            {
+                await FollowupAsync("⚔️ You can't change pets while in a raid lobby or an active raid.", ephemeral: true);
+                return;
+            }
+
             await _petService.UnequipPetAsync(Context.User.Id);
             await FollowupAsync("🐾 Pet unequipped.", ephemeral: true);
         }
