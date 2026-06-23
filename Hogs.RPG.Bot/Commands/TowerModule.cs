@@ -459,6 +459,44 @@ public class TowerButtonModule : InteractionModuleBase<SocketInteractionContext>
         await component.FollowupAsync(message, ephemeral: true);
     }
 
+    [ComponentInteraction("tower_shop_done:*:*")]
+    public async Task HandleMerchantMoveOn(string sessionId, string playerIdStr)
+    {
+        ulong playerId = ulong.Parse(playerIdStr);
+
+        if (Context.User.Id != playerId)
+        {
+            await RespondAsync("❌ This isn't your shop session.", ephemeral: true);
+            return;
+        }
+
+        if (Context.Interaction is not SocketMessageComponent component)
+            return;
+
+        var (success, message) = await _towerService.HandleMerchantMoveOnAsync(sessionId, playerId);
+
+        if (!success)
+        {
+            await RespondAsync(message, ephemeral: true);
+            return;
+        }
+
+        var session = _towerService.GetSession(sessionId);
+        var p = session?.Participants.FirstOrDefault(x => x.DiscordId == playerId);
+
+        if (p != null)
+        {
+            var refreshedComponents = _towerService.BuildMerchantComponents(sessionId, p);
+            await component.UpdateAsync(msg => msg.Components = refreshedComponents);
+        }
+        else
+        {
+            await component.DeferAsync();
+        }
+
+        await component.FollowupAsync(message, ephemeral: true);
+    }
+
     // =========================
     // PRE-BOSS CHOICE BUTTONS
     // =========================

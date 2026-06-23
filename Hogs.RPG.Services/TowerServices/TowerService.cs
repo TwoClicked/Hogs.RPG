@@ -418,9 +418,14 @@ namespace Hogs.RPG.Services.TowerServices
             await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType));
 
             if (eventType == TowerFloorEventType.Merchant)
+            {
+                // Merchant floors wait on an explicit "Move On" click, not a timer
+                session.Status = TowerStatus.Shopping;
+                foreach (var sp in session.Participants)
+                    sp.CheckpointDone = false;
                 await PostMerchantShopAsync(session, thread);
-
-            if (session.Floor % 10 == 0)
+            }
+            else if (session.Floor % 10 == 0)
             {
                 session.Status = TowerStatus.Checkpoint;
                 await PostCheckpointAsync(session, thread);
@@ -943,7 +948,7 @@ namespace Hogs.RPG.Services.TowerServices
                 var components = BuildMerchantComponents(session.SessionId, p);
                 string mention = session.Mode == TowerMode.Duo ? $"<@{p.DiscordId}> — " : "";
                 await thread.SendMessageAsync(
-                    $"{mention}🛒 The merchant opens their cloak. You have **{p.AccumulatedGold}** gold to spend. Each item can only be bought once, and the merchant leaves for good once you push past this floor — buy now or miss out.",
+                    $"{mention}🛒 The merchant opens their cloak. You have **{p.AccumulatedGold}** gold to spend. Each item can only be bought once. Take your time — click **▶️ Move On** when you're done to continue the climb. They won't be back this run.",
                     components: components);
             }
         }
@@ -952,6 +957,7 @@ namespace Hogs.RPG.Services.TowerServices
         {
             var builder = new ComponentBuilder();
             int row = 0, col = 0;
+            bool done = p.CheckpointDone;
 
             void AddItem(string key, string label, bool unlocked)
             {
@@ -964,7 +970,7 @@ namespace Hogs.RPG.Services.TowerServices
                     $"tower_shop:{sessionId}:{p.DiscordId}:{key}",
                     purchased ? ButtonStyle.Success : ButtonStyle.Secondary,
                     row: row,
-                    disabled: purchased || !canAfford || !unlocked);
+                    disabled: purchased || !canAfford || !unlocked || done);
 
                 col++;
                 if (col >= 5) { col = 0; row++; }
@@ -982,6 +988,14 @@ namespace Hogs.RPG.Services.TowerServices
             foreach (var buffDef in TowerBuffPool.All)
                 AddItem($"buff_{buffDef.Type}", $"{buffDef.Emoji} {buffDef.Name}", true);
 
+            // Move On always gets its own row, after every item row
+            builder.WithButton(
+                done ? "✅ Moved On" : "▶️ Move On",
+                $"tower_shop_done:{sessionId}:{p.DiscordId}",
+                done ? ButtonStyle.Success : ButtonStyle.Primary,
+                row: row + 1,
+                disabled: done);
+
             return builder.Build();
         }
 
@@ -990,11 +1004,14 @@ namespace Hogs.RPG.Services.TowerServices
             if (!_sessions.TryGetValue(sessionId, out var session))
                 return (false, "Session not found.");
 
-            if (session.MerchantFloor == 0 || session.Floor != session.MerchantFloor)
+            if (session.Status != TowerStatus.Shopping || session.Floor != session.MerchantFloor)
                 return (false, "❌ The merchant has already left. They won't be back this run.");
 
             var p = session.Participants.FirstOrDefault(x => x.DiscordId == userId);
             if (p == null) return (false, "You are not in this run.");
+
+            if (p.CheckpointDone)
+                return (false, "❌ You've already moved on from the merchant.");
 
             if (!ShopPrices.TryGetValue(itemKey, out int cost))
                 return (false, "Unknown item.");
@@ -1052,6 +1069,24 @@ namespace Hogs.RPG.Services.TowerServices
             p.PurchasedShopItems.Add(itemKey);
 
             return (true, $"{resultMsg}\n💰 Gold remaining: **{p.AccumulatedGold}**");
+        }
+
+        public async Task<(bool success, string message)> HandleMerchantMoveOnAsync(string sessionId, ulong userId)
+        {
+            if (!_sessions.TryGetValue(sessionId, out var session))
+                return (false, "Session not found.");
+
+            if (session.Status != TowerStatus.Shopping)
+                return (false, "❌ The merchant has already left.");
+
+            var p = session.Participants.FirstOrDefault(x => x.DiscordId == userId);
+            if (p == null) return (false, "You are not in this run.");
+            if (p.CheckpointDone) return (false, "You've already moved on.");
+
+            p.CheckpointDone = true;
+            await TryResumeIfAllDoneAsync(session);
+
+            return (true, "▶️ You finish up at the merchant's stall.");
         }
 
         // =========================
@@ -1369,6 +1404,22 @@ namespace Hogs.RPG.Services.TowerServices
                 return;
             }
 
+            if (session.Status == TowerStatus.Shopping)
+            {
+                session.Status = TowerStatus.Running;
+                session.NextFloorAt = DateTime.UtcNow.AddSeconds(FloorIntervalSeconds);
+
+                if (thread != null)
+                {
+                    await thread.SendMessageAsync(embed: new EmbedBuilder()
+                        .WithTitle("▶️ Continuing the climb...")
+                        .WithDescription($"The merchant packs up. Floor **{session.Floor + 1}** in {FloorIntervalSeconds} seconds...")
+                        .WithColor(Color.DarkGrey)
+                        .Build());
+                }
+                return;
+            }
+
             session.Status = TowerStatus.Running;
             session.NextFloorAt = DateTime.UtcNow.AddSeconds(FloorIntervalSeconds);
 
@@ -1666,7 +1717,9 @@ namespace Hogs.RPG.Services.TowerServices
             {
                 bool nextIsCheckpoint = (session.Floor + 1) % 10 == 0;
                 bool nextIsBoss = (session.Floor + 1) % 25 == 0;
-                string next = nextIsBoss ? "⚠️ Boss next!" : nextIsCheckpoint ? "🏁 Checkpoint next!" : $"Next floor in {FloorIntervalSeconds}s";
+                string next = eventType == TowerFloorEventType.Merchant
+                    ? "🛒 Shop now — the climb resumes when everyone clicks Move On"
+                    : nextIsBoss ? "⚠️ Boss next!" : nextIsCheckpoint ? "🏁 Checkpoint next!" : $"Next floor in {FloorIntervalSeconds}s";
                 builder.WithFooter(next);
             }
 
