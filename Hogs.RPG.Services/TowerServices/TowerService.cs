@@ -482,8 +482,10 @@ namespace Hogs.RPG.Services.TowerServices
                 }
 
                 // Player damage
-                int playerDmg = CalcPlayerDamage(p, enemyDef, isElite || isBoss);
+                var (playerDmg, doubleStruck) = CalcPlayerDamage(p, enemyDef, isElite || isBoss);
                 log.AppendLine($"⚔️ **{p.Username}** deals **{playerDmg}** damage!");
+                if (doubleStruck)
+                    log.AppendLine($"  ⚡ **Double Strike!** {p.Username} hits twice!");
                 enemyHp -= playerDmg;
 
                 // Lifesteal
@@ -687,8 +689,10 @@ namespace Hogs.RPG.Services.TowerServices
                     if (p.CurrentHp <= 0) { log.AppendLine($"💀 **{p.Username}** bled out!"); continue; }
                 }
 
-                int playerDmg = CalcPlayerDamage(p, enemyDef, true);
+                var (playerDmg, doubleStruck) = CalcPlayerDamage(p, enemyDef, true);
                 log.AppendLine($"⚔️ **{p.Username}** deals **{playerDmg}** damage!");
+                if (doubleStruck)
+                    log.AppendLine($"  ⚡ **Double Strike!** {p.Username} hits twice!");
                 session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - playerDmg);
 
                 int lifesteal = CalcLifesteal(p, playerDmg);
@@ -1620,7 +1624,7 @@ namespace Hogs.RPG.Services.TowerServices
         // =========================
         // HELPERS
         // =========================
-        private int CalcPlayerDamage(TowerParticipant p, int enemyDef, bool isSpecialFloor)
+        private (int damage, bool doubleStruck) CalcPlayerDamage(TowerParticipant p, int enemyDef, bool isSpecialFloor)
         {
             int def = HasActiveBuff(p, TowerBuffType.Precision)
                 ? (int)(enemyDef * (1f - GetBuffStacks(p, TowerBuffType.Precision) * 0.33f))
@@ -1646,10 +1650,11 @@ namespace Hogs.RPG.Services.TowerServices
 
             // Double Strike
             float dsChance = Math.Min(0.60f, GetBuffStacks(p, TowerBuffType.DoubleStrike) * 0.20f);
-            if (dsChance > 0 && _random.NextDouble() < dsChance)
+            bool doubleStruck = dsChance > 0 && _random.NextDouble() < dsChance;
+            if (doubleStruck)
                 dmg *= 2;
 
-            return dmg;
+            return (dmg, doubleStruck);
         }
 
         private int CalcLifesteal(TowerParticipant p, int dmgDealt)
