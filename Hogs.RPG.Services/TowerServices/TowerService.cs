@@ -1582,7 +1582,7 @@ namespace Hogs.RPG.Services.TowerServices
             }
             else if (roll == 1)
             {
-                int gold = session.Floor * 25;
+                int gold = Math.Min(1500, session.Floor * 25);
                 p.AccumulatedGold += gold;
                 reward = $"earned **{gold} bonus gold**";
             }
