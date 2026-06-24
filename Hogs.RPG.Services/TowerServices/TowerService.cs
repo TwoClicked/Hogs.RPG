@@ -797,8 +797,8 @@ namespace Hogs.RPG.Services.TowerServices
             if (bossIndex == 1)
             {
                 foreach (var p in session.Participants)
-                    AddDebuffSafe(p, TowerDebuffType.Weakened, 3);
-                return "😵 With its dying breath, **Weakened** seeps into all players for 3 floors!";
+                    AddDebuffSafe(p, TowerDebuffType.Weakened, -1);
+                return "😵 With its dying breath, **Weakened** seeps into all players until cleansed!";
             }
             if (bossIndex == 3)
             {
@@ -851,7 +851,7 @@ namespace Hogs.RPG.Services.TowerServices
             {
                 foreach (var p in session.Participants)
                     for (int i = 0; i < stacks; i++)
-                        AddDebuffSafe(p, TowerDebuffType.Weakened, 3);
+                        AddDebuffSafe(p, TowerDebuffType.Weakened, -1);
             }
 
             void InflictBleeding()
@@ -865,19 +865,21 @@ namespace Hogs.RPG.Services.TowerServices
 
             if (bossIndex == 6)
             {
+                string stripped6 = RemoveBuffStacks(6);
                 InflictWeakened(3);
-                return "😵 With its dying breath, **Weakened x3** seeps into all players!";
+                return $"{stripped6}\n😵 All players are also **Weakened x3**!".TrimStart('\n');
             }
 
             if (bossIndex == 7)
             {
+                string stripped7 = RemoveBuffStacks(8);
                 InflictBleeding();
                 InflictWeakened(2);
-                return "🩸 The boss's curse lingers — all players are **Bleeding** and **Weakened x2**!";
+                return $"{stripped7}\n🩸 All players are also **Bleeding** and **Weakened x2**!".TrimStart('\n');
             }
 
             if (bossIndex == 8)
-                return RemoveBuffStacks(8);
+                return RemoveBuffStacks(10);
 
             if (bossIndex == 9)
             {
@@ -1390,14 +1392,35 @@ namespace Hogs.RPG.Services.TowerServices
             switch (choice)
             {
                 case "scavenge":
+                {
                     if (p.HasScavenged)
                         return (false, "❌ You've already scavenged this run.");
-                    int gold = session.Floor * 10;
-                    p.AccumulatedGold += gold;
+
                     p.HasScavenged = true;
                     p.CheckpointDone = true;
-                    resultMsg = $"💰 You scavenge **{gold} gold** from the floor.";
+
+                    var ambushBoss = TowerBossRegistry.All[_random.Next(TowerBossRegistry.All.Count)];
+                    bool isDuoMode = session.Mode == TowerMode.Duo;
+                    int ambushHp = isDuoMode ? 200 + session.Floor * 40 : 150 + session.Floor * 30;
+                    int ambushDef = 5 + session.Floor * 3;
+
+                    var (ambushDmg, _) = CalcPlayerDamage(p, ambushDef, true);
+
+                    if (ambushDmg >= ambushHp)
+                    {
+                        int gold = session.Floor * 10;
+                        p.AccumulatedGold += gold;
+                        var buff = RollRandomBuff();
+                        var granted = AddBuff(p, buff);
+                        var buffDef = TowerBuffPool.Get(granted);
+                        resultMsg = $"💰 While scavenging, **{ambushBoss.Name}** ambushes you! You strike them down and loot **{gold} gold** and gain **{buffDef.Emoji} {buffDef.Name}**!";
+                    }
+                    else
+                    {
+                        resultMsg = $"💀 While scavenging, **{ambushBoss.Name}** ambushes you! You're overpowered and forced to flee empty-handed.";
+                    }
                     break;
+                }
 
                 case "rest":
                     bool shackled = p.Debuffs.Any(d => d.Type == TowerDebuffType.Shackled);
