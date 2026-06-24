@@ -356,7 +356,7 @@ public class TowerButtonModule : InteractionModuleBase<SocketInteractionContext>
             var p2 = session2?.Participants.FirstOrDefault(x => x.DiscordId == playerId);
             if (p2 != null && p2.DebuffRemovesRemaining <= 0)
             {
-                await FollowupAsync("❌ You have used all 5 Remove Debuff charges for this run.", ephemeral: true);
+                await FollowupAsync("❌ You have used all 3 Remove Debuff charges for this run.", ephemeral: true);
                 return;
             }
             if (p2 != null && p2.Debuffs.Count > 1)

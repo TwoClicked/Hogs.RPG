@@ -1419,17 +1419,15 @@ namespace Hogs.RPG.Services.TowerServices
                     if (p.Debuffs.Count == 0)
                         return (false, "❌ You have no debuffs to remove.");
                     if (p.DebuffRemovesRemaining <= 0)
-                        return (false, "❌ You have used all 5 Remove Debuff charges for this run.");
+                        return (false, "❌ You have used all 3 Remove Debuff charges for this run.");
                     if (p.Debuffs.Count == 1)
                     {
                         var d0 = p.Debuffs[0];
                         var removed = TowerDebuffPool.Get(d0.Type);
-                        d0.Stacks--;
-                        if (d0.Stacks <= 0) p.Debuffs.RemoveAt(0);
+                        p.Debuffs.RemoveAt(0);
                         p.DebuffRemovesRemaining--;
-                        string stackMsg0 = d0.Stacks > 0 ? $" (reduced to x{d0.Stacks})" : " (fully cleansed)";
                         p.CheckpointDone = true;
-                        resultMsg = $"🗑️ **{removed.Emoji} {removed.Name}**{stackMsg0}. Removes left: **{p.DebuffRemovesRemaining}**";
+                        resultMsg = $"🗑️ **{removed.Emoji} {removed.Name}** fully cleansed. Removes left: **{p.DebuffRemovesRemaining}**";
                     }
                     else
                     {
@@ -1938,16 +1936,12 @@ namespace Hogs.RPG.Services.TowerServices
             var debuff = p.Debuffs[index];
             var def = TowerDebuffPool.Get(debuff.Type);
 
-            debuff.Stacks--;
-            if (debuff.Stacks <= 0)
-                p.Debuffs.RemoveAt(index);
-
+            p.Debuffs.RemoveAt(index);
             p.DebuffRemovesRemaining--;
             p.CheckpointDone = true;
 
-            string stackMsg = debuff.Stacks > 0 ? $" (reduced to x{debuff.Stacks})" : " (fully cleansed)";
             await TryResumeIfAllDoneAsync(session);
-            return (true, $"🗑️ **{def.Emoji} {def.Name}**{stackMsg}. Removes left: **{p.DebuffRemovesRemaining}**");
+            return (true, $"🗑️ **{def.Emoji} {def.Name}** fully cleansed. Removes left: **{p.DebuffRemovesRemaining}**");
         }
 
         public MessageComponent BuildBuffPickComponents(string sessionId, ulong playerId, List<TowerBuffType> choices)
