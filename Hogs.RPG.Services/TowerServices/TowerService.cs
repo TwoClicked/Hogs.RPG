@@ -965,9 +965,10 @@ namespace Hogs.RPG.Services.TowerServices
             foreach (var p in session.Participants)
             {
                 var buff = RollRandomBuff();
-                AddBuff(p, buff);
-                var def = TowerBuffPool.Get(buff);
-                log.AppendLine($"✨ **{p.Username}** finds **{def.Emoji} {def.Name}**!");
+                var granted = AddBuff(p, buff);
+                var def = TowerBuffPool.Get(granted);
+                string note = granted == buff ? "" : $" (**{TowerBuffPool.Get(buff).Name}** was already maxed)";
+                log.AppendLine($"✨ **{p.Username}** finds **{def.Emoji} {def.Name}**!{note}");
             }
 
             return log.ToString().TrimEnd();
