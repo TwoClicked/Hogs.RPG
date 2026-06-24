@@ -22,6 +22,8 @@ namespace Hogs.RPG.Core.Entities.TowerObjects
         public int DebuffRemovesRemaining { get; set; } = 3;
         public bool PartnerDied { get; set; } = false;
         public HashSet<string> PurchasedShopItems { get; set; } = new();
+        public bool HasScavenged { get; set; } = false;
+        public int BuffProtectorCharges { get; set; } = 0;
     }
 
     public class TowerBuff

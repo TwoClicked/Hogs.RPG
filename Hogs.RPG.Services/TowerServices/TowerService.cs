@@ -806,52 +806,46 @@ namespace Hogs.RPG.Services.TowerServices
                     AddDebuffSafe(p, TowerDebuffType.Bleeding, -1);
                 return "🩸 The boss's venom seeps in — all players are **Bleeding** for the rest of the run!";
             }
+
+            // Removes up to totalStacks buff stacks, spread randomly across whatever buffs
+            // the player has (e.g. 2x Precision, 2x Bloodthirst, 1x IronSkin) instead of
+            // wiping out one buff entirely. A Buff Protector charge blocks the theft outright.
+            string RemoveBuffStacks(int totalStacks)
+            {
+                var lines = new List<string>();
+                foreach (var p in session.Participants)
+                {
+                    if (p.BuffProtectorCharges > 0)
+                    {
+                        p.BuffProtectorCharges--;
+                        lines.Add($"🛡️ **{p.Username}**'s Buff Protector shatters, blocking the theft!");
+                        continue;
+                    }
+
+                    var removedCounts = new Dictionary<TowerBuffType, int>();
+                    int remaining = totalStacks;
+
+                    while (remaining > 0 && p.Buffs.Count > 0)
+                    {
+                        int idx = _random.Next(p.Buffs.Count);
+                        var buff = p.Buffs[idx];
+                        buff.Stacks--;
+                        removedCounts[buff.Type] = removedCounts.GetValueOrDefault(buff.Type) + 1;
+                        if (buff.Stacks <= 0) p.Buffs.RemoveAt(idx);
+                        remaining--;
+                    }
+
+                    if (removedCounts.Count > 0)
+                    {
+                        string detail = string.Join(", ", removedCounts.Select(kv => $"{kv.Value}x {TowerBuffPool.Get(kv.Key).Name}"));
+                        lines.Add($"💀 **{p.Username}** loses **{detail}**!");
+                    }
+                }
+                return string.Join("\n", lines);
+            }
+
             if (bossIndex == 4)
-            {
-                var lines = new List<string>();
-                foreach (var p in session.Participants)
-                {
-                    if (p.Buffs.Count > 0)
-                    {
-                        int idx = _random.Next(p.Buffs.Count);
-                        string removed = TowerBuffPool.Get(p.Buffs[idx].Type).Name;
-                        p.Buffs.RemoveAt(idx);
-                        lines.Add($"💀 **{p.Username}** loses **{removed}**!");
-                    }
-                }
-                return string.Join("\n", lines);
-            }
-
-            string StripRandomBuffs(int count)
-            {
-                var lines = new List<string>();
-                foreach (var p in session.Participants)
-                {
-                    var removedNames = new List<string>();
-                    for (int i = 0; i < count && p.Buffs.Count > 0; i++)
-                    {
-                        int idx = _random.Next(p.Buffs.Count);
-                        removedNames.Add(TowerBuffPool.Get(p.Buffs[idx].Type).Name);
-                        p.Buffs.RemoveAt(idx);
-                    }
-                    if (removedNames.Count > 0)
-                        lines.Add($"💀 **{p.Username}** loses **{string.Join(", ", removedNames)}**!");
-                }
-                return string.Join("\n", lines);
-            }
-
-            string StripAllBuffs()
-            {
-                var lines = new List<string>();
-                foreach (var p in session.Participants)
-                {
-                    if (p.Buffs.Count == 0) continue;
-                    var removedNames = p.Buffs.Select(b => TowerBuffPool.Get(b.Type).Name).ToList();
-                    p.Buffs.Clear();
-                    lines.Add($"💀 **{p.Username}** loses **everything**: {string.Join(", ", removedNames)}!");
-                }
-                return string.Join("\n", lines);
-            }
+                return RemoveBuffStacks(2);
 
             void InflictWeakened(int stacks)
             {
@@ -867,7 +861,7 @@ namespace Hogs.RPG.Services.TowerServices
             }
 
             if (bossIndex == 5)
-                return StripRandomBuffs(2);
+                return RemoveBuffStacks(4);
 
             if (bossIndex == 6)
             {
@@ -883,7 +877,7 @@ namespace Hogs.RPG.Services.TowerServices
             }
 
             if (bossIndex == 8)
-                return StripAllBuffs();
+                return RemoveBuffStacks(8);
 
             if (bossIndex == 9)
             {
@@ -893,14 +887,14 @@ namespace Hogs.RPG.Services.TowerServices
 
             if (bossIndex == 10)
             {
-                string stripped = StripRandomBuffs(2);
+                string stripped = RemoveBuffStacks(4);
                 InflictWeakened(2);
                 return $"{stripped}\n😵 All players are also **Weakened x2**!".TrimStart('\n');
             }
 
             if (bossIndex == 11)
             {
-                string stripped = StripAllBuffs();
+                string stripped = RemoveBuffStacks(8);
                 InflictBleeding();
                 return $"{stripped}\n🩸 All players are also **Bleeding** for the rest of the run!".TrimStart('\n');
             }
@@ -914,14 +908,14 @@ namespace Hogs.RPG.Services.TowerServices
 
             if (bossIndex == 13)
             {
-                string stripped = StripAllBuffs();
+                string stripped = RemoveBuffStacks(8);
                 InflictWeakened(3);
                 return $"{stripped}\n😵 All players are also **Weakened x3**!".TrimStart('\n');
             }
 
             if (bossIndex == 14)
             {
-                string stripped = StripAllBuffs();
+                string stripped = RemoveBuffStacks(10);
                 InflictBleeding();
                 InflictWeakened(3);
                 return $"{stripped}\n☠️ All players are also **Bleeding** and **Weakened x3**!".TrimStart('\n');
@@ -1033,6 +1027,7 @@ namespace Hogs.RPG.Services.TowerServices
                 ["defense"] = 100,
                 ["bandage"] = 300,
                 ["zoomerjuice"] = 250,
+                ["buffprotector"] = 300,
             };
             foreach (var buffDef in TowerBuffPool.All)
                 prices[$"buff_{buffDef.Type}"] = 250;
@@ -1082,6 +1077,7 @@ namespace Hogs.RPG.Services.TowerServices
             AddItem("defense", "🛡️ Increase Defense (+20)", true);
             AddItem("bandage", "🩹 Bandage", hasBleeding);
             AddItem("zoomerjuice", "🧃 Zoomer Juice", hasWeakened);
+            AddItem("buffprotector", "🛡️ Buff Protector", true);
 
             foreach (var buffDef in TowerBuffPool.All)
                 AddItem($"buff_{buffDef.Type}", $"{buffDef.Emoji} {buffDef.Name}", true);
@@ -1135,6 +1131,11 @@ namespace Hogs.RPG.Services.TowerServices
                     return (false, "❌ You aren't weakened.");
                 p.Debuffs.RemoveAll(d => d.Type == TowerDebuffType.Weakened);
                 resultMsg = "🧃 You feel revitalized.";
+            }
+            else if (itemKey == "buffprotector")
+            {
+                p.BuffProtectorCharges++;
+                resultMsg = "🛡️ You tuck the Buff Protector away — it'll block the next buff theft completely.";
             }
             else if (itemKey == "health")
             {
@@ -1355,8 +1356,9 @@ namespace Hogs.RPG.Services.TowerServices
                     bool canRemoveDebuff = p.Debuffs.Count > 0 && p.DebuffRemovesRemaining > 0;
                     string removeLabel = $"🗑️ Remove Debuff ({p.DebuffRemovesRemaining} left)";
 
+                    string scavengeLabel = p.HasScavenged ? "💰 Scavenge (used)" : $"💰 Scavenge ({session.Floor * 10}g)";
                     var playerComponents = new ComponentBuilder()
-                        .WithButton($"💰 Scavenge ({session.Floor * 10}g)", $"tower_cp:{session.SessionId}:{p.DiscordId}:scavenge", ButtonStyle.Secondary, row: 0)
+                        .WithButton(scavengeLabel, $"tower_cp:{session.SessionId}:{p.DiscordId}:scavenge", ButtonStyle.Secondary, row: 0, disabled: p.HasScavenged)
                         .WithButton("💚 Rest",      $"tower_cp:{session.SessionId}:{p.DiscordId}:rest",          ButtonStyle.Success,   row: 0, disabled: shackled)
                         .WithButton("✨ Pick Buff", $"tower_cp:{session.SessionId}:{p.DiscordId}:buff",          ButtonStyle.Primary,   row: 0)
                         .WithButton("🎲 Gamble",    $"tower_cp:{session.SessionId}:{p.DiscordId}:gamble",        ButtonStyle.Danger,    row: 0)
@@ -1388,8 +1390,11 @@ namespace Hogs.RPG.Services.TowerServices
             switch (choice)
             {
                 case "scavenge":
+                    if (p.HasScavenged)
+                        return (false, "❌ You've already scavenged this run.");
                     int gold = session.Floor * 10;
                     p.AccumulatedGold += gold;
+                    p.HasScavenged = true;
                     p.CheckpointDone = true;
                     resultMsg = $"💰 You scavenge **{gold} gold** from the floor.";
                     break;
@@ -1906,8 +1911,9 @@ namespace Hogs.RPG.Services.TowerServices
                 bool hasDebuffs = p.Debuffs.Count > 0;
                 bool canRemoveDebuff = hasDebuffs && p.DebuffRemovesRemaining > 0;
                 string removeLabel = $"🗑️ Remove Debuff ({p.DebuffRemovesRemaining} left)";
+                string scavengeLabel = p.HasScavenged ? "💰 Scavenge (used)" : $"💰 Scavenge ({session.Floor * 10}g)";
 
-                builder.WithButton($"💰 Scavenge ({session.Floor * 10}g)", $"tower_cp:{session.SessionId}:{p.DiscordId}:scavenge", ButtonStyle.Secondary, row: row);
+                builder.WithButton(scavengeLabel, $"tower_cp:{session.SessionId}:{p.DiscordId}:scavenge", ButtonStyle.Secondary, row: row, disabled: p.HasScavenged);
                 builder.WithButton("💚 Rest",         $"tower_cp:{session.SessionId}:{p.DiscordId}:rest",          ButtonStyle.Success,   row: row, disabled: shackled);
                 builder.WithButton("✨ Pick Buff",    $"tower_cp:{session.SessionId}:{p.DiscordId}:buff",          ButtonStyle.Primary,   row: row);
                 builder.WithButton("🎲 Gamble",       $"tower_cp:{session.SessionId}:{p.DiscordId}:gamble",        ButtonStyle.Danger,    row: row);
