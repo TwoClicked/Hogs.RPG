@@ -374,12 +374,9 @@ namespace Hogs.RPG.Services.TowerServices
                             if (existing != null) existing.Stacks = Math.Min(existing.Stacks + buff.Stacks, cap);
                             else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = Math.Min(buff.Stacks, cap) });
                         }
-                        // Merge debuffs (avoid duplicates of same type)
+                        // Merge debuffs, preserving full stack counts
                         foreach (var debuff in fallen.Debuffs)
-                        {
-                            if (!alive.Debuffs.Any(d => d.Type == debuff.Type))
-                                alive.Debuffs.Add(new TowerDebuff { Type = debuff.Type, FloorsRemaining = debuff.FloorsRemaining });
-                        }
+                            MergeDebuffOnDeath(alive, debuff);
                     }
 
                     alive.PartnerDied = true;
@@ -623,7 +620,7 @@ namespace Hogs.RPG.Services.TowerServices
                             else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = Math.Min(buff.Stacks, cap) });
                         }
                         foreach (var debuff in fallen.Debuffs)
-                            AddDebuffSafe(alive, debuff.Type, debuff.FloorsRemaining);
+                            MergeDebuffOnDeath(alive, debuff);
                     }
                     alive.PartnerDied = true;
                     string fallenNames = string.Join(" & ", dead.Select(p => $"**{p.Username}**"));
@@ -1706,6 +1703,26 @@ namespace Hogs.RPG.Services.TowerServices
             {
                 p.Debuffs.Add(new TowerDebuff { Type = type, FloorsRemaining = floorsRemaining, Stacks = 1 });
                 if (type == TowerDebuffType.Shackled) p.HasBeenShackled = true;
+            }
+        }
+
+        // Transfers a fallen partner's debuff to the survivor preserving its full stack count
+        // (unlike AddDebuffSafe, which only ever adds one stack at a time).
+        private void MergeDebuffOnDeath(TowerParticipant alive, TowerDebuff debuff)
+        {
+            if (debuff.Type == TowerDebuffType.Shackled && alive.HasBeenShackled) return;
+
+            var existing = alive.Debuffs.FirstOrDefault(d => d.Type == debuff.Type);
+            if (existing != null)
+            {
+                existing.Stacks += debuff.Stacks;
+                if (existing.FloorsRemaining >= 0 && debuff.FloorsRemaining >= 0)
+                    existing.FloorsRemaining = Math.Max(existing.FloorsRemaining, debuff.FloorsRemaining);
+            }
+            else
+            {
+                alive.Debuffs.Add(new TowerDebuff { Type = debuff.Type, FloorsRemaining = debuff.FloorsRemaining, Stacks = debuff.Stacks });
+                if (debuff.Type == TowerDebuffType.Shackled) alive.HasBeenShackled = true;
             }
         }
 
