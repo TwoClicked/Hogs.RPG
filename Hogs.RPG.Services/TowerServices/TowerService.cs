@@ -366,14 +366,9 @@ namespace Hogs.RPG.Services.TowerServices
 
                     foreach (var fallen in dead)
                     {
-                        // Merge buffs — respect each buff's own stack cap, not a flat number
+                        // Merge buffs — capped overflow becomes random buffs instead of being wasted
                         foreach (var buff in fallen.Buffs)
-                        {
-                            int cap = TowerBuffPool.Get(buff.Type).MaxStacks;
-                            var existing = alive.Buffs.FirstOrDefault(b => b.Type == buff.Type);
-                            if (existing != null) existing.Stacks = Math.Min(existing.Stacks + buff.Stacks, cap);
-                            else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = Math.Min(buff.Stacks, cap) });
-                        }
+                            MergeBuffOnDeath(alive, buff);
                         // Merge debuffs, preserving full stack counts
                         foreach (var debuff in fallen.Debuffs)
                             MergeDebuffOnDeath(alive, debuff);
@@ -613,12 +608,7 @@ namespace Hogs.RPG.Services.TowerServices
                     foreach (var fallen in dead)
                     {
                         foreach (var buff in fallen.Buffs)
-                        {
-                            int cap = TowerBuffPool.Get(buff.Type).MaxStacks;
-                            var existing = alive.Buffs.FirstOrDefault(b => b.Type == buff.Type);
-                            if (existing != null) existing.Stacks = Math.Min(existing.Stacks + buff.Stacks, cap);
-                            else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = Math.Min(buff.Stacks, cap) });
-                        }
+                            MergeBuffOnDeath(alive, buff);
                         foreach (var debuff in fallen.Debuffs)
                             MergeDebuffOnDeath(alive, debuff);
                     }
@@ -1159,9 +1149,11 @@ namespace Hogs.RPG.Services.TowerServices
             }
             else if (itemKey.StartsWith("buff_") && Enum.TryParse<TowerBuffType>(itemKey.Substring(5), out var buffType))
             {
-                AddBuff(p, buffType);
-                var def = TowerBuffPool.Get(buffType);
-                resultMsg = $"✨ You purchase **{def.Emoji} {def.Name}**! — {def.Description}";
+                var granted = AddBuff(p, buffType);
+                var def = TowerBuffPool.Get(granted);
+                resultMsg = granted == buffType
+                    ? $"✨ You purchase **{def.Emoji} {def.Name}**! — {def.Description}"
+                    : $"✨ **{TowerBuffPool.Get(buffType).Name}** is already maxed — instead you gain **{def.Emoji} {def.Name}**! — {def.Description}";
             }
             else
             {
@@ -1467,14 +1459,18 @@ namespace Hogs.RPG.Services.TowerServices
                 return (false, "Invalid buff choice.");
 
             var chosen = p.PendingBuffChoices[buffIndex];
-            AddBuff(p, chosen);
+            var granted = AddBuff(p, chosen);
             p.PendingBuffChoices = null;
             p.CheckpointDone = true;
 
-            var def = TowerBuffPool.Get(chosen);
+            var def = TowerBuffPool.Get(granted);
             await TryResumeIfAllDoneAsync(session);
 
-            return (true, $"✨ You gain **{def.Emoji} {def.Name}**! — {def.Description}");
+            string msg = granted == chosen
+                ? $"✨ You gain **{def.Emoji} {def.Name}**! — {def.Description}"
+                : $"✨ **{TowerBuffPool.Get(chosen).Name}** is already maxed — instead you gain **{def.Emoji} {def.Name}**! — {def.Description}";
+
+            return (true, msg);
         }
 
         private async Task TryResumeIfAllDoneAsync(TowerSession session)
@@ -1548,9 +1544,9 @@ namespace Hogs.RPG.Services.TowerServices
             if (roll == 0)
             {
                 var buff = RollRandomBuff();
-                AddBuff(p, buff);
-                AddBuff(p, buff);
-                var buffDef = TowerBuffPool.Get(buff);
+                var granted = AddBuff(p, buff);
+                AddBuff(p, granted);
+                var buffDef = TowerBuffPool.Get(granted);
                 reward = $"gained **2 stacks of {buffDef.Emoji} {buffDef.Name}**";
             }
             else if (roll == 1)
@@ -1663,11 +1659,35 @@ namespace Hogs.RPG.Services.TowerServices
             return percent > 0 ? (int)(dmgDealt * percent) : 0;
         }
 
-        private void AddBuff(TowerParticipant p, TowerBuffType type)
+        // Grants a stack of the given buff. If the player is already capped on it,
+        // transforms the grant into a different, non-capped buff instead of wasting it.
+        // Returns the buff type that was actually granted (may differ from the requested one).
+        private TowerBuffType AddBuff(TowerParticipant p, TowerBuffType type)
         {
+            var def = TowerBuffPool.Get(type);
             var existing = p.Buffs.FirstOrDefault(b => b.Type == type);
+
+            if (existing != null && existing.Stacks >= def.MaxStacks)
+            {
+                var candidates = TowerBuffPool.All
+                    .Where(b => b.Type != type)
+                    .Where(b =>
+                    {
+                        var stack = p.Buffs.FirstOrDefault(x => x.Type == b.Type);
+                        return stack == null || stack.Stacks < b.MaxStacks;
+                    })
+                    .ToList();
+
+                if (candidates.Count == 0) return type; // everything is capped — nothing left to give
+
+                type = candidates[_random.Next(candidates.Count)].Type;
+                existing = p.Buffs.FirstOrDefault(b => b.Type == type);
+            }
+
             if (existing != null) existing.Stacks++;
             else p.Buffs.Add(new TowerBuff { Type = type, Stacks = 1 });
+
+            return type;
         }
 
         private bool HasActiveBuff(TowerParticipant p, TowerBuffType type) =>
@@ -1724,6 +1744,27 @@ namespace Hogs.RPG.Services.TowerServices
                 alive.Debuffs.Add(new TowerDebuff { Type = debuff.Type, FloorsRemaining = debuff.FloorsRemaining, Stacks = debuff.Stacks });
                 if (debuff.Type == TowerDebuffType.Shackled) alive.HasBeenShackled = true;
             }
+        }
+
+        // Transfers a fallen partner's buff to the survivor, respecting the buff's own cap.
+        // Any stacks that would overflow the cap become random buffs instead of being wasted.
+        private void MergeBuffOnDeath(TowerParticipant alive, TowerBuff buff)
+        {
+            var def = TowerBuffPool.Get(buff.Type);
+            var existing = alive.Buffs.FirstOrDefault(b => b.Type == buff.Type);
+            int currentStacks = existing?.Stacks ?? 0;
+            int roomLeft = Math.Max(0, def.MaxStacks - currentStacks);
+            int applied = Math.Min(buff.Stacks, roomLeft);
+            int overflow = buff.Stacks - applied;
+
+            if (applied > 0)
+            {
+                if (existing != null) existing.Stacks += applied;
+                else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = applied });
+            }
+
+            for (int i = 0; i < overflow; i++)
+                AddBuff(alive, RollRandomBuff());
         }
 
         private List<TowerBuffType> RollThreeBuffs()
