@@ -170,7 +170,7 @@ namespace Hogs.RPG.Bot.Commands
             // =========================
             int xpRequired = player.Level * player.Level * 100;
             double progress = (double)player.XP / xpRequired;
-            int filledBars = (int)(progress * 10);
+            int filledBars = Math.Clamp((int)(progress * 10), 0, 10);
             string xpBar = new string('█', filledBars) + new string('░', 10 - filledBars);
 
             var stats = _statService.CalculateStats(player);
@@ -266,7 +266,7 @@ namespace Hogs.RPG.Bot.Commands
 
                 int xpRequiredPet = 20 + (pet.Level * pet.Level * 15);
                 double petProgress = (double)pet.XP / xpRequiredPet;
-                int filled = (int)(petProgress * 10);
+                int filled = Math.Clamp((int)(petProgress * 10), 0, 10);
                 string petBar = new string('█', filled) + new string('░', 10 - filled);
 
                 string displayName = pet.CustomName ?? def.Name;

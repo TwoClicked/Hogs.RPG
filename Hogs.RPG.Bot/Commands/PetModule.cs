@@ -220,7 +220,7 @@ namespace Hogs.RPG.Bot.Commands
 
             int xpRequired = 20 + (pet.Level * pet.Level * 15);
             double progress = (double)pet.XP / xpRequired;
-            int filled = (int)(progress * 10);
+            int filled = Math.Clamp((int)(progress * 10), 0, 10);
             string bar = new string('█', filled) + new string('░', 10 - filled);
 
             var embed = new EmbedBuilder()
