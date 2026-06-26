@@ -390,9 +390,18 @@ namespace Hogs.RPG.Services.RaidServices
                 var dpsPlayer = await _playerRepo.GetByDiscordIdAsync(dps.DiscordId);
                 var (dpsAtk, _, _) = await _statService.CalculateStatsAsync(dpsPlayer);
                 var relicBonuses = await _relicService.GetRelicBonusesAsync(dps.DiscordId);
-                dpsAtk = (int)(dpsAtk * (1f + relicBonuses.AttackPercent));
 
-                var empowerEffect = session.ActiveEffects.FirstOrDefault(e => e.EffectType == ActiveEffectType.EmpowerAttack && e.TargetDiscordId == dps.DiscordId);
+                if (relicBonuses.ConsecutiveHitBonusPercent > 0)
+                {
+                    dps.ConescutiveHits++;
+                    dpsAtk = (int)(dpsAtk * (1f + relicBonuses.ConsecutiveHitBonusPercent * dps.ConescutiveHits));
+                }
+                else
+                {
+                    dps.ConescutiveHits = 0;
+                }
+
+                    var empowerEffect = session.ActiveEffects.FirstOrDefault(e => e.EffectType == ActiveEffectType.EmpowerAttack && e.TargetDiscordId == dps.DiscordId);
                 if (empowerEffect != null)
                     dpsAtk = (int)(dpsAtk * (1f + (float)empowerEffect.Value));
 

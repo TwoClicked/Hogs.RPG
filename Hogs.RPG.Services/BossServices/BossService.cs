@@ -332,7 +332,8 @@ namespace Hogs.RPG.Services.Game
                     foreach (var loot in lootTable)
                     {
                         int roll = _rand.Next(1, 101);
-                        bool dropped = roll <= loot.DropChance;
+                        double effectiveChance = loot.DropChance + relicBonuses.BonusLootRollPercent * 100;
+                        bool dropped = roll <= effectiveChance;
 
                         string itemLabel = InventoryItemDefinitions.All.TryGetValue(loot.ItemId, out var itemDef)
                             ? $"{itemDef.Icon} {itemDef.Name}" : loot.ItemId;

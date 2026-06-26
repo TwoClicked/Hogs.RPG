@@ -515,7 +515,8 @@ namespace Hogs.RPG.Services.Game
                 foreach (var drop in drops)
                 {
                     int roll = _random.Next(1, 101);
-                    if (roll <= drop.ChancePercent)
+                    float effectiveChance = drop.ChancePercent + relicBonuses.BonusLootRollPercent * 100f;
+                    if (roll <= effectiveChance)
                     {
                         await inventoryService.GiveItemAsync(userId, drop.ItemId, 1);
                         dropText += InventoryItemDefinitions.All.TryGetValue(drop.ItemId, out var item)

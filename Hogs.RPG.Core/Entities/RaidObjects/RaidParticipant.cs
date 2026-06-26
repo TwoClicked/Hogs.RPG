@@ -23,6 +23,7 @@ namespace Hogs.RPG.Core.Entities
         // The message ID of this player's action button message for the current round.
         // Stored so we can edit it in-place when the player changes their action.
         public ulong ActionMessageId { get; set; } = 0;
+        public int ConescutiveHits {get; set;} = 0;
 
         public int ShatterCooldownRoundsRemaining { get; set; } = 0;
         public int RecklessCooldownRoundsRemaining { get; set; } = 0;

@@ -320,7 +320,7 @@ namespace Hogs.RPG.Services.TowerServices
                 eventType = TowerFloorEventType.Boss;
             else if (isElite)
                 eventType = TowerFloorEventType.Elite;
-            else if (session.Floor > 30 && session.MerchantFloor == 0 && _random.NextDouble() < 0.10)
+            else if (session.Floor > 40 && session.MerchantFloor == 0 && _random.NextDouble() < 0.10)
                 eventType = TowerFloorEventType.Merchant;
             else
                 eventType = RollEventType();

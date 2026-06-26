@@ -98,12 +98,10 @@ namespace Hogs.RPG.Services.RelicServices
         public async Task<string> RerollRelicAsync(ulong discordId, int relicId, int shardTier)
         {
             var relic = await _repo.GetByIdAsync(relicId);
-
             if (relic == null || relic.DiscordId != discordId)
                 return "❌ Relic not found.";
 
             var removed = await _repo.RemoveShardAsync(discordId, shardTier, 1);
-
             if (!removed)
                 return $"❌ You don't have a Tier {shardTier} shard to reroll with.";
 
@@ -119,9 +117,18 @@ namespace Hogs.RPG.Services.RelicServices
                 return "❌ No other bonuses available to roll.";
 
             relic.BonusType = available[_random.Next(available.Count)];
+
+            // NAME section
+
+            var newDef = RelicRegistry.All.Values
+                .FirstOrDefault(d => d.Affinity == def.Affinity && d.BonusType == relic.BonusType);
+            if (newDef != null)
+                relic.RelicId = newDef.Id;
+
             await _repo.SaveAsync();
 
-            return $"🎲 Rerolled! **{def.Name}** now has: **{FormatBonus(relic.BonusType)}**";
+            var displayDef = newDef ?? def;
+            return $"🎲 Rerolled! **{displayDef.Name}** now has: **{FormatBonus(relic.BonusType)}**";
         }
 
         // =========================

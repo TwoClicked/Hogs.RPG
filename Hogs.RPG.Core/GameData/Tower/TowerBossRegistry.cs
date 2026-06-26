@@ -30,7 +30,7 @@ namespace Hogs.RPG.Core.GameData.Tower
                 ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1517671773762490499/image.png?ex=6a37217b&is=6a35cffb&hm=3cc214056eb0ab9d463f395bef34fed998ab12fdd1dd42e75c8a7bb672940bc0",
                 HpMultiplier = 3.5f,
                 AtkMultiplier = 2.5f,
-                SpecialMechanicText = "👁️ **Void Gaze!** Inflicts Weakened on all players for 3 floors."
+                SpecialMechanicText = "👁️ **Void Gaze!** Inflicts Weakened on all players until cleansed."
             },
             new()
             {
@@ -57,7 +57,7 @@ namespace Hogs.RPG.Core.GameData.Tower
                 ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1504510410861318296/image0.png?ex=6a36b602&is=6a356482&hm=24df6c513967dcef5e89dc44a10e1b1ccae09e05b36a1ece818efc5bddc99855",
                 HpMultiplier = 5f,
                 AtkMultiplier = 3.5f,
-                SpecialMechanicText = "💀 **Doom Proclamation!** Strips one random buff from each player."
+                SpecialMechanicText = "💀 **Doom Proclamation!** Steals 2 buff stacks from each player."
             },
             new()
             {
@@ -66,7 +66,7 @@ namespace Hogs.RPG.Core.GameData.Tower
                 ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1519072933530566778/IMG_3647.png?ex=6a3c3a6a&is=6a3ae8ea&hm=8d7ca1e1e671fe84761992dd9fae5319a25037c2e479f8fdb19f3aa41f2d12e3",
                 HpMultiplier = 5.5f,
                 AtkMultiplier = 3.75f,
-                SpecialMechanicText = "🌀 **Unraveling Grasp!** Tears two buffs from every player on defeat."
+                SpecialMechanicText = "🌀 **Unraveling Grasp!** Steals 4 buff stacks from every player on defeat."
             },
             new()
             {
@@ -75,7 +75,7 @@ namespace Hogs.RPG.Core.GameData.Tower
                 ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1518700263773311197/image0.jpg?ex=6a3c30d6&is=6a3adf56&hm=581600c9bc94ed6d4f61da4ded12c621f12bf7acf9a83f25325eaa2f9763100d",
                 HpMultiplier = 6f,
                 AtkMultiplier = 4f,
-                SpecialMechanicText = "😵 **Crushing Despair!** Inflicts Weakened x3 on every player."
+                SpecialMechanicText = "😵 **Crushing Despair!** Steals 6 buff stacks and inflicts Weakened x3 on every player."
             },
             new()
             {
@@ -84,7 +84,7 @@ namespace Hogs.RPG.Core.GameData.Tower
                 ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1510773840660271265/1780266346003.png?ex=6a3bb308&is=6a3a6188&hm=49374d13fe19f6ec02c2c58a6c00b89d34eb2ffdffa2b98376ae5a3c61000736",
                 HpMultiplier = 6.5f,
                 AtkMultiplier = 4.25f,
-                SpecialMechanicText = "🩸 **Festering Wound!** Inflicts permanent Bleeding and Weakened x2."
+                SpecialMechanicText = "🩸 **Festering Wound!** Steals 8 buff stacks and inflicts permanent Bleeding and Weakened x2."
             },
             new()
             {
@@ -93,7 +93,7 @@ namespace Hogs.RPG.Core.GameData.Tower
                 ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1504505688842436749/image0.png?ex=6a3bf79c&is=6a3aa61c&hm=a7ab9d5dda32e268377753124e2708a60701155e7c3539297397c13c2b76b0f9",
                 HpMultiplier = 7f,
                 AtkMultiplier = 4.5f,
-                SpecialMechanicText = "💀 **Total Erasure!** Strips every buff from every player."
+                SpecialMechanicText = "💀 **Total Erasure!** Steals 10 buff stacks from every player."
             },
             new()
             {
@@ -111,7 +111,7 @@ namespace Hogs.RPG.Core.GameData.Tower
                 ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1504502760475852911/image0.png?ex=6a3bf4e2&is=6a3aa362&hm=a4058dbdeb4e509de1c57471a2d7e237613fc63cff899b48e94d6447ad5f889c",
                 HpMultiplier = 8f,
                 AtkMultiplier = 5f,
-                SpecialMechanicText = "🌀 **Hollowing Strike!** Strips two buffs and inflicts Weakened x2."
+                SpecialMechanicText = "🌀 **Hollowing Strike!** Steals 4 buff stacks and inflicts Weakened x2."
             },
             new()
             {
@@ -120,7 +120,7 @@ namespace Hogs.RPG.Core.GameData.Tower
                 ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1491147055052095498/5C6805BB-4015-430F-8009-3E63E31C9F3E.png?ex=6a3c25ea&is=6a3ad46a&hm=eae0bf001c0155c6832eb41c8f6bd566b9372871d2f6fd18a3c559e1a867d29c",
                 HpMultiplier = 8.5f,
                 AtkMultiplier = 5.25f,
-                SpecialMechanicText = "💀 **Final Reckoning!** Strips every buff and inflicts permanent Bleeding."
+                SpecialMechanicText = "💀 **Final Reckoning!** Steals 8 buff stacks and inflicts permanent Bleeding."
             },
             new()
             {
@@ -138,7 +138,7 @@ namespace Hogs.RPG.Core.GameData.Tower
                 ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1486710664230731930/1774529681198.png?ex=6a3bd434&is=6a3a82b4&hm=d4ea7f365cd888ee28176c8daaee8634e2299019ad997b7c0c751c3768745970",
                 HpMultiplier = 9.5f,
                 AtkMultiplier = 5.75f,
-                SpecialMechanicText = "💀 **Soul Strip!** Strips every buff and inflicts Weakened x3."
+                SpecialMechanicText = "💀 **Soul Strip!** Steals 8 buff stacks and inflicts Weakened x3."
             },
             new()
             {
@@ -147,7 +147,7 @@ namespace Hogs.RPG.Core.GameData.Tower
                 ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1486694307158298767/file_00000000bf70720a9fd5ef91dd9325bd.png?ex=6a3bc4f8&is=6a3a7378&hm=cbb204293e82bba86689e33fb68b629c421921848e8d13d8ef2024491dbf1034",
                 HpMultiplier = 10f,
                 AtkMultiplier = 6f,
-                SpecialMechanicText = "☠️ **Apex Curse!** Strips every buff, inflicts permanent Bleeding, and Weakened x3."
+                SpecialMechanicText = "☠️ **Apex Curse!** Steals 10 buff stacks, inflicts permanent Bleeding, and Weakened x3."
             }
         };
 
