@@ -393,12 +393,12 @@ namespace Hogs.RPG.Services.RaidServices
 
                 if (relicBonuses.ConsecutiveHitBonusPercent > 0)
                 {
-                    dps.ConescutiveHits++;
-                    dpsAtk = (int)(dpsAtk * (1f + relicBonuses.ConsecutiveHitBonusPercent * dps.ConescutiveHits));
+                    dps.ConsecutiveHits++;
+                    dpsAtk = (int)(dpsAtk * (1f + relicBonuses.ConsecutiveHitBonusPercent * dps.ConsecutiveHits));
                 }
                 else
                 {
-                    dps.ConescutiveHits = 0;
+                    dps.ConsecutiveHits = 0;
                 }
 
                     var empowerEffect = session.ActiveEffects.FirstOrDefault(e => e.EffectType == ActiveEffectType.EmpowerAttack && e.TargetDiscordId == dps.DiscordId);
