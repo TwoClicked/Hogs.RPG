@@ -34,6 +34,10 @@ public class AlchemyDrinkAutocompleteHandler : AutocompleteHandler
             {
                 AlchemyPotionRegistry.All.TryGetValue(i.ItemId, out var potion);
                 var label = $"{potion?.Icon ?? "🧪"} {potion?.Name ?? i.ItemId} × {i.Quantity} — {potion?.Description ?? ""}";
+                // Discord hard-caps autocomplete choice names at 100 chars — one oversized
+                // label here breaks the entire dropdown for every potion, not just this one.
+                if (label.Length > 100)
+                    label = label[..97] + "...";
                 return (label, i.ItemId);
             })
             .Where(x => string.IsNullOrEmpty(input) || x.label.ToLower().Contains(input))
