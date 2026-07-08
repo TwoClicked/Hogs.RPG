@@ -147,5 +147,27 @@ namespace Hogs.RPG.Core.GameData.Shop
             Type = ShopItemType.FixedPrice,
             Price = 5_000
         };
+        public static readonly ShopItemDefinition SoloTowerReset = new()
+        {
+            Id = "rpg_solo_tower_reset",
+            Name = "Tower reset - Solo",
+            Description = "Grants 1 additional solo tower of doom attempt for today.",
+            Icon = "🗼",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 3_000
+        };
+
+        public static readonly ShopItemDefinition DuoTowerReset = new()
+        {
+            Id = "rpg_duo_tower_reset",
+            Name = "Tower reset - Duo",
+            Description = "Grants 1 additional duo tower of doom attempt for today.",
+            Icon = "🗼",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 3_000
+        };
+
     }
 }

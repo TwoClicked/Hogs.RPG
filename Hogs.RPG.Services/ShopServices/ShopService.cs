@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using Google.Apis.Logging;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.JobObjects;
 using Hogs.RPG.Core.Entities.TradeObjects;
@@ -564,6 +565,22 @@ namespace Hogs.RPG.Services.ShopServices
                     player.TrailsToday = 0;
                     player.LastTrailDate = today;
                     player.TrailResetUsedDate = today;
+                    await playerRepo.UpdatePlayerAsync(player);
+                    break;
+
+                // =========================
+                // 🗼 SOLO TOWER - Extra attempt
+                // =========================
+                case "rpg_solo_tower_reset":
+                    player.LastSoloTowerRun = null;
+                    await playerRepo.UpdatePlayerAsync(player);
+                    break;
+
+                // =========================
+                // 🗼 DUO TOWER - Extra attempt
+                // =========================
+                case "rpg_duo_tower_reset":
+                    player.LastDuoTowerRun = null;
                     await playerRepo.UpdatePlayerAsync(player);
                     break;
             }
