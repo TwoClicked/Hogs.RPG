@@ -15,6 +15,7 @@ using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
 using Hogs.RPG.Services.RelicServices;
+using Hogs.RPG.Services.TowerServices;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -182,13 +183,15 @@ namespace Hogs.RPG.Services.Game
             var statService = scope.ServiceProvider.GetRequiredService<StatService>();
             var petService = scope.ServiceProvider.GetRequiredService<PetService>();
             var relicService = scope.ServiceProvider.GetRequiredService<RelicService>();
+            var sigilService = scope.ServiceProvider.GetRequiredService<SigilService>();
 
             foreach (var userId in boss.Participants)
             {
                 var player = await playerService.GetOrCreatePlayerAsync(userId, "Unknown");
                 var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
+                var sigilBonuses = await sigilService.GetSigilBonusesAsync(userId);
 
-                int goldWithBonus = (int)(reward * (1f + relicBonuses.BonusGoldPercent));
+                int goldWithBonus = (int)(reward * (1f + relicBonuses.BonusGoldPercent + sigilBonuses.BonusGoldPercent));
                 int petXp = (int)(25 * (1f + relicBonuses.BonusPetXpPercent));
 
                 player.Gold += goldWithBonus;
@@ -290,15 +293,17 @@ namespace Hogs.RPG.Services.Game
             var levelService = scope.ServiceProvider.GetRequiredService<LevelService>();
             var petService = scope.ServiceProvider.GetRequiredService<PetService>();
             var relicService = scope.ServiceProvider.GetRequiredService<RelicService>();
+            var sigilService = scope.ServiceProvider.GetRequiredService<SigilService>();
             var achievementService = scope.ServiceProvider.GetRequiredService<AchievementService>();
 
             foreach (var userId in boss.Participants)
             {
                 var player = await playerService.GetOrCreatePlayerAsync(userId, "Unknown");
                 var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
+                var sigilBonuses = await sigilService.GetSigilBonusesAsync(userId);
 
-                int gold = (int)(reward * (1f + relicBonuses.BonusGoldPercent));
-                int xp = (int)(2500 * (1f + relicBonuses.BonusPlayerXpPercent));
+                int gold = (int)(reward * (1f + relicBonuses.BonusGoldPercent + sigilBonuses.BonusGoldPercent));
+                int xp = (int)(2500 * (1f + relicBonuses.BonusPlayerXpPercent + sigilBonuses.BonusPlayerXpPercent));
                 int petXp = (int)(50 * (1f + relicBonuses.BonusPetXpPercent));
 
                 player.Gold += gold;
@@ -306,8 +311,8 @@ namespace Hogs.RPG.Services.Game
 
                 if (top3.Contains(userId))
                 {
-                    player.Gold += (int)(250 * (1f + relicBonuses.BonusGoldPercent));
-                    player.XP += (int)(2500 * (1f + relicBonuses.BonusPlayerXpPercent));
+                    player.Gold += (int)(250 * (1f + relicBonuses.BonusGoldPercent + sigilBonuses.BonusGoldPercent));
+                    player.XP += (int)(2500 * (1f + relicBonuses.BonusPlayerXpPercent + sigilBonuses.BonusPlayerXpPercent));
                     top3Mentions.Add($"<@{userId}>");
                 }
 

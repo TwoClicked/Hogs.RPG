@@ -13,6 +13,7 @@ using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.PlayerServices;
 using Hogs.RPG.Services.RelicServices;
+using Hogs.RPG.Services.TowerServices;
 
 namespace Hogs.RPG.Services.RaidServices
 {
@@ -28,6 +29,7 @@ namespace Hogs.RPG.Services.RaidServices
         private readonly LevelService _levelService;
         private readonly DiscordSocketClient _client;
         private readonly AchievementService _achievementService;
+        private readonly SigilService _sigilService;
 
         private static readonly Random _random = new();
 
@@ -43,6 +45,7 @@ namespace Hogs.RPG.Services.RaidServices
             PlayerRepository playerRepo,
             InventoryRepository inventoryRepo,
             RelicService relicService,
+            SigilService sigilService,
             StatService statService,
             PetService petService,
             PetPassiveService petPassiveService,
@@ -60,6 +63,7 @@ namespace Hogs.RPG.Services.RaidServices
             _levelService = levelService;
             _client = client;
             _achievementService = achievementService;
+            _sigilService = sigilService;
         }
 
         // =========================
@@ -390,6 +394,7 @@ namespace Hogs.RPG.Services.RaidServices
                 var dpsPlayer = await _playerRepo.GetByDiscordIdAsync(dps.DiscordId);
                 var (dpsAtk, _, _) = await _statService.CalculateStatsAsync(dpsPlayer);
                 var relicBonuses = await _relicService.GetRelicBonusesAsync(dps.DiscordId);
+                var sigilBonuses = await _sigilService.GetSigilBonusesAsync(dps.DiscordId);
 
                 if (relicBonuses.ConsecutiveHitBonusPercent > 0)
                 {
@@ -443,10 +448,10 @@ namespace Hogs.RPG.Services.RaidServices
                     session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - damage);
                     int petLifesteal = _petPassiveService.ApplyOnHitEffects(damage, dpsPlayer, dpsPet);
                     if (petLifesteal > 0) dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + petLifesteal);
-                    int relicHeal = (int)(damage * relicBonuses.LifeStealPercent);
+                    int relicHeal = (int)(damage * (relicBonuses.LifeStealPercent + sigilBonuses.LifeStealPercent));
                     if (relicHeal > 0) dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + relicHeal);
                     string lsSuffix = (relicHeal > 0 && petLifesteal > 0)
-                        ? $" 🩸 Life steal: **+{relicHeal}** (relic) + **+{petLifesteal}** (pet)."
+                        ? $" 🩸 Life steal: **+{relicHeal}** (gear) + **+{petLifesteal}** (pet)."
                         : relicHeal > 0 ? $" 🩸 Life steal healed for **{relicHeal}**."
                         : petLifesteal > 0 ? $" 🩸 Pet lifesteal: **+{petLifesteal} HP**."
                         : "";
@@ -461,10 +466,10 @@ namespace Hogs.RPG.Services.RaidServices
                     session.BossCurrentHp = Math.Max(0, session.BossCurrentHp - damage);
                     int petLifesteal = _petPassiveService.ApplyOnHitEffects(damage, dpsPlayer, dpsPet);
                     if (petLifesteal > 0) dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + petLifesteal);
-                    int relicHeal = (int)(damage * relicBonuses.LifeStealPercent);
+                    int relicHeal = (int)(damage * (relicBonuses.LifeStealPercent + sigilBonuses.LifeStealPercent));
                     if (relicHeal > 0) dps.CurrentHp = Math.Min(dps.MaxHp, dps.CurrentHp + relicHeal);
                     if (relicHeal > 0 && petLifesteal > 0)
-                        result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Life steal: **+{relicHeal}** (relic) + **+{petLifesteal}** (pet).";
+                        result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Life steal: **+{relicHeal}** (gear) + **+{petLifesteal}** (pet).";
                     else if (relicHeal > 0)
                         result.DpsText = $"⚔️ DPS dealt **{damage}** damage! 🩸 Life steal healed for **{relicHeal}**.";
                     else if (petLifesteal > 0)
@@ -780,9 +785,10 @@ namespace Hogs.RPG.Services.RaidServices
                 if (player == null) continue;
 
                 var relicBonuses = await _relicService.GetRelicBonusesAsync(p.DiscordId);
+                var sigilBonuses = await _sigilService.GetSigilBonusesAsync(p.DiscordId);
 
-                int gold = (int)(RaidGoldReward * (1f + relicBonuses.BonusGoldPercent));
-                int xp = (int)(RaidPlayerXpReward * (1f + relicBonuses.BonusPlayerXpPercent));
+                int gold = (int)(RaidGoldReward * (1f + relicBonuses.BonusGoldPercent + sigilBonuses.BonusGoldPercent));
+                int xp = (int)(RaidPlayerXpReward * (1f + relicBonuses.BonusPlayerXpPercent + sigilBonuses.BonusPlayerXpPercent));
                 int petXp = (int)(RaidPetXpReward * (1f + relicBonuses.BonusPetXpPercent));
 
                 player.Gold += gold;

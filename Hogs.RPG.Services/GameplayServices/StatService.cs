@@ -6,6 +6,7 @@ using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.RelicServices;
+using Hogs.RPG.Services.TowerServices;
 
 namespace Hogs.RPG.Services.GameplayServices
 {
@@ -14,15 +15,18 @@ namespace Hogs.RPG.Services.GameplayServices
         private readonly EquipmentService _equipmentService;
         private readonly PetService _petService;
         private readonly RelicService _relicService;
+        private readonly SigilService _sigilService;
 
         public StatService(
             EquipmentService equipmentService,
             PetService petService,
-            RelicService relicService)
+            RelicService relicService,
+            SigilService sigilService)
         {
             _equipmentService = equipmentService;
             _petService = petService;
             _relicService = relicService;
+            _sigilService = sigilService;
         }
 
         public async Task<(int attack, int defense, int health)> CalculateStatsAsync(Player player)
@@ -85,6 +89,15 @@ namespace Hogs.RPG.Services.GameplayServices
             attack = (int)(attack * (1f + relicBonuses.AttackPercent));
             defense = (int)(defense * (1f + relicBonuses.DefensePercent));
             health = (int)(health * (1f + relicBonuses.MaxHpPercent));
+
+            // =========================
+            // ✨ SIGIL BONUSES (Tower of Doom)
+            // =========================
+            var sigilBonuses = await _sigilService.GetSigilBonusesAsync(player.DiscordId);
+
+            attack = (int)(attack * (1f + sigilBonuses.AttackPercent));
+            defense = (int)(defense * (1f + sigilBonuses.DefensePercent));
+            health = (int)(health * (1f + sigilBonuses.MaxHpPercent));
 
             // =========================
             // 🏆 ACHIEVEMENT MILESTONE BONUSES
