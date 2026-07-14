@@ -24,6 +24,16 @@ namespace Hogs.RPG.Services.PetServices
         {
             var existing = await _repo.GetPetAsync(userId, petId);
 
+            // Recompute from the source of truth (not incremented) so this
+            // self-heals even if a prior grant path missed updating it.
+            var player = await _playerRepo.GetByDiscordIdAsync(userId);
+            if (player != null)
+            {
+                var pets = await _repo.GetPetsAsync(userId);
+                player.TotalPetsOwned = pets.Count;
+                await _playerRepo.UpdatePlayerAsync(player);
+            }
+
             if (existing != null)
                 return;
 
@@ -219,13 +229,13 @@ namespace Hogs.RPG.Services.PetServices
             if (slot == 1)
             {
                 oldPassive = equippedPet.Passive1!.Value;
-                newPassive = GetRandomPassiveExcluding(equippedPet.Passive2);
+                newPassive = GetRandomPassiveExcluding(oldPassive, equippedPet.Passive2);
                 equippedPet.Passive1 = newPassive;
             }
             else
             {
                 oldPassive = equippedPet.Passive2!.Value;
-                newPassive = GetRandomPassiveExcluding(equippedPet.Passive1);
+                newPassive = GetRandomPassiveExcluding(equippedPet.Passive1, oldPassive);
                 equippedPet.Passive2 = newPassive;
             }
 

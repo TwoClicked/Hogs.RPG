@@ -196,6 +196,9 @@ namespace Hogs.RPG.Services.TrailServices
                         }
                         else if (petDrop && player.HasHuntingPet)
                         {
+                            player.HasHuntingPet = true;
+                            player.HuntingCompanionUnlocked = true;
+                            await playerRepo.UpdatePlayerAsync(player);
                             state.TokensEarned += 15;
                             logEntry += " — You already have a companion, but the creature left a gift. **+15 tokens**";
                         }

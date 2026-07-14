@@ -598,6 +598,7 @@ namespace Hogs.RPG.Services.TowerServices
 
             bool bossDefeated = session.BossCurrentHp <= 0;
             bool anyDead = session.Participants.Any(p => p.CurrentHp <= 0);
+            bool allDead = session.Participants.All(p => p.CurrentHp <= 0);
 
             // Duo: if one partner dies during boss fight, pass buffs/debuffs to survivor
             if (anyDead && !bossDefeated && session.Mode == TowerMode.Duo)
@@ -624,6 +625,25 @@ namespace Hogs.RPG.Services.TowerServices
                     session.Participants.RemoveAll(p => p.CurrentHp <= 0);
                     anyDead = false;
                 }
+            }
+
+            // Boss defeated with at least one survivor — the kill wins the trade,
+            // even if a partner died in the same round. A full wipe still requires
+            // surviving the boss for credit, so that case falls through to the loss path below.
+            if (bossDefeated && anyDead && !allDead && session.Mode == TowerMode.Duo)
+            {
+                var dead = session.Participants.Where(p => p.CurrentHp <= 0).ToList();
+                var alive = session.Participants.First(p => p.CurrentHp > 0);
+
+                string fallenNames = string.Join(" & ", dead.Select(p => $"**{p.Username}**"));
+                await thread.SendMessageAsync(embed: new EmbedBuilder()
+                    .WithTitle("💀 A partner has fallen — but the boss is slain!")
+                    .WithDescription($"{fallenNames} fell in the same blow that finished the boss. **{alive.Username}** claims the victory alone.")
+                    .WithColor(Color.Gold).Build());
+
+                session.FallenParticipants.AddRange(dead);
+                session.Participants.RemoveAll(p => p.CurrentHp <= 0);
+                anyDead = false;
             }
 
             if (anyDead)
