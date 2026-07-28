@@ -11,6 +11,7 @@ using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
 using Hogs.RPG.Services.RelicServices;
+using Hogs.RPG.Services.TowerServices;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hogs.RPG.Services.DungeonServices
@@ -128,6 +129,7 @@ namespace Hogs.RPG.Services.DungeonServices
             var petService = scope.ServiceProvider.GetRequiredService<PetService>();
             var petPassiveService = scope.ServiceProvider.GetRequiredService<PetPassiveService>();
             var relicService = scope.ServiceProvider.GetRequiredService<RelicService>();
+            var sigilService = scope.ServiceProvider.GetRequiredService<SigilService>();
 
             var pet = await petService.GetEquippedPetAsync(userId);
             PetDefinition petDef = null;
@@ -143,6 +145,7 @@ namespace Hogs.RPG.Services.DungeonServices
                 playerDamage = (int)(playerDamage * 0.80);
 
             var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
+            var sigilBonuses = await sigilService.GetSigilBonusesAsync(userId);
 
             // =========================
             // 💎 RELIC: CONSECUTIVE HIT BONUS
@@ -175,11 +178,13 @@ namespace Hogs.RPG.Services.DungeonServices
                 text += outgoingTriggerText + "\n";
 
             // =========================
-            // 💎 RELIC: LIFESTEAL
+            // 💎 RELIC / ✨ SIGIL: LIFESTEAL
             // =========================
             int heal = petPassiveService.ApplyOnHitEffects(playerDamage, null, pet);
             if (relicBonuses.LifeStealPercent > 0)
                 heal += (int)(playerDamage * relicBonuses.LifeStealPercent);
+            if (sigilBonuses.LifeStealPercent > 0)
+                heal += (int)(playerDamage * sigilBonuses.LifeStealPercent);
 
             if (heal > 0)
             {
@@ -357,13 +362,15 @@ namespace Hogs.RPG.Services.DungeonServices
             var petService = scope.ServiceProvider.GetRequiredService<PetService>();
             var levelService = scope.ServiceProvider.GetRequiredService<LevelService>();
             var relicService = scope.ServiceProvider.GetRequiredService<RelicService>();
+            var sigilService = scope.ServiceProvider.GetRequiredService<SigilService>();
 
             var player = await playerRepo.GetByDiscordIdAsync(userId);
             var dungeon = GetDungeonById(session.DungeonId);
             var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
+            var sigilBonuses = await sigilService.GetSigilBonusesAsync(userId);
 
-            int gold = (int)(250 * (1f + relicBonuses.BonusGoldPercent));
-            int xp = (int)(500 * (1f + relicBonuses.BonusPlayerXpPercent));
+            int gold = (int)(250 * (1f + relicBonuses.BonusGoldPercent + sigilBonuses.BonusGoldPercent));
+            int xp = (int)(500 * (1f + relicBonuses.BonusPlayerXpPercent + sigilBonuses.BonusPlayerXpPercent));
             int petXp = (int)(250 * (1f + relicBonuses.BonusPetXpPercent));
 
             player.Gold += gold;

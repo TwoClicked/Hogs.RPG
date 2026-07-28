@@ -93,6 +93,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<PetPassiveService>();
             services.AddScoped<RelicService>();
             services.AddScoped<RaidService>();
+            services.AddScoped<SigilService>();
             services.AddScoped<GearSetService>();
             services.AddSingleton<PlayerAuctionService>();
             services.AddScoped<MaterialConversionService>();
@@ -100,6 +101,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<SmithingShopRepository>();
             services.AddScoped<AlchemyBrewService>();
             services.AddScoped<AchievementService>();
+    
 
 
             // =========================
