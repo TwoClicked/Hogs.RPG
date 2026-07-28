@@ -29,6 +29,10 @@ namespace Hogs.RPG.Services.TowerServices
         private const int FlatXp = 2500;
         private const int FlatPetXp = 250;
 
+        // Discord connection resilience
+        private const int MaxDiscordRetries = 3;
+        private const int DiscordRetryDelaySeconds = 5;
+
         public TowerService(IServiceScopeFactory scopeFactory, DiscordSocketClient client)
         {
             _scopeFactory = scopeFactory;
@@ -124,6 +128,131 @@ namespace Hogs.RPG.Services.TowerServices
             }
 
             Console.WriteLine($"🧹 Tower cleanup done: {deleted} thread(s) deleted.");
+        }
+
+        // =========================
+        // 🔌 DISCORD CONNECTION RESILIENCE
+        // =========================
+        // Wraps a single Discord send. On failure it posts a best-effort "hiccup" notice to the
+        // thread and retries with a short delay, up to MaxDiscordRetries total attempts.
+        // - critical=true (default): if every attempt fails, the run is aborted and the
+        //   players' daily attempt is refunded. Use this for anything that carries game state
+        //   forward (floor results, boss rounds, checkpoints, etc).
+        // - critical=false: if every attempt fails, we just log it and move on — used for
+        //   purely cosmetic messages where losing the message isn't worth ending the run over.
+        private async Task<bool> SendWithRetryAsync(TowerSession session, IThreadChannel thread, Func<Task> sendAction, bool critical = true)
+        {
+            for (int attempt = 1; attempt <= MaxDiscordRetries; attempt++)
+            {
+                try
+                {
+                    await sendAction();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Tower send failed (attempt {attempt}/{MaxDiscordRetries}) [{session.SessionId}]: {ex.Message}");
+
+                    if (attempt < MaxDiscordRetries)
+                    {
+                        try
+                        {
+                            await thread.SendMessageAsync(
+                                $"⚠️ Discord connection hiccup detected — retrying in {DiscordRetryDelaySeconds}s... ({attempt}/{MaxDiscordRetries})");
+                        }
+                        catch { /* best effort — if this also fails we just stay quiet and keep retrying */ }
+
+                        await Task.Delay(TimeSpan.FromSeconds(DiscordRetryDelaySeconds));
+                    }
+                }
+            }
+
+            Console.WriteLine($"❌ Tower send permanently failed after {MaxDiscordRetries} attempts [{session.SessionId}]. Critical={critical}");
+
+            if (critical)
+                await AbortRunDueToConnectionFailureAsync(session, thread);
+
+            return false;
+        }
+
+        // Looks up the run's thread, retrying a few times with a short delay if Discord's cache
+        // doesn't have it yet (common right after a gateway reconnect). Returns null only after
+        // every attempt fails.
+        private async Task<IThreadChannel?> GetThreadWithRetryAsync(TowerSession session)
+        {
+            for (int attempt = 1; attempt <= MaxDiscordRetries; attempt++)
+            {
+                var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
+                if (thread != null) return thread;
+
+                Console.WriteLine($"⚠️ Tower thread lookup failed (attempt {attempt}/{MaxDiscordRetries}) [{session.SessionId}]");
+
+                if (attempt < MaxDiscordRetries)
+                    await Task.Delay(TimeSpan.FromSeconds(DiscordRetryDelaySeconds));
+            }
+
+            return null;
+        }
+
+        // Ends a run early because Discord was unreachable, refunds the players' daily attempt
+        // so they can start again, and best-effort notifies them. Never throws.
+        private async Task AbortRunDueToConnectionFailureAsync(TowerSession session, IThreadChannel? thread)
+        {
+            Console.WriteLine($"❌ Tower session {session.SessionId} aborted after repeated Discord connection failures.");
+
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
+
+                foreach (var p in session.Participants.Concat(session.FallenParticipants))
+                {
+                    var player = await playerRepo.GetByDiscordIdAsync(p.DiscordId);
+                    if (player == null) continue;
+
+                    if (session.Mode == TowerMode.Solo) player.LastSoloTowerRun = null;
+                    else player.LastDuoTowerRun = null;
+
+                    await playerRepo.UpdatePlayerAsync(player);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Failed to refund players after connection abort [{session.SessionId}]: {ex.Message}");
+            }
+
+            try
+            {
+                var noticeEmbed = new EmbedBuilder()
+                    .WithTitle("🔌 Connection Lost — Run Ended")
+                    .WithDescription("We couldn't reach Discord after several attempts, so this run had to be ended early.\n\n" +
+                                      "Your attempt has been **refunded** — feel free to start a new Tower run.")
+                    .WithColor(Color.DarkGrey)
+                    .Build();
+
+                var notifyThread = thread ?? _client.GetChannel(session.ThreadId) as IThreadChannel;
+                if (notifyThread != null)
+                {
+                    await notifyThread.SendMessageAsync(embed: noticeEmbed);
+                }
+                else
+                {
+                    // Thread itself is unreachable — fall back to the main tower channel so
+                    // players still get told what happened instead of just vanishing.
+                    var fallbackChannel = _client.GetChannel(session.ChannelId) as ITextChannel;
+                    if (fallbackChannel != null)
+                    {
+                        string mentions = string.Join(" ", session.Participants.Concat(session.FallenParticipants).Select(p => $"<@{p.DiscordId}>"));
+                        await fallbackChannel.SendMessageAsync($"{mentions}", embed: noticeEmbed);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Could not deliver connection-abort notice [{session.SessionId}]: {ex.Message}");
+            }
+
+            RemoveSession(session.SessionId);
         }
 
         // =========================
@@ -226,11 +355,22 @@ namespace Hogs.RPG.Services.TowerServices
                 ? $"🗼 Duo Tower — {string.Join(" & ", session.Participants.Select(p => p.Username))}"
                 : $"🗼 Solo Tower — {session.Participants[0].Username}";
 
-            var thread = await channel.CreateThreadAsync(
-                name: threadName,
-                autoArchiveDuration: ThreadArchiveDuration.OneDay,
-                type: ThreadType.PublicThread
-            );
+            IThreadChannel thread;
+            try
+            {
+                thread = await channel.CreateThreadAsync(
+                    name: threadName,
+                    autoArchiveDuration: ThreadArchiveDuration.OneDay,
+                    type: ThreadType.PublicThread
+                );
+            }
+            catch (Exception ex)
+            {
+                // Nothing was consumed yet (no cooldown marked, no thread exists) — the lobby
+                // is untouched, so the safest thing is to just let them retry Start.
+                Console.WriteLine($"❌ Tower thread creation failed [{sessionId}]: {ex.Message}");
+                return (false, "We couldn't reach Discord to create the tower thread. Please try Start again in a moment.");
+            }
 
             session.ThreadId = thread.Id;
             session.Status = TowerStatus.StartPick;
@@ -247,8 +387,13 @@ namespace Hogs.RPG.Services.TowerServices
                 await playerRepo.UpdatePlayerAsync(player);
             }
 
-            await thread.SendMessageAsync(embed: BuildStartEmbed(session));
-            await PostStartBuffChoiceAsync(session, thread);
+            // From here on, the daily attempt has been consumed — any connection failure now
+            // goes through the abort+refund path instead of leaving the player locked out.
+            if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: BuildStartEmbed(session))))
+                return (false, "We couldn't reach Discord to start the run after several attempts. The lobby has been closed and your attempt refunded — please create a new one.");
+
+            if (!await PostStartBuffChoiceAsync(session, thread))
+                return (false, "We couldn't reach Discord to start the run after several attempts. The lobby has been closed and your attempt refunded — please create a new one.");
 
             return (true, "");
         }
@@ -309,7 +454,7 @@ namespace Hogs.RPG.Services.TowerServices
             {
                 var shakeThread = _client.GetChannel(session.ThreadId) as IThreadChannel;
                 if (shakeThread != null)
-                    await shakeThread.SendMessageAsync(string.Join("\n", shakeOffNotices));
+                    await SendWithRetryAsync(session, shakeThread, () => shakeThread.SendMessageAsync(string.Join("\n", shakeOffNotices)), critical: false);
             }
 
             bool isBoss = session.Floor % 25 == 0;
@@ -328,29 +473,29 @@ namespace Hogs.RPG.Services.TowerServices
             // Boss floors — show pre-boss choice (full heal or remove debuff stack) then start the fight
             if (eventType == TowerFloorEventType.Boss)
             {
-                var bossThread = _client.GetChannel(session.ThreadId) as IThreadChannel;
-                if (bossThread == null) return;
+                var bossThread = await GetThreadWithRetryAsync(session);
+                if (bossThread == null) { await AbortRunDueToConnectionFailureAsync(session, null); return; }
                 await PostPreBossChoiceAsync(session, TowerBossRegistry.GetForFloor(session.Floor), bossThread);
                 return;
             }
 
             string combatLog = eventType switch
             {
-                TowerFloorEventType.Combat       => ResolveCombat(session, false, false),
-                TowerFloorEventType.Elite        => ResolveCombat(session, true, false),
+                TowerFloorEventType.Combat => ResolveCombat(session, false, false),
+                TowerFloorEventType.Elite => ResolveCombat(session, true, false),
                 TowerFloorEventType.TreasureRoom => ResolveTreasureRoom(session),
-                TowerFloorEventType.CursedFloor  => ResolveCursedFloor(session),
-                TowerFloorEventType.RestSite     => ResolveRestSite(session),
-                TowerFloorEventType.Merchant     => ResolveMerchantFloor(session),
-                _                                => ResolveCombat(session, false, false)
+                TowerFloorEventType.CursedFloor => ResolveCursedFloor(session),
+                TowerFloorEventType.RestSite => ResolveRestSite(session),
+                TowerFloorEventType.Merchant => ResolveMerchantFloor(session),
+                _ => ResolveCombat(session, false, false)
             };
 
             // Accumulate gold (boss floors accumulate on kill)
             foreach (var p in session.Participants)
                 p.AccumulatedGold += GoldPerFloor;
 
-            var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
-            if (thread == null) return;
+            var thread = await GetThreadWithRetryAsync(session);
+            if (thread == null) { await AbortRunDueToConnectionFailureAsync(session, null); return; }
 
             bool anyDead = session.Participants.Any(p => p.CurrentHp <= 0);
 
@@ -362,7 +507,8 @@ namespace Hogs.RPG.Services.TowerServices
 
                 if (alive != null && dead.Count < session.Participants.Count)
                 {
-                    await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType));
+                    if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType))))
+                        return;
 
                     foreach (var fallen in dead)
                     {
@@ -376,11 +522,12 @@ namespace Hogs.RPG.Services.TowerServices
 
                     alive.PartnerDied = true;
                     string fallenNames = string.Join(" & ", dead.Select(p => $"**{p.Username}**"));
-                    await thread.SendMessageAsync(embed: new EmbedBuilder()
+                    if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: new EmbedBuilder()
                         .WithTitle("💀 A partner has fallen!")
                         .WithDescription($"{fallenNames} has died — their buffs and debuffs have been passed to **{alive.Username}**.\n\nThe climb continues alone. ⚠️ **Incoming damage doubled!**")
                         .WithColor(Color.DarkRed)
-                        .Build());
+                        .Build())))
+                        return;
 
                     // Move dead participants to FallenParticipants (not discarded) so they still get end-of-run rewards
                     // and have their player-session lock cleared when the run ends
@@ -402,12 +549,14 @@ namespace Hogs.RPG.Services.TowerServices
 
             if (anyDead)
             {
-                await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType));
+                if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType))))
+                    return;
                 await EndRunAsync(session, thread);
                 return;
             }
 
-            await thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType));
+            if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: BuildFloorEmbed(session, combatLog, eventType))))
+                return;
 
             if (eventType == TowerFloorEventType.Merchant)
             {
@@ -436,7 +585,7 @@ namespace Hogs.RPG.Services.TowerServices
                 < 45 => TowerFloorEventType.Combat,
                 < 60 => TowerFloorEventType.TreasureRoom,
                 < 80 => TowerFloorEventType.CursedFloor,
-                _    => TowerFloorEventType.RestSite
+                _ => TowerFloorEventType.RestSite
             };
         }
 
@@ -451,14 +600,14 @@ namespace Hogs.RPG.Services.TowerServices
             int floor = session.Floor;
             bool isDuo = session.Mode == TowerMode.Duo;
 
-            int baseEnemyHp  = isDuo ? 200 + (floor * 40) : 150 + (floor * 30);
+            int baseEnemyHp = isDuo ? 200 + (floor * 40) : 150 + (floor * 30);
             int baseEnemyAtk = 17 + (floor * 9);
             int baseEnemyDef = 5 + (floor * 3);
 
-            float hpMult  = isBoss ? bossDef!.HpMultiplier  : isElite ? 1.6f : 1f;
+            float hpMult = isBoss ? bossDef!.HpMultiplier : isElite ? 1.6f : 1f;
             float atkMult = isBoss ? bossDef!.AtkMultiplier : isElite ? 1.6f : 1f;
 
-            int enemyHp  = (int)(baseEnemyHp  * hpMult);
+            int enemyHp = (int)(baseEnemyHp * hpMult);
             int enemyAtk = (int)(baseEnemyAtk * atkMult);
             int enemyDef = baseEnemyDef;
 
@@ -554,7 +703,7 @@ namespace Hogs.RPG.Services.TowerServices
         // =========================
         // MULTI-ROUND BOSS FIGHT
         // =========================
-        private async Task StartBossFightAsync(TowerSession session, TowerBossDefinition bossDef, IThreadChannel thread)
+        private async Task<bool> StartBossFightAsync(TowerSession session, TowerBossDefinition bossDef, IThreadChannel thread)
         {
             int floor = session.Floor;
             bool isDuo = session.Mode == TowerMode.Duo;
@@ -580,9 +729,11 @@ namespace Hogs.RPG.Services.TowerServices
 
             intro.AddField($"👹 {bossDef.Name}", FormatHpBar(session.BossCurrentHp, session.BossMaxHp), false);
 
-            await thread.SendMessageAsync(embed: intro.Build());
+            if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: intro.Build())))
+                return false;
 
             session.NextBossRoundAt = DateTime.UtcNow.AddSeconds(5);
+            return true;
         }
 
         private async Task ResolveBossRoundAsync(TowerSession session)
@@ -591,13 +742,14 @@ namespace Hogs.RPG.Services.TowerServices
             session.BossRound++;
 
             var bossDef = session.ActiveBoss!;
-            var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
-            if (thread == null) return;
+            var thread = await GetThreadWithRetryAsync(session);
+            if (thread == null) { await AbortRunDueToConnectionFailureAsync(session, null); return; }
 
             string combatLog = ResolveBossRoundCombat(session);
 
             bool bossDefeated = session.BossCurrentHp <= 0;
             bool anyDead = session.Participants.Any(p => p.CurrentHp <= 0);
+            bool allDead = session.Participants.All(p => p.CurrentHp <= 0);
 
             // Duo: if one partner dies during boss fight, pass buffs/debuffs to survivor
             if (anyDead && !bossDefeated && session.Mode == TowerMode.Duo)
@@ -606,7 +758,8 @@ namespace Hogs.RPG.Services.TowerServices
                 var alive = session.Participants.FirstOrDefault(p => p.CurrentHp > 0);
                 if (alive != null && dead.Count < session.Participants.Count)
                 {
-                    await thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, false, false));
+                    if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, false, false))))
+                        return;
                     foreach (var fallen in dead)
                     {
                         foreach (var buff in fallen.Buffs)
@@ -616,19 +769,41 @@ namespace Hogs.RPG.Services.TowerServices
                     }
                     alive.PartnerDied = true;
                     string fallenNames = string.Join(" & ", dead.Select(p => $"**{p.Username}**"));
-                    await thread.SendMessageAsync(embed: new EmbedBuilder()
+                    if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: new EmbedBuilder()
                         .WithTitle("💀 A partner has fallen!")
                         .WithDescription($"{fallenNames} fell to the boss — their buffs and debuffs pass to **{alive.Username}**.\n\nThe fight continues alone... ⚠️ **Incoming damage doubled!**")
-                        .WithColor(Color.DarkRed).Build());
+                        .WithColor(Color.DarkRed).Build())))
+                        return;
                     session.FallenParticipants.AddRange(dead);
                     session.Participants.RemoveAll(p => p.CurrentHp <= 0);
                     anyDead = false;
                 }
             }
 
+            // Boss defeated with at least one survivor — the kill wins the trade,
+            // even if a partner died in the same round. A full wipe still requires
+            // surviving the boss for credit, so that case falls through to the loss path below.
+            if (bossDefeated && anyDead && !allDead && session.Mode == TowerMode.Duo)
+            {
+                var dead = session.Participants.Where(p => p.CurrentHp <= 0).ToList();
+                var alive = session.Participants.First(p => p.CurrentHp > 0);
+
+                string fallenNames = string.Join(" & ", dead.Select(p => $"**{p.Username}**"));
+                if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: new EmbedBuilder()
+                    .WithTitle("💀 A partner has fallen — but the boss is slain!")
+                    .WithDescription($"{fallenNames} fell in the same blow that finished the boss. **{alive.Username}** claims the victory alone.")
+                    .WithColor(Color.Gold).Build())))
+                    return;
+
+                session.FallenParticipants.AddRange(dead);
+                session.Participants.RemoveAll(p => p.CurrentHp <= 0);
+                anyDead = false;
+            }
+
             if (anyDead)
             {
-                await thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, false, true));
+                if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, false, true))))
+                    return;
                 await EndRunAsync(session, thread);
                 return;
             }
@@ -647,7 +822,8 @@ namespace Hogs.RPG.Services.TowerServices
                 session.ActiveBoss = null;
                 session.BossRound = 0;
 
-                await thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, true, false));
+                if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, true, false))))
+                    return;
 
                 if (session.Floor % 10 == 0)
                 {
@@ -661,7 +837,8 @@ namespace Hogs.RPG.Services.TowerServices
                 return;
             }
 
-            await thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, false, false));
+            if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: BuildBossRoundEmbed(session, bossDef, combatLog, false, false))))
+                return;
             session.NextBossRoundAt = DateTime.UtcNow.AddSeconds(5);
         }
 
@@ -1036,16 +1213,18 @@ namespace Hogs.RPG.Services.TowerServices
             return prices;
         }
 
-        private async Task PostMerchantShopAsync(TowerSession session, IThreadChannel thread)
+        private async Task<bool> PostMerchantShopAsync(TowerSession session, IThreadChannel thread)
         {
             foreach (var p in session.Participants)
             {
                 var components = BuildMerchantComponents(session.SessionId, p);
                 string mention = session.Mode == TowerMode.Duo ? $"<@{p.DiscordId}> — " : "";
-                await thread.SendMessageAsync(
+                if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(
                     $"{mention}🛒 The merchant opens their cloak. You have **{p.AccumulatedGold}** gold to spend. Each item can only be bought once. Take your time — click **▶️ Move On** when you're done to continue the climb. They won't be back this run.",
-                    components: components);
+                    components: components)))
+                    return false;
             }
+            return true;
         }
 
         public MessageComponent BuildMerchantComponents(string sessionId, TowerParticipant p)
@@ -1195,7 +1374,7 @@ namespace Hogs.RPG.Services.TowerServices
         // =========================
         // PRE-BOSS CHOICE
         // =========================
-        private async Task PostPreBossChoiceAsync(TowerSession session, TowerBossDefinition bossDef, IThreadChannel thread)
+        private async Task<bool> PostPreBossChoiceAsync(TowerSession session, TowerBossDefinition bossDef, IThreadChannel thread)
         {
             session.ActiveBoss = bossDef;
             session.Status = TowerStatus.PreBoss;
@@ -1213,25 +1392,30 @@ namespace Hogs.RPG.Services.TowerServices
 
             if (session.Mode == TowerMode.Duo && session.Participants.Count > 1)
             {
-                await thread.SendMessageAsync(embed: embed.Build());
+                if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: embed.Build())))
+                    return false;
                 foreach (var p in session.Participants)
                 {
                     var pc = BuildPreBossComponents(session.SessionId, p);
-                    await thread.SendMessageAsync($"<@{p.DiscordId}> — choose before the battle:", components: pc);
+                    if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync($"<@{p.DiscordId}> — choose before the battle:", components: pc)))
+                        return false;
                 }
             }
             else
             {
                 var p = session.Participants[0];
-                await thread.SendMessageAsync(embed: embed.Build(), components: BuildPreBossComponents(session.SessionId, p));
+                if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: embed.Build(), components: BuildPreBossComponents(session.SessionId, p))))
+                    return false;
             }
+
+            return true;
         }
 
         private MessageComponent BuildPreBossComponents(string sessionId, TowerParticipant p)
         {
             bool hasDebuffs = p.Debuffs.Count > 0;
             return new ComponentBuilder()
-                .WithButton("💚 Full Heal",           $"tower_preboss:{sessionId}:{p.DiscordId}:heal",        ButtonStyle.Success,   row: 0)
+                .WithButton("💚 Full Heal", $"tower_preboss:{sessionId}:{p.DiscordId}:heal", ButtonStyle.Success, row: 0)
                 .WithButton("🗑️ Remove Debuff Stack", $"tower_preboss:{sessionId}:{p.DiscordId}:removedebuff", ButtonStyle.Secondary, row: 0, disabled: !hasDebuffs)
                 .Build();
         }
@@ -1318,7 +1502,7 @@ namespace Hogs.RPG.Services.TowerServices
         // =========================
         // CHECKPOINT
         // =========================
-        private async Task PostCheckpointAsync(TowerSession session, IThreadChannel thread)
+        private async Task<bool> PostCheckpointAsync(TowerSession session, IThreadChannel thread)
         {
             var shackleNotices = new List<string>();
 
@@ -1350,7 +1534,8 @@ namespace Hogs.RPG.Services.TowerServices
             if (session.Mode == TowerMode.Duo && session.Participants.Count > 1)
             {
                 // In duo: send one shared status embed, then a separate button message per player
-                await thread.SendMessageAsync(embed: embed.Build());
+                if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: embed.Build())))
+                    return false;
 
                 foreach (var p in session.Participants)
                 {
@@ -1361,20 +1546,24 @@ namespace Hogs.RPG.Services.TowerServices
                     string scavengeLabel = p.HasScavenged ? "💰 Scavenge (used)" : $"💰 Scavenge ({session.Floor * 10}g)";
                     var playerComponents = new ComponentBuilder()
                         .WithButton(scavengeLabel, $"tower_cp:{session.SessionId}:{p.DiscordId}:scavenge", ButtonStyle.Secondary, row: 0, disabled: p.HasScavenged)
-                        .WithButton("💚 Rest",      $"tower_cp:{session.SessionId}:{p.DiscordId}:rest",          ButtonStyle.Success,   row: 0, disabled: shackled)
-                        .WithButton("✨ Pick Buff", $"tower_cp:{session.SessionId}:{p.DiscordId}:buff",          ButtonStyle.Primary,   row: 0)
-                        .WithButton("🎲 Gamble",    $"tower_cp:{session.SessionId}:{p.DiscordId}:gamble",        ButtonStyle.Danger,    row: 0)
-                        .WithButton(removeLabel,     $"tower_cp:{session.SessionId}:{p.DiscordId}:removedebuff", ButtonStyle.Secondary, row: 0, disabled: !canRemoveDebuff)
+                        .WithButton("💚 Rest", $"tower_cp:{session.SessionId}:{p.DiscordId}:rest", ButtonStyle.Success, row: 0, disabled: shackled)
+                        .WithButton("✨ Pick Buff", $"tower_cp:{session.SessionId}:{p.DiscordId}:buff", ButtonStyle.Primary, row: 0)
+                        .WithButton("🎲 Gamble", $"tower_cp:{session.SessionId}:{p.DiscordId}:gamble", ButtonStyle.Danger, row: 0)
+                        .WithButton(removeLabel, $"tower_cp:{session.SessionId}:{p.DiscordId}:removedebuff", ButtonStyle.Secondary, row: 0, disabled: !canRemoveDebuff)
                         .Build();
 
-                    await thread.SendMessageAsync($"<@{p.DiscordId}> — choose your reward:", components: playerComponents);
+                    if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync($"<@{p.DiscordId}> — choose your reward:", components: playerComponents)))
+                        return false;
                 }
             }
             else
             {
                 var components = BuildCheckpointComponents(session, shackledIds);
-                await thread.SendMessageAsync(embed: embed.Build(), components: components);
+                if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: embed.Build(), components: components)))
+                    return false;
             }
+
+            return true;
         }
 
         public async Task<(bool success, string message)> HandleCheckpointChoiceAsync(
@@ -1392,35 +1581,35 @@ namespace Hogs.RPG.Services.TowerServices
             switch (choice)
             {
                 case "scavenge":
-                {
-                    if (p.HasScavenged)
-                        return (false, "❌ You've already scavenged this run.");
-
-                    p.HasScavenged = true;
-                    p.CheckpointDone = true;
-
-                    var ambushBoss = TowerBossRegistry.All[_random.Next(TowerBossRegistry.All.Count)];
-                    bool isDuoMode = session.Mode == TowerMode.Duo;
-                    int ambushHp = isDuoMode ? 200 + session.Floor * 40 : 150 + session.Floor * 30;
-                    int ambushDef = 5 + session.Floor * 3;
-
-                    var (ambushDmg, _) = CalcPlayerDamage(p, ambushDef, true);
-
-                    if (ambushDmg >= ambushHp)
                     {
-                        int gold = session.Floor * 10;
-                        p.AccumulatedGold += gold;
-                        var buff = RollRandomBuff();
-                        var granted = AddBuff(p, buff);
-                        var buffDef = TowerBuffPool.Get(granted);
-                        resultMsg = $"💰 While scavenging, **{ambushBoss.Name}** ambushes you! You strike them down and loot **{gold} gold** and gain **{buffDef.Emoji} {buffDef.Name}**!";
+                        if (p.HasScavenged)
+                            return (false, "❌ You've already scavenged this run.");
+
+                        p.HasScavenged = true;
+                        p.CheckpointDone = true;
+
+                        var ambushBoss = TowerBossRegistry.All[_random.Next(TowerBossRegistry.All.Count)];
+                        bool isDuoMode = session.Mode == TowerMode.Duo;
+                        int ambushHp = isDuoMode ? 200 + session.Floor * 40 : 150 + session.Floor * 30;
+                        int ambushDef = 5 + session.Floor * 3;
+
+                        var (ambushDmg, _) = CalcPlayerDamage(p, ambushDef, true);
+
+                        if (ambushDmg >= ambushHp)
+                        {
+                            int gold = session.Floor * 10;
+                            p.AccumulatedGold += gold;
+                            var buff = RollRandomBuff();
+                            var granted = AddBuff(p, buff);
+                            var buffDef = TowerBuffPool.Get(granted);
+                            resultMsg = $"💰 While scavenging, **{ambushBoss.Name}** ambushes you! You strike them down and loot **{gold} gold** and gain **{buffDef.Emoji} {buffDef.Name}**!";
+                        }
+                        else
+                        {
+                            resultMsg = $"💀 While scavenging, **{ambushBoss.Name}** ambushes you! You're overpowered and forced to flee empty-handed.";
+                        }
+                        break;
                     }
-                    else
-                    {
-                        resultMsg = $"💀 While scavenging, **{ambushBoss.Name}** ambushes you! You're overpowered and forced to flee empty-handed.";
-                    }
-                    break;
-                }
 
                 case "rest":
                     bool shackled = p.Debuffs.Any(d => d.Type == TowerDebuffType.Shackled);
@@ -1504,18 +1693,19 @@ namespace Hogs.RPG.Services.TowerServices
             return (true, msg);
         }
 
-        private async Task TryResumeIfAllDoneAsync(TowerSession session)
+        private async Task<bool> TryResumeIfAllDoneAsync(TowerSession session)
         {
-            if (!session.Participants.All(p => p.CheckpointDone)) return;
+            if (!session.Participants.All(p => p.CheckpointDone)) return true;
 
-            var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
+            var thread = await GetThreadWithRetryAsync(session);
+            if (thread == null) { await AbortRunDueToConnectionFailureAsync(session, null); return false; }
 
             if (session.Status == TowerStatus.PreBoss)
             {
                 session.Status = TowerStatus.Running;
-                if (thread != null && session.ActiveBoss != null)
-                    await StartBossFightAsync(session, session.ActiveBoss, thread);
-                return;
+                if (session.ActiveBoss != null)
+                    return await StartBossFightAsync(session, session.ActiveBoss, thread);
+                return true;
             }
 
             if (session.Status == TowerStatus.StartPick)
@@ -1523,15 +1713,11 @@ namespace Hogs.RPG.Services.TowerServices
                 session.Status = TowerStatus.Running;
                 session.NextFloorAt = DateTime.UtcNow.AddSeconds(3);
 
-                if (thread != null)
-                {
-                    await thread.SendMessageAsync(embed: new EmbedBuilder()
-                        .WithTitle("▶️ The climb begins!")
-                        .WithDescription("Floor 1 in a few seconds...")
-                        .WithColor(Color.DarkGrey)
-                        .Build());
-                }
-                return;
+                return await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: new EmbedBuilder()
+                    .WithTitle("▶️ The climb begins!")
+                    .WithDescription("Floor 1 in a few seconds...")
+                    .WithColor(Color.DarkGrey)
+                    .Build()));
             }
 
             if (session.Status == TowerStatus.Shopping)
@@ -1539,28 +1725,21 @@ namespace Hogs.RPG.Services.TowerServices
                 session.Status = TowerStatus.Running;
                 session.NextFloorAt = DateTime.UtcNow.AddSeconds(FloorIntervalSeconds);
 
-                if (thread != null)
-                {
-                    await thread.SendMessageAsync(embed: new EmbedBuilder()
-                        .WithTitle("▶️ Continuing the climb...")
-                        .WithDescription($"The merchant packs up. Floor **{session.Floor + 1}** in {FloorIntervalSeconds} seconds...")
-                        .WithColor(Color.DarkGrey)
-                        .Build());
-                }
-                return;
+                return await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: new EmbedBuilder()
+                    .WithTitle("▶️ Continuing the climb...")
+                    .WithDescription($"The merchant packs up. Floor **{session.Floor + 1}** in {FloorIntervalSeconds} seconds...")
+                    .WithColor(Color.DarkGrey)
+                    .Build()));
             }
 
             session.Status = TowerStatus.Running;
             session.NextFloorAt = DateTime.UtcNow.AddSeconds(FloorIntervalSeconds);
 
-            if (thread != null)
-            {
-                await thread.SendMessageAsync(embed: new EmbedBuilder()
-                    .WithTitle("▶️ Continuing the climb...")
-                    .WithDescription($"All players have made their choice. Floor **{session.Floor + 1}** in {FloorIntervalSeconds} seconds...")
-                    .WithColor(Color.DarkGrey)
-                    .Build());
-            }
+            return await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: new EmbedBuilder()
+                .WithTitle("▶️ Continuing the climb...")
+                .WithDescription($"All players have made their choice. Floor **{session.Floor + 1}** in {FloorIntervalSeconds} seconds...")
+                .WithColor(Color.DarkGrey)
+                .Build()));
         }
 
         private string ApplyGamble(TowerSession session, TowerParticipant p)
@@ -1634,14 +1813,18 @@ namespace Hogs.RPG.Services.TowerServices
 
             int floorReached = session.Floor;
 
-            await thread.SendMessageAsync(embed: new EmbedBuilder()
+            // Non-critical: rewards are already granted above, so a failure here must never
+            // trigger the connection-abort/refund path — that would incorrectly refund a
+            // completed run. Worst case, players just don't see the final summary embed.
+            await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(embed: new EmbedBuilder()
                 .WithTitle($"🗼 Run Over — Floor {floorReached} reached")
                 .WithDescription(rewardLines.ToString().TrimEnd())
                 .WithColor(Color.DarkRed)
                 .WithFooter("The tower remains. Come back tomorrow.")
-                .Build());
+                .Build()), critical: false);
 
-            await thread.ModifyAsync(t => t.Archived = true);
+            try { await thread.ModifyAsync(t => t.Archived = true); }
+            catch (Exception ex) { Console.WriteLine($"⚠️ Could not archive tower thread [{session.SessionId}]: {ex.Message}"); }
 
             lock (_completedThreadIds)
                 _completedThreadIds.Add(thread.Id);
@@ -1853,7 +2036,7 @@ namespace Hogs.RPG.Services.TowerServices
                 .Build();
         }
 
-        private async Task PostStartBuffChoiceAsync(TowerSession session, IThreadChannel thread)
+        private async Task<bool> PostStartBuffChoiceAsync(TowerSession session, IThreadChannel thread)
         {
             foreach (var p in session.Participants)
             {
@@ -1871,28 +2054,32 @@ namespace Hogs.RPG.Services.TowerServices
                 }));
 
                 string mention = session.Mode == TowerMode.Duo ? $"<@{p.DiscordId}> — " : "";
-                await thread.SendMessageAsync(
+                bool ok = await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(
                     text: $"{mention}✨ Choose your starting buff:",
                     embed: new EmbedBuilder()
                         .WithTitle("✨ Choose a Starting Buff")
                         .WithDescription(desc)
                         .WithColor(Color.Blue)
                         .Build(),
-                    components: components);
+                    components: components));
+
+                if (!ok) return false;
             }
+
+            return true;
         }
 
         private Embed BuildFloorEmbed(TowerSession session, string combatLog, TowerFloorEventType eventType, TowerBossDefinition? bossDef = null)
         {
             string emoji = eventType switch
             {
-                TowerFloorEventType.Boss        => "💀",
-                TowerFloorEventType.Elite       => "👑",
+                TowerFloorEventType.Boss => "💀",
+                TowerFloorEventType.Elite => "👑",
                 TowerFloorEventType.TreasureRoom => "🎁",
-                TowerFloorEventType.CursedFloor  => "☠️",
-                TowerFloorEventType.RestSite     => "💚",
-                TowerFloorEventType.Merchant     => "🛒",
-                _                               => "⚔️"
+                TowerFloorEventType.CursedFloor => "☠️",
+                TowerFloorEventType.RestSite => "💚",
+                TowerFloorEventType.Merchant => "🛒",
+                _ => "⚔️"
             };
 
             var builder = new EmbedBuilder()
@@ -1937,10 +2124,10 @@ namespace Hogs.RPG.Services.TowerServices
                 string scavengeLabel = p.HasScavenged ? "💰 Scavenge (used)" : $"💰 Scavenge ({session.Floor * 10}g)";
 
                 builder.WithButton(scavengeLabel, $"tower_cp:{session.SessionId}:{p.DiscordId}:scavenge", ButtonStyle.Secondary, row: row, disabled: p.HasScavenged);
-                builder.WithButton("💚 Rest",         $"tower_cp:{session.SessionId}:{p.DiscordId}:rest",          ButtonStyle.Success,   row: row, disabled: shackled);
-                builder.WithButton("✨ Pick Buff",    $"tower_cp:{session.SessionId}:{p.DiscordId}:buff",          ButtonStyle.Primary,   row: row);
-                builder.WithButton("🎲 Gamble",       $"tower_cp:{session.SessionId}:{p.DiscordId}:gamble",        ButtonStyle.Danger,    row: row);
-                builder.WithButton(removeLabel,        $"tower_cp:{session.SessionId}:{p.DiscordId}:removedebuff", ButtonStyle.Secondary, row: row, disabled: !canRemoveDebuff);
+                builder.WithButton("💚 Rest", $"tower_cp:{session.SessionId}:{p.DiscordId}:rest", ButtonStyle.Success, row: row, disabled: shackled);
+                builder.WithButton("✨ Pick Buff", $"tower_cp:{session.SessionId}:{p.DiscordId}:buff", ButtonStyle.Primary, row: row);
+                builder.WithButton("🎲 Gamble", $"tower_cp:{session.SessionId}:{p.DiscordId}:gamble", ButtonStyle.Danger, row: row);
+                builder.WithButton(removeLabel, $"tower_cp:{session.SessionId}:{p.DiscordId}:removedebuff", ButtonStyle.Secondary, row: row, disabled: !canRemoveDebuff);
             }
 
             return builder.Build();
