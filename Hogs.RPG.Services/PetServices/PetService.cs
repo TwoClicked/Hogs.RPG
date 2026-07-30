@@ -3,6 +3,7 @@ using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
+using Microsoft.Identity.Client;
 
 namespace Hogs.RPG.Services.PetServices
 {
@@ -20,22 +21,8 @@ namespace Hogs.RPG.Services.PetServices
         // =========================
         // 🐾 GIVE PET
         // =========================
-        public async Task GivePetAsync(ulong userId, string petId)
+        public async Task<bool> GivePetAsync(ulong userId, string petId)
         {
-            var existing = await _repo.GetPetAsync(userId, petId);
-
-            // Recompute from the source of truth (not incremented) so this
-            // self-heals even if a prior grant path missed updating it.
-            var player = await _playerRepo.GetByDiscordIdAsync(userId);
-            if (player != null)
-            {
-                var pets = await _repo.GetPetsAsync(userId);
-                player.TotalPetsOwned = pets.Count;
-                await _playerRepo.UpdatePlayerAsync(player);
-            }
-
-            if (existing != null)
-                return;
 
             var pet = new PlayerPet
             {
@@ -44,21 +31,35 @@ namespace Hogs.RPG.Services.PetServices
             };
 
             await _repo.AddPetAsync(pet);
+
+            // Recompute from the source of turth so this self heals even if if a player
+            // prior grant path missed updating it. Count distinct species owned
+            // Since colllector means 3 different pets and not 3 copies of one
+
+            var player = await _playerRepo.GetByDiscordIdAsync(userId);
+            if (player != null)
+            {
+                var pets = await _repo.GetPetsAsync(userId);
+                player.TotalPetsOwned = pets.Select(p => p.PetId).Distinct().Count();
+                await _playerRepo.UpdatePlayerAsync(player);
+            }
+
+            return true; 
         }
 
         // =========================
         // 🐾 EQUIP PET
         // =========================
-        public async Task EquipPetAsync(ulong userId, string petId)
+        public async Task EquipPetAsync(ulong userId, int petInstanceId)
         {
             var pets = await _repo.GetPetsAsync(userId);
 
-            if (pets.Any(p => p.PetId == petId && p.IsEquipped))
+            if (pets.Any(p => p.Id == petInstanceId && p.IsEquipped))
                 return;
 
             foreach (var pet in pets)
             {
-                pet.IsEquipped = pet.PetId == petId;
+                pet.IsEquipped = pet.Id == petInstanceId;
             }
 
             await _repo.SaveAsync();
@@ -201,9 +202,16 @@ namespace Hogs.RPG.Services.PetServices
                 return (false, "❌ Your pet hasn't unlocked Passive Slot 2 yet. Reach **Level 20** first.");
 
             // Sacrifice pet must be owned and unequipped
-            var sacrificePet = await _repo.GetPetAsync(userId, sacrificePetId);
+            var pets = await _repo.GetPetsAsync(userId);
+            var sacrificePet = pets.FirstOrDefault(p => p.PetId == sacrificePetId && !p.IsEquipped);
+
             if (sacrificePet == null)
-                return (false, "❌ You don't own that pet.");
+            {
+                bool ownsAnyEquipped = pets.Any(p => p.PetId == sacrificePetId && p.IsEquipped);
+                return (false, ownsAnyEquipped
+                    ? "❌ You can't sacrifice your equipped pet. Unequip it first."
+                    : "❌ You don't own that pet.");
+            }
 
             if (sacrificePet.IsEquipped)
                 return (false, "❌ You can't sacrifice your equipped pet. Unequip it first.");

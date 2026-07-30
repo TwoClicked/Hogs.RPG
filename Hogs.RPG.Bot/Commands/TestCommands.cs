@@ -152,7 +152,7 @@ namespace Hogs.RPG.Bot.Commands
 
                 if (pets.Count == 0) continue;
 
-                player.TotalPetsOwned = pets.Count;
+                player.TotalPetsOwned = pets.Select(p => p.PetId).Distinct().Count();
                 player.HighestPetLevel = pets.Max(p => p.Level);
                 player.HuntingCompanionUnlocked = player.HasHuntingPet;
 
