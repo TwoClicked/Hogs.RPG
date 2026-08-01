@@ -126,7 +126,7 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         // PROFILE
         // =========================
-        [SlashCommand("profile", "View your character")]
+        [SlashCommand("profile", "View your character information")]
         public async Task Profile()
         {
             if (Context.Channel.Id != 1486017679016857752UL)
