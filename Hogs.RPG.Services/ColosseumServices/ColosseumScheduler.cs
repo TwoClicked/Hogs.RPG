@@ -21,21 +21,22 @@ namespace Hogs.RPG.Services.ColosseumServices
     ///   2. Warn the RPG feed 30 minutes before registration closes
     ///   3. Close registration + seed the bracket once RegistrationEndsAt passes
     ///   4. Resolve every currently-ready match in any InProgress tournament,
-    ///      one round at a time, pausing SecondsPerRound between rounds -
-    ///      every match's combat log and advancement summary posts into a
-    ///      single shared tournament thread, created lazily the first time
-    ///      this method sees an InProgress tournament without one yet (so
-    ///      both the normal daily flow and /testcolosseum, which skips
-    ///      straight to InProgress, both get a thread)
+    ///      one round at a time, pausing SecondsPerRound between rounds.
+    ///      Each match's combat log posts as a colored embed in the single
+    ///      shared tournament thread (created lazily on first sight of an
+    ///      InProgress tournament, so both the daily flow and
+    ///      /testcolosseum get one), and the advancement result posts as a
+    ///      matching-colored embed in both the thread and the main
+    ///      Colosseum channel.
     /// </summary>
     public class ColosseumScheduler : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly DiscordSocketClient _client;
 
-        // Dedicated Colosseum channel - daily open/close announcements
-        // post here, and this is the parent channel the tournament thread
-        // gets created under.
+        // Dedicated Colosseum channel - daily open/close announcements and
+        // per-match result summaries post here, and this is the parent
+        // channel the tournament thread gets created under.
         private readonly ulong _announceChannelId = 1536112830967709776;
 
         // Final results (winner + runner-up) and the 30-minute warning also
@@ -56,11 +57,10 @@ namespace Hogs.RPG.Services.ColosseumServices
         private const int MaxDiscordRetries = 3;
         private const int DiscordRetryDelaySeconds = 5;
 
-        // Discord caps message content at 2000 chars. A long fight (many
-        // rounds, pet passive trigger lines) can easily exceed that, so
-        // combat logs get chunked - this is the target size per chunk,
-        // kept comfortably under the hard cap.
-        private const int MaxMessageLength = 1900;
+        // Embed descriptions cap at 4096 chars. Condensed combat logs should
+        // never get close to this, but chunk into multiple embeds as a
+        // fallback just in case a very long fight slips past truncation.
+        private const int MaxEmbedDescriptionLength = 4000;
 
         private DateTime _lastOpenedDate = DateTime.MinValue;
 
@@ -230,34 +230,32 @@ namespace Hogs.RPG.Services.ColosseumServices
             var tournament = await colosseumRepo.GetInProgressTournamentAsync();
             if (tournament == null) return;
 
+            var parentChannel = _client.GetChannel(tournament.AnnounceChannelId) as ITextChannel;
+
             // Lazily create the master thread the first time this tournament
             // is seen InProgress - covers both the normal daily flow (which
             // goes through CheckAndCloseRegistrationAsync first) and
             // /testcolosseum (which skips straight to InProgress and would
             // otherwise never get a thread at all).
-            if (tournament.MasterThreadId == 0)
+            if (tournament.MasterThreadId == 0 && parentChannel != null)
             {
-                var parentChannel = _client.GetChannel(tournament.AnnounceChannelId) as ITextChannel;
-                if (parentChannel != null)
+                try
                 {
-                    try
-                    {
-                        var newThread = await parentChannel.CreateThreadAsync(
-                            name: $"🏛️ Colosseum Tournament #{tournament.Id}",
-                            autoArchiveDuration: ThreadArchiveDuration.OneDay,
-                            type: ThreadType.PublicThread);
+                    var newThread = await parentChannel.CreateThreadAsync(
+                        name: $"🏛️ Colosseum Tournament #{tournament.Id}",
+                        autoArchiveDuration: ThreadArchiveDuration.OneDay,
+                        type: ThreadType.PublicThread);
 
-                        tournament.MasterThreadId = newThread.Id;
-                        await colosseumRepo.SaveTournamentAsync(tournament);
+                    tournament.MasterThreadId = newThread.Id;
+                    await colosseumRepo.SaveTournamentAsync(tournament);
 
-                        await SendWithRetryAsync(
-                            () => newThread.SendMessageAsync($"🏛️ **{tournament.Participants.Count} fighters enter.** Matches resolve here, one round at a time."),
-                            $"tournament {tournament.Id} thread intro");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"⚠️ Colosseum thread creation failed for tournament {tournament.Id}: {ex.Message}");
-                    }
+                    await SendWithRetryAsync(
+                        () => newThread.SendMessageAsync($"🏛️ **{tournament.Participants.Count} fighters enter.** Matches resolve here, one round at a time."),
+                        $"tournament {tournament.Id} thread intro");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Colosseum thread creation failed for tournament {tournament.Id}: {ex.Message}");
                 }
             }
 
@@ -292,21 +290,28 @@ namespace Hogs.RPG.Services.ColosseumServices
                     var winnerName = result.WinnerParticipantId == participantA.Id ? nameA : nameB;
                     var loserName = result.WinnerParticipantId == participantA.Id ? nameB : nameA;
 
-                    if (thread != null)
-                    {
-                        await SendWithRetryAsync(
-                            () => thread.SendMessageAsync($"**⚔️ {nameA} vs {nameB}** ({match.BracketType})"),
-                            $"match {match.Id} header");
-                        await SendCombatLogAsync(thread, result.CombatLog, match.Id);
-                    }
-
                     var decided = await bracketService.AdvanceAfterMatchAsync(match, result.WinnerParticipantId, result.LoserParticipantId);
 
+                    var presentation = BuildMatchPresentation(match, winnerName, loserName, decided);
+
+                    // Combat log embed(s) - detailed, thread only.
                     if (thread != null)
                     {
-                        var advancementEmbed = BuildAdvancementEmbed(match, winnerName, loserName, decided);
-                        await SendWithRetryAsync(() => thread.SendMessageAsync(embed: advancementEmbed), $"match {match.Id} advancement summary");
+                        var logTitle = $"⚔️ {nameA} vs {nameB} ({match.BracketType})";
+                        await SendCombatLogEmbedsAsync(thread, logTitle, result.CombatLog, presentation.Color, match.Id);
                     }
+
+                    // Advancement result embed - posted to both the thread
+                    // (for anyone reading it top-to-bottom) and the main
+                    // Colosseum channel (so it's visible without opening
+                    // the thread at all).
+                    var resultEmbed = BuildAdvancementEmbed(presentation);
+
+                    if (thread != null)
+                        await SendWithRetryAsync(() => thread.SendMessageAsync(embed: resultEmbed), $"match {match.Id} result (thread)");
+
+                    if (parentChannel != null)
+                        await SendWithRetryAsync(() => parentChannel.SendMessageAsync(embed: resultEmbed), $"match {match.Id} result (channel)");
 
                     if (decided.HasValue)
                     {
@@ -320,72 +325,99 @@ namespace Hogs.RPG.Services.ColosseumServices
             }
         }
 
-        // Builds a colored embed announcing what happened after a match -
-        // an embed stands out much more clearly against a wall of plain
-        // combat-log text than another plain message would.
-        private Embed BuildAdvancementEmbed(ColosseumMatch match, string winnerName, string loserName, (int winnerId, int runnerUpId)? decided)
-        {
-            string title;
-            string advanceLabel;
-            string advanceText;
-            string outLabel;
-            string outText;
-            Color color;
+        // Everything needed to render one match's log embed + result embed
+        // with a shared color, computed once per match rather than twice.
+        private readonly record struct MatchPresentation(
+            string Title, string AdvanceLabel, string AdvanceText,
+            string OutLabel, string OutText, Color Color);
 
+        private MatchPresentation BuildMatchPresentation(ColosseumMatch match, string winnerName, string loserName, (int winnerId, int runnerUpId)? decided)
+        {
             switch (match.BracketType)
             {
                 case ColosseumBracketType.WinnerBracket:
-                    title = "🟢 Winner Bracket Result";
-                    advanceLabel = "Advances";
-                    advanceText = $"**{winnerName}**";
-                    outLabel = "Drops to Loser Bracket";
-                    outText = $"**{loserName}**";
-                    color = new Color(0x2ECC71);
-                    break;
+                    return new MatchPresentation(
+                        "🟢 Winner Bracket Result", "Advances", $"**{winnerName}**",
+                        "Drops to Loser Bracket", $"**{loserName}**", new Color(0x2ECC71));
 
                 case ColosseumBracketType.LoserBracket:
-                    title = "🔻 Loser Bracket Result";
-                    advanceLabel = "Survives";
-                    advanceText = $"**{winnerName}**";
-                    outLabel = "☠️ Eliminated";
-                    outText = $"**{loserName}**";
-                    color = new Color(0xE74C3C);
-                    break;
+                    return new MatchPresentation(
+                        "🔻 Loser Bracket Result", "Survives", $"**{winnerName}**",
+                        "☠️ Eliminated", $"**{loserName}**", new Color(0xE74C3C));
 
                 case ColosseumBracketType.GrandFinal when decided.HasValue:
-                    title = "🏆 TOURNAMENT CHAMPION!";
-                    advanceLabel = "Winner";
-                    advanceText = $"**{winnerName}**";
-                    outLabel = "Runner-up";
-                    outText = $"**{loserName}**";
-                    color = new Color(0xF1C40F);
-                    break;
+                    return new MatchPresentation(
+                        "🏆 TOURNAMENT CHAMPION!", "Winner", $"**{winnerName}**",
+                        "Runner-up", $"**{loserName}**", new Color(0xF1C40F));
 
                 case ColosseumBracketType.GrandFinal:
-                    title = "⚠️ BRACKET RESET!";
-                    advanceLabel = "Forces a decider match";
-                    advanceText = $"**{winnerName}**";
-                    outLabel = "Must win the reset to survive";
-                    outText = $"**{loserName}**";
-                    color = new Color(0xE67E22);
-                    break;
+                    // Loser Bracket champion just beat the Winner Bracket
+                    // champion's first loss - both tied at one loss each.
+                    return new MatchPresentation(
+                        "⚠️ BRACKET RESET!", "Forces a decider match", $"**{winnerName}**",
+                        "Must win the reset to survive", $"**{loserName}**", new Color(0xE67E22));
 
                 default: // BracketReset
-                    title = "🏆 TOURNAMENT CHAMPION!";
-                    advanceLabel = "Winner";
-                    advanceText = $"**{winnerName}**";
-                    outLabel = "Runner-up";
-                    outText = $"**{loserName}**";
-                    color = new Color(0xF1C40F);
-                    break;
+                    return new MatchPresentation(
+                        "🏆 TOURNAMENT CHAMPION!", "Winner", $"**{winnerName}**",
+                        "Runner-up", $"**{loserName}**", new Color(0xF1C40F));
+            }
+        }
+
+        private Embed BuildAdvancementEmbed(MatchPresentation p)
+        {
+            return new EmbedBuilder()
+                .WithTitle(p.Title)
+                .AddField(p.AdvanceLabel, p.AdvanceText, inline: true)
+                .AddField(p.OutLabel, p.OutText, inline: true)
+                .WithColor(p.Color)
+                .Build();
+        }
+
+        // Embed descriptions cap at 4096 chars - condensed logs should
+        // always fit in one, but this chunks into multiple embeds as a
+        // fallback so nothing ever gets silently dropped or fails to send.
+        private async Task SendCombatLogEmbedsAsync(IThreadChannel thread, string title, string combatLog, Color color, int matchId)
+        {
+            var chunks = new List<string>();
+
+            if (combatLog.Length <= MaxEmbedDescriptionLength)
+            {
+                chunks.Add(combatLog);
+            }
+            else
+            {
+                var lines = combatLog.Split('\n');
+                var current = new System.Text.StringBuilder();
+
+                foreach (var line in lines)
+                {
+                    if (current.Length + line.Length + 1 > MaxEmbedDescriptionLength && current.Length > 0)
+                    {
+                        chunks.Add(current.ToString());
+                        current.Clear();
+                    }
+
+                    if (current.Length > 0) current.Append('\n');
+                    current.Append(line);
+                }
+
+                if (current.Length > 0)
+                    chunks.Add(current.ToString());
             }
 
-            return new EmbedBuilder()
-                .WithTitle(title)
-                .AddField(advanceLabel, advanceText, inline: true)
-                .AddField(outLabel, outText, inline: true)
-                .WithColor(color)
-                .Build();
+            for (var i = 0; i < chunks.Count; i++)
+            {
+                var chunkTitle = chunks.Count == 1 ? title : $"{title} ({i + 1}/{chunks.Count})";
+
+                var embed = new EmbedBuilder()
+                    .WithTitle(chunkTitle)
+                    .WithDescription(chunks[i])
+                    .WithColor(color)
+                    .Build();
+
+                await SendWithRetryAsync(() => thread.SendMessageAsync(embed: embed), $"match {matchId} combat log embed {i + 1}/{chunks.Count}");
+            }
         }
 
         // =========================
@@ -468,36 +500,6 @@ namespace Hogs.RPG.Services.ColosseumServices
 
             var player = await playerRepo.GetByDiscordIdAsync(participant.DiscordId);
             return player?.Username ?? $"Player {participant.DiscordId}";
-        }
-
-        // Discord caps message content at 2000 chars, and a long fight
-        // (many rounds, pet passive trigger lines) can easily exceed that.
-        // Splits on line boundaries so no single line gets cut mid-sentence,
-        // and sends each chunk as its own message in order.
-        private async Task SendCombatLogAsync(IThreadChannel thread, string combatLog, int matchId)
-        {
-            var lines = combatLog.Split('\n');
-            var chunks = new List<string>();
-            var current = new System.Text.StringBuilder();
-
-            foreach (var line in lines)
-            {
-                // +1 accounts for the newline that'll join it back in.
-                if (current.Length + line.Length + 1 > MaxMessageLength && current.Length > 0)
-                {
-                    chunks.Add(current.ToString());
-                    current.Clear();
-                }
-
-                if (current.Length > 0) current.Append('\n');
-                current.Append(line);
-            }
-
-            if (current.Length > 0)
-                chunks.Add(current.ToString());
-
-            foreach (var chunk in chunks)
-                await SendWithRetryAsync(() => thread.SendMessageAsync(chunk), $"match {matchId} combat log chunk");
         }
 
         private async Task<bool> SendWithRetryAsync(Func<Task> sendAction, string context)
