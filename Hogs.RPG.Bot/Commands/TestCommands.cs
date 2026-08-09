@@ -329,7 +329,7 @@ namespace Hogs.RPG.Bot.Commands
             var tournament = await _colosseumService.CreateTestTournamentAsync(Context.Channel.Id);
 
             await FollowupAsync(
-                $"🏛️ Test tournament {tournament.Id} started with 32 bots - " +
+                $"🏛️ Test tournament {tournament.Id} started with 16 bots - " +
                 $"ColosseumScheduler will resolve it on its next tick(s) and post to <#{Context.Channel.Id}>.",
                 ephemeral: true);
         }

@@ -19,12 +19,14 @@ namespace Hogs.RPG.Services.ColosseumServices
     ///   1. Open a new tournament once a day at OpenHourUtc (also cleans up
     ///      the previous tournament's thread first)
     ///   2. Warn the RPG feed 30 minutes before registration closes
-    ///   3. Close registration + seed the bracket once RegistrationEndsAt
-    ///      passes, creating the single tournament thread
+    ///   3. Close registration + seed the bracket once RegistrationEndsAt passes
     ///   4. Resolve every currently-ready match in any InProgress tournament,
     ///      one round at a time, pausing SecondsPerRound between rounds -
-    ///      every match's combat log and advancement summary posts into
-    ///      that one shared thread rather than a thread per match
+    ///      every match's combat log and advancement summary posts into a
+    ///      single shared tournament thread, created lazily the first time
+    ///      this method sees an InProgress tournament without one yet (so
+    ///      both the normal daily flow and /testcolosseum, which skips
+    ///      straight to InProgress, both get a thread)
     /// </summary>
     public class ColosseumScheduler : BackgroundService
     {
@@ -201,41 +203,12 @@ namespace Hogs.RPG.Services.ColosseumServices
 
             Console.WriteLine($"🏛️ Tournament {tournament.Id} bracket seeded, now InProgress.");
 
-            var channel = _client.GetChannel(_announceChannelId) as ITextChannel;
+            var channel = _client.GetChannel(_announceChannelId) as IMessageChannel;
             if (channel == null) return;
-
-            // Create the single thread the whole tournament plays out in.
-            ulong masterThreadId = 0;
-            try
-            {
-                var thread = await channel.CreateThreadAsync(
-                    name: $"🏛️ Colosseum Tournament #{tournament.Id}",
-                    autoArchiveDuration: ThreadArchiveDuration.OneDay,
-                    type: ThreadType.PublicThread);
-
-                masterThreadId = thread.Id;
-
-                await SendWithRetryAsync(
-                    () => thread.SendMessageAsync("🏛️ **16 fighters enter.** Matches resolve here, one round at a time."),
-                    $"tournament {tournament.Id} thread intro");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"⚠️ Colosseum thread creation failed for tournament {tournament.Id}: {ex.Message}");
-            }
-
-            var reloaded = await colosseumRepo.GetTournamentAsync(tournament.Id);
-            if (reloaded != null)
-            {
-                reloaded.MasterThreadId = masterThreadId;
-                await colosseumRepo.SaveTournamentAsync(reloaded);
-            }
 
             var embed = new EmbedBuilder()
                 .WithTitle("🏛️ The bracket is set!")
-                .WithDescription(masterThreadId != 0
-                    ? $"16 fighters enter. Follow the action in <#{masterThreadId}>."
-                    : "16 fighters enter. Matches are resolving now.")
+                .WithDescription("Fighters enter. Matches are resolving now — the tournament thread will appear shortly.")
                 .WithColor(new Color(0xC0392B))
                 .Build();
 
@@ -256,6 +229,37 @@ namespace Hogs.RPG.Services.ColosseumServices
 
             var tournament = await colosseumRepo.GetInProgressTournamentAsync();
             if (tournament == null) return;
+
+            // Lazily create the master thread the first time this tournament
+            // is seen InProgress - covers both the normal daily flow (which
+            // goes through CheckAndCloseRegistrationAsync first) and
+            // /testcolosseum (which skips straight to InProgress and would
+            // otherwise never get a thread at all).
+            if (tournament.MasterThreadId == 0)
+            {
+                var parentChannel = _client.GetChannel(tournament.AnnounceChannelId) as ITextChannel;
+                if (parentChannel != null)
+                {
+                    try
+                    {
+                        var newThread = await parentChannel.CreateThreadAsync(
+                            name: $"🏛️ Colosseum Tournament #{tournament.Id}",
+                            autoArchiveDuration: ThreadArchiveDuration.OneDay,
+                            type: ThreadType.PublicThread);
+
+                        tournament.MasterThreadId = newThread.Id;
+                        await colosseumRepo.SaveTournamentAsync(tournament);
+
+                        await SendWithRetryAsync(
+                            () => newThread.SendMessageAsync($"🏛️ **{tournament.Participants.Count} fighters enter.** Matches resolve here, one round at a time."),
+                            $"tournament {tournament.Id} thread intro");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"⚠️ Colosseum thread creation failed for tournament {tournament.Id}: {ex.Message}");
+                    }
+                }
+            }
 
             var thread = tournament.MasterThreadId != 0
                 ? _client.GetChannel(tournament.MasterThreadId) as IThreadChannel
