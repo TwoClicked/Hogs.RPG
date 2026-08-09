@@ -316,6 +316,24 @@ namespace Hogs.RPG.Bot.Commands
             });
         }
 
+        [SlashCommand("fix-unknown-pets", "Remove PlayerPet rows pointing at pet IDs no longer in the registry (Admin Only)")]
+        public async Task FixUnknownPets()
+        {
+            if (!await EnsureAdminAsync()) return;
+
+            await DeferAsync(ephemeral: true);
+
+            var players = await _playerRepository.GetAllPlayersAsync();
+            int totalRemoved = 0;
+
+            foreach (var player in players)
+            {
+                totalRemoved += await _petService.RemoveUnknownPetsAsync(player.DiscordId);
+            }
+
+            await FollowupAsync($"✅ Removed **{totalRemoved}** pet(s) with unrecognized pet IDs.", ephemeral: true);
+        }
+
         // =========================
         // TEST COLOSSEUM (ALL BOTS)
         // =========================

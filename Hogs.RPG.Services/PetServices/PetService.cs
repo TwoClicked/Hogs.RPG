@@ -265,6 +265,33 @@ namespace Hogs.RPG.Services.PetServices
                 $"✨ {PetPassiveFormatter.Format(newPassive)}");
         }
 
+        // =========================
+        // 🧹 REMOVE PETS WITH UNKNOWN IDS
+        // =========================
+        // Cleans up PlayerPet rows whose PetId no longer exists in
+        // PetRegistry - can happen if a pet was removed/renamed in a past
+        // content update while the row is still sitting in someone's saved
+        // data. Returns how many rows were removed for this player.
+        public async Task<int> RemoveUnknownPetsAsync(ulong userId)
+        {
+            var pets = await _repo.GetPetsAsync(userId);
+            int removed = 0;
+
+            foreach (var pet in pets)
+            {
+                if (!PetRegistry.All.ContainsKey(pet.PetId))
+                {
+                    _repo.RemovePet(pet);
+                    removed++;
+                }
+            }
+
+            if (removed > 0)
+                await _repo.SaveAsync();
+
+            return removed;
+        }
+
         private PetPassive GetRandomPassiveExcluding(params PetPassive?[] exclude)
         {
             var available = Enum.GetValues(typeof(PetPassive))
