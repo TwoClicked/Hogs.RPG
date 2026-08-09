@@ -43,6 +43,20 @@ namespace Hogs.RPG.Data.Repositories
                 .FirstOrDefaultAsync(t => t.Status == ColosseumTournamentStatus.Registration);
         }
 
+        // Every tournament that's finished - used by the scheduler to clean
+        // up match threads for any completed tournament before opening the
+        // next one. Returns all of them (not just the most recent) so a
+        // missed day (e.g. bot downtime over the open hour) doesn't leave
+        // an earlier tournament's threads uncleaned forever - re-deleting
+        // an already-deleted thread is a harmless no-op.
+        public async Task<List<ColosseumTournament>> GetCompletedTournamentsAsync()
+        {
+            return await _context.ColosseumTournaments
+                .Include(t => t.Matches)
+                .Where(t => t.Status == ColosseumTournamentStatus.Completed)
+                .ToListAsync();
+        }
+
         // Used by the scheduler to find whatever tournament is currently
         // mid-bracket so it can advance the next round.
         public async Task<ColosseumTournament?> GetInProgressTournamentAsync()

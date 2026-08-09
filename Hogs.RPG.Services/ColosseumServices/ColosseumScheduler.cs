@@ -16,7 +16,8 @@ namespace Hogs.RPG.Services.ColosseumServices
     ///
     /// Responsibilities per tick, each independent and wrapped in its own
     /// try/catch so one failing doesn't block the others:
-    ///   1. Open a new tournament once a day at OpenHourUtc
+    ///   1. Open a new tournament once a day at OpenHourUtc (also cleans up
+    ///      the previous tournament's match threads first)
     ///   2. Warn the RPG feed 30 minutes before registration closes
     ///   3. Close registration + seed the bracket once RegistrationEndsAt passes
     ///   4. Resolve every currently-ready match in any InProgress tournament,
@@ -45,6 +46,12 @@ namespace Hogs.RPG.Services.ColosseumServices
 
         private const int MaxDiscordRetries = 3;
         private const int DiscordRetryDelaySeconds = 5;
+
+        // Discord caps message content at 2000 chars. A long fight (many
+        // rounds, pet passive trigger lines) can easily exceed that, so
+        // combat logs get chunked - this is the target size per chunk,
+        // kept comfortably under the hard cap.
+        private const int MaxMessageLength = 1900;
 
         private DateTime _lastOpenedDate = DateTime.MinValue;
 
@@ -106,6 +113,13 @@ namespace Hogs.RPG.Services.ColosseumServices
                 _lastOpenedDate = now.Date;
                 return;
             }
+
+            // Clean up every previous tournament's match threads before
+            // opening today's - keeps the dedicated Colosseum channel from
+            // accumulating dozens of stale threads day after day.
+            var completedTournaments = await colosseumRepo.GetCompletedTournamentsAsync();
+            foreach (var completed in completedTournaments)
+                await CleanupMatchThreadsAsync(completed);
 
             var tournament = await colosseumService.OpenRegistrationAsync(_announceChannelId);
             _lastOpenedDate = now.Date;
@@ -245,7 +259,7 @@ namespace Hogs.RPG.Services.ColosseumServices
                                 type: ThreadType.PublicThread);
 
                             threadId = thread.Id;
-                            await SendWithRetryAsync(() => thread.SendMessageAsync(result.CombatLog), $"match {match.Id} combat log");
+                            await SendCombatLogAsync(thread, result.CombatLog, match.Id);
                         }
                         catch (Exception ex)
                         {
@@ -309,6 +323,42 @@ namespace Hogs.RPG.Services.ColosseumServices
         }
 
         // =========================
+        // THREAD CLEANUP
+        // =========================
+        // Deletes every match thread for a completed tournament. Each
+        // deletion is independently try/caught - one already-deleted or
+        // permission-denied thread shouldn't stop the rest from being
+        // cleaned up. Called right before opening the next daily
+        // tournament, so players get a full day to review yesterday's
+        // matches before the threads disappear.
+        private async Task CleanupMatchThreadsAsync(ColosseumTournament tournament)
+        {
+            var threadIds = tournament.Matches.Where(m => m.ThreadId != 0).Select(m => m.ThreadId).ToList();
+            if (threadIds.Count == 0) return;
+
+            Console.WriteLine($"🧹 Cleaning up {threadIds.Count} Colosseum match threads for tournament {tournament.Id}...");
+
+            var deleted = 0;
+            foreach (var threadId in threadIds)
+            {
+                try
+                {
+                    if (_client.GetChannel(threadId) is IThreadChannel thread)
+                    {
+                        await thread.DeleteAsync();
+                        deleted++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Failed to delete Colosseum thread {threadId}: {ex.Message}");
+                }
+            }
+
+            Console.WriteLine($"🧹 Deleted {deleted}/{threadIds.Count} Colosseum match threads.");
+        }
+
+        // =========================
         // HELPERS
         // =========================
         private async Task<string> ResolveDisplayNameAsync(ColosseumParticipant participant, PlayerRepository playerRepo)
@@ -318,6 +368,36 @@ namespace Hogs.RPG.Services.ColosseumServices
 
             var player = await playerRepo.GetByDiscordIdAsync(participant.DiscordId);
             return player?.Username ?? $"Player {participant.DiscordId}";
+        }
+
+        // Discord caps message content at 2000 chars, and a long fight
+        // (many rounds, pet passive trigger lines) can easily exceed that.
+        // Splits on line boundaries so no single line gets cut mid-sentence,
+        // and sends each chunk as its own message in order.
+        private async Task SendCombatLogAsync(IThreadChannel thread, string combatLog, int matchId)
+        {
+            var lines = combatLog.Split('\n');
+            var chunks = new List<string>();
+            var current = new System.Text.StringBuilder();
+
+            foreach (var line in lines)
+            {
+                // +1 accounts for the newline that'll join it back in.
+                if (current.Length + line.Length + 1 > MaxMessageLength && current.Length > 0)
+                {
+                    chunks.Add(current.ToString());
+                    current.Clear();
+                }
+
+                if (current.Length > 0) current.Append('\n');
+                current.Append(line);
+            }
+
+            if (current.Length > 0)
+                chunks.Add(current.ToString());
+
+            foreach (var chunk in chunks)
+                await SendWithRetryAsync(() => thread.SendMessageAsync(chunk), $"match {matchId} combat log chunk");
         }
 
         private async Task<bool> SendWithRetryAsync(Func<Task> sendAction, string context)
