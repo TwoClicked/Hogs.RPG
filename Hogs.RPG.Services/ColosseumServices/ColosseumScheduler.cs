@@ -304,8 +304,8 @@ namespace Hogs.RPG.Services.ColosseumServices
 
                     if (thread != null)
                     {
-                        var summary = BuildAdvancementMessage(match, winnerName, loserName, decided);
-                        await SendWithRetryAsync(() => thread.SendMessageAsync(summary), $"match {match.Id} advancement summary");
+                        var advancementEmbed = BuildAdvancementEmbed(match, winnerName, loserName, decided);
+                        await SendWithRetryAsync(() => thread.SendMessageAsync(embed: advancementEmbed), $"match {match.Id} advancement summary");
                     }
 
                     if (decided.HasValue)
@@ -320,50 +320,72 @@ namespace Hogs.RPG.Services.ColosseumServices
             }
         }
 
-        // Builds the "X moving on / Y dropping down or eliminated" message
-        // posted after each match. Derived purely from which bracket the
-        // just-resolved match belongs to, plus whether this match happened
-        // to decide the tournament outright.
-        private string BuildAdvancementMessage(ColosseumMatch match, string winnerName, string loserName, (int winnerId, int runnerUpId)? decided)
+        // Builds a colored embed announcing what happened after a match -
+        // an embed stands out much more clearly against a wall of plain
+        // combat-log text than another plain message would.
+        private Embed BuildAdvancementEmbed(ColosseumMatch match, string winnerName, string loserName, (int winnerId, int runnerUpId)? decided)
         {
-            string winnerText;
-            string loserText;
+            string title;
+            string advanceLabel;
+            string advanceText;
+            string outLabel;
+            string outText;
+            Color color;
 
             switch (match.BracketType)
             {
                 case ColosseumBracketType.WinnerBracket:
-                    winnerText = $"🟢 **{winnerName}** moves on in the **Winner Bracket**.";
-                    loserText = $"🔻 **{loserName}** drops down to the **Loser Bracket**.";
+                    title = "🟢 Winner Bracket Result";
+                    advanceLabel = "Advances";
+                    advanceText = $"**{winnerName}**";
+                    outLabel = "Drops to Loser Bracket";
+                    outText = $"**{loserName}**";
+                    color = new Color(0x2ECC71);
                     break;
 
                 case ColosseumBracketType.LoserBracket:
-                    winnerText = $"🟢 **{winnerName}** moves on in the **Loser Bracket**.";
-                    loserText = $"☠️ **{loserName}** is **eliminated**.";
+                    title = "🔻 Loser Bracket Result";
+                    advanceLabel = "Survives";
+                    advanceText = $"**{winnerName}**";
+                    outLabel = "☠️ Eliminated";
+                    outText = $"**{loserName}**";
+                    color = new Color(0xE74C3C);
+                    break;
+
+                case ColosseumBracketType.GrandFinal when decided.HasValue:
+                    title = "🏆 TOURNAMENT CHAMPION!";
+                    advanceLabel = "Winner";
+                    advanceText = $"**{winnerName}**";
+                    outLabel = "Runner-up";
+                    outText = $"**{loserName}**";
+                    color = new Color(0xF1C40F);
                     break;
 
                 case ColosseumBracketType.GrandFinal:
-                    if (decided.HasValue)
-                    {
-                        winnerText = $"🏆 **{winnerName}** wins the tournament!";
-                        loserText = $"☠️ **{loserName}** is **eliminated** (runner-up).";
-                    }
-                    else
-                    {
-                        // Loser Bracket champion just beat the Winner
-                        // Bracket champion's first loss - both are tied at
-                        // one loss each, so neither is eliminated yet.
-                        winnerText = $"🟢 **{winnerName}** forces a **Bracket Reset**!";
-                        loserText = $"⚠️ **{loserName}** must win the reset match to survive.";
-                    }
+                    title = "⚠️ BRACKET RESET!";
+                    advanceLabel = "Forces a decider match";
+                    advanceText = $"**{winnerName}**";
+                    outLabel = "Must win the reset to survive";
+                    outText = $"**{loserName}**";
+                    color = new Color(0xE67E22);
                     break;
 
                 default: // BracketReset
-                    winnerText = $"🏆 **{winnerName}** wins the tournament!";
-                    loserText = $"☠️ **{loserName}** is **eliminated** (runner-up).";
+                    title = "🏆 TOURNAMENT CHAMPION!";
+                    advanceLabel = "Winner";
+                    advanceText = $"**{winnerName}**";
+                    outLabel = "Runner-up";
+                    outText = $"**{loserName}**";
+                    color = new Color(0xF1C40F);
                     break;
             }
 
-            return $"{winnerText}\n{loserText}";
+            return new EmbedBuilder()
+                .WithTitle(title)
+                .AddField(advanceLabel, advanceText, inline: true)
+                .AddField(outLabel, outText, inline: true)
+                .WithColor(color)
+                .Build();
         }
 
         // =========================

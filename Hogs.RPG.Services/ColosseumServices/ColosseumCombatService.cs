@@ -16,10 +16,18 @@ namespace Hogs.RPG.Services.ColosseumServices
     /// pet passive behavior stays identical to the live game, just applied
     /// symmetrically to both sides instead of player-vs-fixed-enemy.
     ///
+    /// Log formatting is deliberately compact: each strike (including any
+    /// passive triggers - double strike, guardian shield, lifesteal,
+    /// thorns) collapses onto a single line rather than one line per
+    /// effect, and very long fights (tanky Thorns-vs-Thorns grinds
+    /// especially) get truncated to the first/last few exchanges rather
+    /// than printing every single round - a 40-round slugfest was
+    /// producing 100+ lines of near-identical output before this.
+    ///
     /// This service is Discord-agnostic on purpose - it takes two
     /// participants (with resolved display names) and returns a winner plus
     /// a combat log string. Posting that log to a match thread is
-    /// ColosseumBracketService's job, not this one.
+    /// ColosseumScheduler's job, not this one.
     /// </summary>
     public class ColosseumCombatService
     {
@@ -35,10 +43,18 @@ namespace Hogs.RPG.Services.ColosseumServices
         private const int BaseDefense = 5;
         private const int BaseHealth = 100;
 
-
+        // Colosseum pets are treated as this fixed level for stat purposes -
+        // there's no leveling/XP context in a sandboxed build. Bumped up
+        // from an initial level 1 so pet tier actually contributes
+        // meaningful stats, not just the passive slot.
         private const int ColosseumPetLevel = 15;
 
         private const int MaxRounds = 100; // safety cap, formula guarantees >=1 dmg/hit so this shouldn't ever bind
+
+        // Long fights get condensed to this many exchanges from the start
+        // and this many from the end, with a summary line in between,
+        // rather than printing every single round.
+        private const int KeepExchangesEachEnd = 5;
 
         public ColosseumCombatService(PetPassiveService petPassiveService)
         {
@@ -52,11 +68,7 @@ namespace Hogs.RPG.Services.ColosseumServices
             var a = BuildCombatant(participantA, displayNameA);
             var b = BuildCombatant(participantB, displayNameB);
 
-            var log = new List<string>
-            {
-                $"⚔️ **{a.DisplayName}** (ATK {a.Attack} / DEF {a.Defense} / HP {a.MaxHealth}) vs **{b.DisplayName}** (ATK {b.Attack} / DEF {b.Defense} / HP {b.MaxHealth})",
-                ""
-            };
+            var strikeLines = new List<string>();
 
             // Coin flip for who swings first - no structural advantage for
             // whichever participant happens to be "A" in the match record.
@@ -66,7 +78,7 @@ namespace Hogs.RPG.Services.ColosseumServices
             var round = 1;
             while (a.CurrentHealth > 0 && b.CurrentHealth > 0 && round <= MaxRounds)
             {
-                ResolveStrike(attacker, defender, log);
+                ResolveStrike(attacker, defender, strikeLines);
 
                 if (defender.CurrentHealth <= 0)
                     break;
@@ -77,6 +89,14 @@ namespace Hogs.RPG.Services.ColosseumServices
 
             var winner = a.CurrentHealth > 0 ? a : b;
             var loser = winner == a ? b : a;
+
+            var log = new List<string>
+            {
+                $"⚔️ **{a.DisplayName}** (ATK {a.Attack} / DEF {a.Defense} / HP {a.MaxHealth}) vs **{b.DisplayName}** (ATK {b.Attack} / DEF {b.Defense} / HP {b.MaxHealth})",
+                ""
+            };
+
+            log.AddRange(CondenseStrikeLines(strikeLines));
 
             log.Add("");
             log.Add($"🏆 **{winner.DisplayName}** wins! ({winner.CurrentHealth}/{winner.MaxHealth} HP remaining)");
@@ -89,8 +109,29 @@ namespace Hogs.RPG.Services.ColosseumServices
             };
         }
 
+        // Keeps the first and last few exchanges of a long fight, replacing
+        // the middle with a one-line summary, so a 30+ round grind doesn't
+        // dump 30+ near-identical lines into the thread.
+        private List<string> CondenseStrikeLines(List<string> lines)
+        {
+            if (lines.Count <= KeepExchangesEachEnd * 2 + 1)
+                return lines;
+
+            var result = new List<string>();
+            result.AddRange(lines.Take(KeepExchangesEachEnd));
+
+            var omitted = lines.Count - (KeepExchangesEachEnd * 2);
+            result.Add($"*… {omitted} more exchanges …*");
+
+            result.AddRange(lines.Skip(lines.Count - KeepExchangesEachEnd));
+            return result;
+        }
+
         // =========================
         // ONE STRIKE
+        // Builds a single combined line - base hit plus any passive
+        // triggers (outgoing/incoming modifiers, lifesteal, thorns) all
+        // appended to the same line rather than logged separately.
         // =========================
         private void ResolveStrike(ColosseumCombatant attacker, ColosseumCombatant defender, List<string> log)
         {
@@ -109,16 +150,18 @@ namespace Hogs.RPG.Services.ColosseumServices
 
             defender.CurrentHealth = Math.Max(0, defender.CurrentHealth - dmg);
 
-            log.Add($"🗡️ **{attacker.DisplayName}** hits **{defender.DisplayName}** for **{dmg}** damage! ({defender.CurrentHealth}/{defender.MaxHealth} HP)");
-            if (outgoingTrigger != null) log.Add(outgoingTrigger);
-            if (incomingTrigger != null) log.Add(incomingTrigger);
+            var line = new System.Text.StringBuilder();
+            line.Append($"🗡️ **{attacker.DisplayName}** hits **{defender.DisplayName}** for **{dmg}** ({defender.CurrentHealth}/{defender.MaxHealth} HP)");
+
+            if (outgoingTrigger != null) line.Append($" · {outgoingTrigger}");
+            if (incomingTrigger != null) line.Append($" · {incomingTrigger}");
 
             // Attacker's pet: Lifesteal heals off the damage actually dealt.
             var healing = _petPassiveService.ApplyOnHitEffects(dmg, null, attacker.PetForPassives);
             if (healing > 0)
             {
                 attacker.CurrentHealth = Math.Min(attacker.MaxHealth, attacker.CurrentHealth + healing);
-                log.Add($"❤️ **{attacker.DisplayName}** lifesteals **{healing}** HP! ({attacker.CurrentHealth}/{attacker.MaxHealth} HP)");
+                line.Append($" · ❤️ lifesteals {healing} ({attacker.CurrentHealth}/{attacker.MaxHealth})");
             }
 
             // Defender's pet: Thorns reflects some damage back at the attacker.
@@ -126,8 +169,10 @@ namespace Hogs.RPG.Services.ColosseumServices
             if (reflect > 0 && defender.CurrentHealth > 0)
             {
                 attacker.CurrentHealth = Math.Max(0, attacker.CurrentHealth - reflect);
-                log.Add($"🌵 **{defender.DisplayName}**'s Thorns reflects **{reflect}** damage back! (**{attacker.DisplayName}**: {attacker.CurrentHealth}/{attacker.MaxHealth} HP)");
+                line.Append($" · 🌵 thorns {reflect} back ({attacker.DisplayName}: {attacker.CurrentHealth}/{attacker.MaxHealth})");
             }
+
+            log.Add(line.ToString());
         }
 
         // =========================
