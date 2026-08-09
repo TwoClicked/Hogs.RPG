@@ -3,6 +3,7 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.Entities.PlayerObjects;
+using Hogs.RPG.Core.Enums.TradeEnums;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Services.AuctionServices;
 using System.Text;
@@ -204,8 +205,8 @@ namespace Hogs.RPG.Bot.Commands
             {
                 string typeIcon = l.Type switch
                 {
-                    Core.Enums.ListingType.Pet => "🐾",
-                    Core.Enums.ListingType.Relic => "🔮",
+                    ListingType.Pet => "🐾",
+                    ListingType.Relic => "🔮",
                     _ => "📦"
                 };
 

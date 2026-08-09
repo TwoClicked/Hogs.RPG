@@ -1,7 +1,7 @@
 using Discord;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities.TowerObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.TowerEnums;
 using Hogs.RPG.Core.GameData.Tower;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.AchievementServices;
@@ -21,7 +21,6 @@ namespace Hogs.RPG.Services.TowerServices
 
         private readonly Dictionary<string, TowerSession> _sessions = new();
         private readonly Dictionary<ulong, string> _playerSession = new();
-        private readonly List<ulong> _completedThreadIds = new();
         private DateTime _lastCleanupDate = DateTime.MinValue;
 
         private const int FloorIntervalSeconds = 10;
@@ -102,12 +101,10 @@ namespace Hogs.RPG.Services.TowerServices
         {
             Console.WriteLine("🧹 Running daily Tower thread cleanup...");
 
-            List<ulong> toClean;
-            lock (_completedThreadIds)
-            {
-                toClean = _completedThreadIds.ToList();
-                _completedThreadIds.Clear();
-            }
+            using var scope = _scopeFactory.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<TowerCompletedThreadRepository>();
+
+            var toClean = await repo.GetPendingAsync();
 
             int deleted = 0;
             foreach (var threadId in toClean)
@@ -120,10 +117,14 @@ namespace Hogs.RPG.Services.TowerServices
                         await thread.DeleteAsync();
                         deleted++;
                     }
+
+                    // Whether it still existed or was already gone, we're done tracking it.
+                    await repo.RemoveAsync(threadId);
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"⚠️ Could not delete tower thread {threadId}: {ex.Message}");
+                    // Leave the DB row in place so tomorrow's cleanup retries it.
                 }
             }
 
@@ -230,26 +231,66 @@ namespace Hogs.RPG.Services.TowerServices
                     .WithColor(Color.DarkGrey)
                     .Build();
 
+                bool delivered = false;
+
                 var notifyThread = thread ?? _client.GetChannel(session.ThreadId) as IThreadChannel;
                 if (notifyThread != null)
                 {
-                    await notifyThread.SendMessageAsync(embed: noticeEmbed);
+                    try
+                    {
+                        await notifyThread.SendMessageAsync(embed: noticeEmbed);
+                        delivered = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"⚠️ Could not deliver connection-abort notice to thread [{session.SessionId}]: {ex.Message}");
+                    }
                 }
-                else
+
+                // If the thread attempt failed (or there was no thread to try), fall back to the
+                // main tower channel so players still get told what happened. This matters most
+                // in exactly the case where it's most likely to fire — the thread we just failed
+                // to send to 3 times in a row is not a safe bet for a 4th silent attempt.
+                if (!delivered)
                 {
-                    // Thread itself is unreachable — fall back to the main tower channel so
-                    // players still get told what happened instead of just vanishing.
                     var fallbackChannel = _client.GetChannel(session.ChannelId) as ITextChannel;
                     if (fallbackChannel != null)
                     {
                         string mentions = string.Join(" ", session.Participants.Concat(session.FallenParticipants).Select(p => $"<@{p.DiscordId}>"));
-                        await fallbackChannel.SendMessageAsync($"{mentions}", embed: noticeEmbed);
+                        try
+                        {
+                            await fallbackChannel.SendMessageAsync(mentions, embed: noticeEmbed);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"⚠️ Could not deliver connection-abort notice to fallback channel [{session.SessionId}]: {ex.Message}");
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"⚠️ Could not deliver connection-abort notice [{session.SessionId}]: {ex.Message}");
+            }
+
+            // Archive + queue for cleanup, same as a normal run ending — this thread was
+            // previously left fully active forever on this path.
+            try
+            {
+                var closingThread = thread ?? _client.GetChannel(session.ThreadId) as IThreadChannel;
+                if (closingThread != null)
+                {
+                    try { await closingThread.ModifyAsync(t => t.Archived = true); }
+                    catch (Exception ex) { Console.WriteLine($"⚠️ Could not archive aborted tower thread [{session.SessionId}]: {ex.Message}"); }
+
+                    using var scope = _scopeFactory.CreateScope();
+                    var completedThreadRepo = scope.ServiceProvider.GetRequiredService<TowerCompletedThreadRepository>();
+                    await completedThreadRepo.MarkCompletedAsync(closingThread.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Could not queue aborted tower thread for cleanup [{session.SessionId}]: {ex.Message}");
             }
 
             RemoveSession(session.SessionId);
@@ -465,7 +506,9 @@ namespace Hogs.RPG.Services.TowerServices
                 eventType = TowerFloorEventType.Boss;
             else if (isElite)
                 eventType = TowerFloorEventType.Elite;
-            else if (session.Floor > 40 && session.MerchantFloor == 0 && _random.NextDouble() < 0.10)
+            else if (session.ShopAppearances == 0 && session.Floor > 40 && _random.NextDouble() < 0.10)
+                eventType = TowerFloorEventType.Merchant;
+            else if (session.ShopAppearances == 1 && session.Floor > 150 && _random.NextDouble() < 0.10)
                 eventType = TowerFloorEventType.Merchant;
             else
                 eventType = RollEventType();
@@ -690,11 +733,10 @@ namespace Hogs.RPG.Services.TowerServices
                 }
             }
 
-            // Frenzy update
+            // Frenzy update — grows every floor cleared, regardless of damage taken
             foreach (var p in session.Participants)
             {
-                if (p.TookDamageThisFloor) p.FrenzyStacks = 0;
-                else if (HasActiveBuff(p, TowerBuffType.Frenzy)) p.FrenzyStacks++;
+                if (HasActiveBuff(p, TowerBuffType.Frenzy)) p.FrenzyStacks++;
             }
 
             return log.ToString().TrimEnd();
@@ -794,25 +836,6 @@ namespace Hogs.RPG.Services.TowerServices
                     .WithDescription($"{fallenNames} fell in the same blow that finished the boss. **{alive.Username}** claims the victory alone.")
                     .WithColor(Color.Gold).Build())))
                     return;
-
-                session.FallenParticipants.AddRange(dead);
-                session.Participants.RemoveAll(p => p.CurrentHp <= 0);
-                anyDead = false;
-            }
-
-            // Boss defeated with at least one survivor — the kill wins the trade,
-            // even if a partner died in the same round. A full wipe still requires
-            // surviving the boss for credit, so that case falls through to the loss path below.
-            if (bossDefeated && anyDead && !allDead && session.Mode == TowerMode.Duo)
-            {
-                var dead = session.Participants.Where(p => p.CurrentHp <= 0).ToList();
-                var alive = session.Participants.First(p => p.CurrentHp > 0);
-
-                string fallenNames = string.Join(" & ", dead.Select(p => $"**{p.Username}**"));
-                await thread.SendMessageAsync(embed: new EmbedBuilder()
-                    .WithTitle("💀 A partner has fallen — but the boss is slain!")
-                    .WithDescription($"{fallenNames} fell in the same blow that finished the boss. **{alive.Username}** claims the victory alone.")
-                    .WithColor(Color.Gold).Build());
 
                 session.FallenParticipants.AddRange(dead);
                 session.Participants.RemoveAll(p => p.CurrentHp <= 0);
@@ -947,10 +970,10 @@ namespace Hogs.RPG.Services.TowerServices
                 }
             }
 
+            // Frenzy update — grows every boss round, regardless of damage taken
             foreach (var p in session.Participants)
             {
-                if (p.TookDamageThisFloor) p.FrenzyStacks = 0;
-                else if (HasActiveBuff(p, TowerBuffType.Frenzy)) p.FrenzyStacks++;
+                if (HasActiveBuff(p, TowerBuffType.Frenzy)) p.FrenzyStacks++;
             }
 
             return log.ToString().TrimEnd();
@@ -1204,10 +1227,26 @@ namespace Hogs.RPG.Services.TowerServices
         private string ResolveMerchantFloor(TowerSession session)
         {
             session.MerchantFloor = session.Floor;
+            session.ShopAppearances++;
 
             var log = new System.Text.StringBuilder();
-            log.AppendLine("🛒 **A traveling merchant emerges from the shadows!**");
-            log.AppendLine("\"Gold for gear, climber? I don't ask where it came from. But I'm only passing through — buy now or don't.\"");
+
+            if (session.ShopAppearances > 1)
+            {
+                // Second shop — everyone's purchase history resets, so stat boosts
+                // (health/attack/defense) and consumables are all buyable again.
+                foreach (var p in session.Participants)
+                    p.PurchasedShopItems.Clear();
+
+                log.AppendLine("🛒 **The traveling merchant returns, stall restocked!**");
+                log.AppendLine("\"Back again, climber. Fresh stock, same prices — one visit, one chance.\"");
+            }
+            else
+            {
+                log.AppendLine("🛒 **A traveling merchant emerges from the shadows!**");
+                log.AppendLine("\"Gold for gear, climber? I don't ask where it came from. But I'm only passing through — buy now or don't.\"");
+            }
+
             return log.ToString().TrimEnd();
         }
 
@@ -1239,7 +1278,7 @@ namespace Hogs.RPG.Services.TowerServices
                 var components = BuildMerchantComponents(session.SessionId, p);
                 string mention = session.Mode == TowerMode.Duo ? $"<@{p.DiscordId}> — " : "";
                 if (!await SendWithRetryAsync(session, thread, () => thread.SendMessageAsync(
-                    $"{mention}🛒 The merchant opens their cloak. You have **{p.AccumulatedGold}** gold to spend. Each item can only be bought once. Take your time — click **▶️ Move On** when you're done to continue the climb. They won't be back this run.",
+                    $"{mention}🛒 The merchant opens their cloak. You have **{p.AccumulatedGold}** gold to spend. Each item can only be bought once per visit. Take your time — click **▶️ Move On** when you're done to continue the climb.",
                     components: components)))
                     return false;
             }
@@ -1299,7 +1338,7 @@ namespace Hogs.RPG.Services.TowerServices
                 return (false, "Session not found.");
 
             if (session.Status != TowerStatus.Shopping || session.Floor != session.MerchantFloor)
-                return (false, "❌ The merchant has already left. They won't be back this run.");
+                return (false, "❌ The merchant has already left. Keep climbing — they may return later.");
 
             var p = session.Participants.FirstOrDefault(x => x.DiscordId == userId);
             if (p == null) return (false, "You are not in this run.");
@@ -1805,6 +1844,7 @@ namespace Hogs.RPG.Services.TowerServices
             var playerRepo = scope.ServiceProvider.GetRequiredService<PlayerRepository>();
             var petService = scope.ServiceProvider.GetRequiredService<PetServices.PetService>();
             var achievementService = scope.ServiceProvider.GetRequiredService<AchievementServices.AchievementService>();
+            var completedThreadRepo = scope.ServiceProvider.GetRequiredService<TowerCompletedThreadRepository>();
 
             var rewardLines = new System.Text.StringBuilder();
 
@@ -1845,8 +1885,8 @@ namespace Hogs.RPG.Services.TowerServices
             try { await thread.ModifyAsync(t => t.Archived = true); }
             catch (Exception ex) { Console.WriteLine($"⚠️ Could not archive tower thread [{session.SessionId}]: {ex.Message}"); }
 
-            lock (_completedThreadIds)
-                _completedThreadIds.Add(thread.Id);
+            try { await completedThreadRepo.MarkCompletedAsync(thread.Id); }
+            catch (Exception ex) { Console.WriteLine($"⚠️ Could not queue tower thread {thread.Id} for cleanup: {ex.Message}"); }
 
             RemoveSession(session.SessionId);
         }
@@ -1874,9 +1914,14 @@ namespace Hogs.RPG.Services.TowerServices
             if (isSpecialFloor && HasActiveBuff(p, TowerBuffType.Executioner))
                 dmg = (int)(dmg * (1f + GetBuffStacks(p, TowerBuffType.Executioner) * 0.25f));
 
-            // Frenzy
-            if (HasActiveBuff(p, TowerBuffType.Frenzy) && p.FrenzyStacks > 0)
-                dmg = (int)(dmg * (1f + p.FrenzyStacks * 0.05f));
+            // Frenzy — grows every floor cleared regardless of damage taken. Growth rate per
+            // floor scales with stacks owned (1% per floor per stack), capped at +200% total.
+            int frenzyStacksOwned = GetBuffStacks(p, TowerBuffType.Frenzy);
+            if (frenzyStacksOwned > 0 && p.FrenzyStacks > 0)
+            {
+                float frenzyBonus = Math.Min(2.0f, p.FrenzyStacks * frenzyStacksOwned * 0.01f);
+                dmg = (int)(dmg * (1f + frenzyBonus));
+            }
 
             // Double Strike
             float dsChance = Math.Min(0.60f, GetBuffStacks(p, TowerBuffType.DoubleStrike) * 0.20f);
@@ -1920,6 +1965,15 @@ namespace Hogs.RPG.Services.TowerServices
 
             if (existing != null) existing.Stacks++;
             else p.Buffs.Add(new TowerBuff { Type = type, Stacks = 1 });
+
+            // Vitality applies its Max HP bonus immediately, the same way the merchant's
+            // flat health item does — no calc-time lookup needed elsewhere.
+            if (type == TowerBuffType.Vitality)
+            {
+                int bump = (int)(p.MaxHp * 0.10f);
+                p.MaxHp += bump;
+                p.CurrentHp += bump;
+            }
 
             return type;
         }
@@ -1995,6 +2049,18 @@ namespace Hogs.RPG.Services.TowerServices
             {
                 if (existing != null) existing.Stacks += applied;
                 else alive.Buffs.Add(new TowerBuff { Type = buff.Type, Stacks = applied });
+
+                // Vitality's HP bonus is applied immediately at grant time, not looked up
+                // at calc-time — so a direct stack transfer needs the same bump AddBuff gives.
+                if (buff.Type == TowerBuffType.Vitality)
+                {
+                    for (int i = 0; i < applied; i++)
+                    {
+                        int bump = (int)(alive.MaxHp * 0.10f);
+                        alive.MaxHp += bump;
+                        alive.CurrentHp += bump;
+                    }
+                }
             }
 
             for (int i = 0; i < overflow; i++)

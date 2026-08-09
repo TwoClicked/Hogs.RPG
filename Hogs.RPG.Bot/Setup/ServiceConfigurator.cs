@@ -6,6 +6,7 @@ using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.TowerServices;
 using Hogs.RPG.Services.AlchemyServices;
 using Hogs.RPG.Services.AuctionServices;
+using Hogs.RPG.Services.ColosseumServices;
 using Hogs.RPG.Services.DungeonServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.GameplayServices;
@@ -68,6 +69,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<GearSetRepository>();
             services.AddScoped<PlayerAuctionRepository>();
             services.AddScoped<AchievementRepository>();
+            services.AddScoped<ColosseumRepository>();
 
             // =========================
             // ⚙️ CORE GAME SERVICES (Scoped)
@@ -101,7 +103,11 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<SmithingShopRepository>();
             services.AddScoped<AlchemyBrewService>();
             services.AddScoped<AchievementService>();
-    
+            services.AddScoped<ColosseumBotBuilderService>();
+            services.AddScoped<ColosseumCombatService>();
+            services.AddScoped<ColosseumBracketService>();
+            services.AddScoped<ColosseumService>();
+
 
 
             // =========================
@@ -123,6 +129,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddSingleton<TrailService>();
             services.AddSingleton<NpcShopService>();
             services.AddSingleton<GameEventService>();
+            services.AddSingleton<ColosseumScheduler>();
 
             // DungeonService keeps in-memory state → must stay singleton
             services.AddSingleton<DungeonService>();

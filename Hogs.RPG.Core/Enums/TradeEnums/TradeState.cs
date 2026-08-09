@@ -4,14 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hogs.RPG.Core.Enums
+namespace Hogs.RPG.Core.Enums.TradeEnums
 {
-    public enum RelicAffinity
+    public enum TradeState
     {
-        Tank,
-        Dps,
-        Healer,
-        Universal
-
+        Pending,
+        Active,
+        Confirming
     }
 }

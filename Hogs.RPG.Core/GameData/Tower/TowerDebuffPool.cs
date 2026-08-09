@@ -1,4 +1,4 @@
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.TowerEnums;
 
 namespace Hogs.RPG.Core.GameData.Tower
 {

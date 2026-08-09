@@ -1,6 +1,6 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.RaidObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.RaidEnums;
 using Hogs.RPG.Data;
 using Microsoft.EntityFrameworkCore;
 

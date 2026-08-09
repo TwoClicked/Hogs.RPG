@@ -1,11 +1,13 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.AchievementObjects;
+using Hogs.RPG.Core.Entities.ColosseumObjects;
 using Hogs.RPG.Core.Entities.EquipmentObjects;
 using Hogs.RPG.Core.Entities.GlobalBossObjects;
 using Hogs.RPG.Core.Entities.JobObjects;
 using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Core.Entities.RaidObjects;
 using Hogs.RPG.Core.Entities.SigilObjects;
+using Hogs.RPG.Core.Entities.TowerObjects;
 using Hogs.RPG.Core.Entities.TradeObjects;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,6 +31,13 @@ namespace Hogs.RPG.Data
         public DbSet<PlayerAuctionListing> PlayerAuctionListings { get; set; }
         public DbSet<PlayerAchievement> PlayerAchievements { get; set; }
         public DbSet<PlayerSigil> PlayerSigils { get; set; }
+        public DbSet<TowerCompletedThread> TowerCompletedThreads { get; set; }
+
+        public DbSet<ColosseumTournament> ColosseumTournaments { get; set; }
+        public DbSet<ColosseumParticipant> ColosseumParticipants { get; set; }
+        public DbSet<ColosseumBuild> ColosseumBuilds { get; set; }
+        public DbSet<ColosseumMatch> ColosseumMatches { get; set; }
+
         public GameDbContext(DbContextOptions<GameDbContext> options)
             : base(options)
         {
@@ -87,6 +96,9 @@ namespace Hogs.RPG.Data
             modelBuilder.Entity<PlayerSigil>()
                 .HasIndex(x => new { x.DiscordId, x.SigilId })
                 .IsUnique();
+
+            modelBuilder.Entity<TowerCompletedThread>()
+                .HasKey(x => x.ThreadId);
         }
     }
 }

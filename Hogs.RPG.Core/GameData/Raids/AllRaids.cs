@@ -1,6 +1,6 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.RaidObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.BossEnums;
 
 namespace Hogs.RPG.Core.GameData.Raids
 {

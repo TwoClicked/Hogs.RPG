@@ -4,12 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hogs.RPG.Core.Enums
+namespace Hogs.RPG.Core.Enums.RelicEnums
 {
-    public enum HuntCategory
+    public enum RelicAffinity
     {
-        Normal,
-        Alchemy,
-        Rare
+        Tank,
+        Dps,
+        Healer,
+        Universal
+
     }
 }

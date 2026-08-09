@@ -1,5 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.PlayerObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.PlayerEnums;
 
 namespace Hogs.RPG.Core.Entities
 {

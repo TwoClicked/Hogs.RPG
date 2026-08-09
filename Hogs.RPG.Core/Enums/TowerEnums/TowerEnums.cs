@@ -1,4 +1,4 @@
-namespace Hogs.RPG.Core.Enums
+namespace Hogs.RPG.Core.Enums.TowerEnums
 {
     public enum TowerMode { Solo, Duo }
 
@@ -24,7 +24,8 @@ namespace Hogs.RPG.Core.Enums
         Thorns,
         Precision,
         Evasion,
-        Frenzy
+        Frenzy,
+        Vitality
     }
 
     public enum TowerDebuffType

@@ -1,5 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.PlayerObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.BossEnums;
 using System.Linq;
 
 namespace Hogs.RPG.Services.GameplayServices

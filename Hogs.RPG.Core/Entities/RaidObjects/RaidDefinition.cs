@@ -1,5 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.RaidObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.BossEnums;
 
 namespace Hogs.RPG.Core.Entities
 {

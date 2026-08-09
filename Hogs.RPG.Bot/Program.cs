@@ -3,6 +3,7 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Bot.Setup;
 using Hogs.RPG.Data;
+using Hogs.RPG.Services.ColosseumServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.RaidServices;
 using Hogs.RPG.Services.SmithingServices;
@@ -137,6 +138,10 @@ namespace Hogs.RPG.Bot
                 Console.WriteLine("🗼 Starting TowerService...");
                 var towerService = _services.GetRequiredService<TowerService>();
                 _ = towerService.StartAsync(CancellationToken.None);
+
+                Console.WriteLine("🏛️ Starting ColosseumScheduler...");
+                var colosseumScheduler = _services.GetRequiredService<ColosseumScheduler>();
+                _ = colosseumScheduler.StartAsync(CancellationToken.None);
 
                 _schedulerStarted = true;
             }

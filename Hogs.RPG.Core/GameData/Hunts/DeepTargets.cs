@@ -1,7 +1,7 @@
 ﻿namespace Hogs.RPG.GameData.Hunts;
 
 using Hogs.RPG.Core.Entities.GameLoopObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.MiscEnums;
 using System.Net.NetworkInformation;
 
 public static class DeepTargets

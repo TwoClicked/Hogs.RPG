@@ -1,6 +1,6 @@
 ﻿// Hogs.RPG.Core/Entities/EquipmentDefinition.cs
 
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.PlayerEnums;
 
 namespace Hogs.RPG.Core.Entities.EquipmentObjects
 {

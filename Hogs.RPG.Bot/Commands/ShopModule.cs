@@ -4,7 +4,7 @@ using Discord.WebSocket;
 using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.Entities.JobObjects;
 using Hogs.RPG.Core.Entities.TradeObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.ShopEnums;
 using Hogs.RPG.Core.GameData.Shop;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Services.ShopServices;

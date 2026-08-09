@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hogs.RPG.Core.Enums
+namespace Hogs.RPG.Core.Enums.MiscEnums
 {
-    public enum TradeState
+    public enum HuntCategory
     {
-        Pending,
-        Active,
-        Confirming
+        Normal,
+        Alchemy,
+        Rare
     }
 }
