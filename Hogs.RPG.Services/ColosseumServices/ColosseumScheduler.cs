@@ -17,32 +17,39 @@ namespace Hogs.RPG.Services.ColosseumServices
     /// Responsibilities per tick, each independent and wrapped in its own
     /// try/catch so one failing doesn't block the others:
     ///   1. Open a new tournament once a day at OpenHourUtc (also cleans up
-    ///      the previous tournament's match threads first)
+    ///      the previous tournament's thread first)
     ///   2. Warn the RPG feed 30 minutes before registration closes
-    ///   3. Close registration + seed the bracket once RegistrationEndsAt passes
+    ///   3. Close registration + seed the bracket once RegistrationEndsAt
+    ///      passes, creating the single tournament thread
     ///   4. Resolve every currently-ready match in any InProgress tournament,
-    ///      repeatedly, until the bracket is fully decided (this is what
-    ///      makes the whole thing finish in well under an hour once started -
-    ///      there's no reason to wait between rounds since combat needs no
-    ///      live input)
+    ///      one round at a time, pausing SecondsPerRound between rounds -
+    ///      every match's combat log and advancement summary posts into
+    ///      that one shared thread rather than a thread per match
     /// </summary>
     public class ColosseumScheduler : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly DiscordSocketClient _client;
 
-        // Dedicated Colosseum channel - daily open/close announcements and
-        // every match thread post here.
-        private readonly ulong _announceChannelId = 1536104075253391360;
+        // Dedicated Colosseum channel - daily open/close announcements
+        // post here, and this is the parent channel the tournament thread
+        // gets created under.
+        private readonly ulong _announceChannelId = 1536112830967709776;
 
         // Final results (winner + runner-up) and the 30-minute warning also
         // cross-post to the main RPG feed, since that's higher-traffic than
         // the dedicated Colosseum channel and most players won't be
-        // watching match threads.
+        // watching the tournament thread.
         private readonly ulong _rpgFeedChannelId = 1485357755433750549;
 
         // Tournament opens once a day at this UTC hour. Change freely.
         private const int OpenHourUtc = 12;
+
+        // Pause between bracket rounds once a tournament is InProgress -
+        // gives each round's messages a moment to land before the next
+        // wave starts, and gives spectators something closer to a real
+        // event pace instead of the whole bracket resolving instantly.
+        private const int SecondsPerRound = 20;
 
         private const int MaxDiscordRetries = 3;
         private const int DiscordRetryDelaySeconds = 5;
@@ -86,7 +93,7 @@ namespace Hogs.RPG.Services.ColosseumServices
                 try { await CheckAndCloseRegistrationAsync(now); }
                 catch (Exception ex) { Console.WriteLine($"❌ Colosseum close-registration check failed: {ex.Message}"); }
 
-                try { await ProcessInProgressTournamentAsync(); }
+                try { await ProcessInProgressTournamentAsync(stoppingToken); }
                 catch (Exception ex) { Console.WriteLine($"❌ Colosseum bracket processing failed: {ex.Message}"); }
 
                 await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
@@ -114,12 +121,12 @@ namespace Hogs.RPG.Services.ColosseumServices
                 return;
             }
 
-            // Clean up every previous tournament's match threads before
-            // opening today's - keeps the dedicated Colosseum channel from
-            // accumulating dozens of stale threads day after day.
+            // Clean up every previous tournament's thread before opening
+            // today's - keeps the dedicated Colosseum channel from
+            // accumulating stale threads day after day.
             var completedTournaments = await colosseumRepo.GetCompletedTournamentsAsync();
             foreach (var completed in completedTournaments)
-                await CleanupMatchThreadsAsync(completed);
+                await CleanupTournamentThreadAsync(completed);
 
             var tournament = await colosseumService.OpenRegistrationAsync(_announceChannelId);
             _lastOpenedDate = now.Date;
@@ -194,12 +201,41 @@ namespace Hogs.RPG.Services.ColosseumServices
 
             Console.WriteLine($"🏛️ Tournament {tournament.Id} bracket seeded, now InProgress.");
 
-            var channel = _client.GetChannel(_announceChannelId) as IMessageChannel;
+            var channel = _client.GetChannel(_announceChannelId) as ITextChannel;
             if (channel == null) return;
+
+            // Create the single thread the whole tournament plays out in.
+            ulong masterThreadId = 0;
+            try
+            {
+                var thread = await channel.CreateThreadAsync(
+                    name: $"🏛️ Colosseum Tournament #{tournament.Id}",
+                    autoArchiveDuration: ThreadArchiveDuration.OneDay,
+                    type: ThreadType.PublicThread);
+
+                masterThreadId = thread.Id;
+
+                await SendWithRetryAsync(
+                    () => thread.SendMessageAsync("🏛️ **16 fighters enter.** Matches resolve here, one round at a time."),
+                    $"tournament {tournament.Id} thread intro");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Colosseum thread creation failed for tournament {tournament.Id}: {ex.Message}");
+            }
+
+            var reloaded = await colosseumRepo.GetTournamentAsync(tournament.Id);
+            if (reloaded != null)
+            {
+                reloaded.MasterThreadId = masterThreadId;
+                await colosseumRepo.SaveTournamentAsync(reloaded);
+            }
 
             var embed = new EmbedBuilder()
                 .WithTitle("🏛️ The bracket is set!")
-                .WithDescription("32 fighters enter. Matches are resolving now — check the threads below as they go up.")
+                .WithDescription(masterThreadId != 0
+                    ? $"16 fighters enter. Follow the action in <#{masterThreadId}>."
+                    : "16 fighters enter. Matches are resolving now.")
                 .WithColor(new Color(0xC0392B))
                 .Build();
 
@@ -209,7 +245,7 @@ namespace Hogs.RPG.Services.ColosseumServices
         // =========================
         // 4. RESOLVE READY MATCHES
         // =========================
-        private async Task ProcessInProgressTournamentAsync()
+        private async Task ProcessInProgressTournamentAsync(CancellationToken stoppingToken)
         {
             using var scope = _scopeFactory.CreateScope();
             var colosseumRepo = scope.ServiceProvider.GetRequiredService<ColosseumRepository>();
@@ -221,12 +257,13 @@ namespace Hogs.RPG.Services.ColosseumServices
             var tournament = await colosseumRepo.GetInProgressTournamentAsync();
             if (tournament == null) return;
 
-            var parentChannel = _client.GetChannel(tournament.AnnounceChannelId) as ITextChannel;
+            var thread = tournament.MasterThreadId != 0
+                ? _client.GetChannel(tournament.MasterThreadId) as IThreadChannel
+                : null;
 
-            // Keep resolving whatever's ready until nothing's left this pass -
-            // a match resolving can immediately make its next-round match
-            // ready too (both feeder matches might finish in the same pass),
-            // so this can walk the entire bracket to completion in one tick.
+            // Resolve one round's worth of ready matches, pause
+            // SecondsPerRound, then check again - gives the bracket real
+            // pacing instead of instant-resolving the whole thing.
             while (true)
             {
                 var readyMatches = await bracketService.GetReadyMatchesAsync(tournament.Id);
@@ -248,29 +285,24 @@ namespace Hogs.RPG.Services.ColosseumServices
 
                     var result = combatService.ResolveMatch(participantA, nameA, participantB, nameB);
 
-                    ulong threadId = 0;
-                    if (parentChannel != null)
-                    {
-                        try
-                        {
-                            var thread = await parentChannel.CreateThreadAsync(
-                                name: $"⚔️ {nameA} vs {nameB} ({match.BracketType})",
-                                autoArchiveDuration: ThreadArchiveDuration.OneDay,
-                                type: ThreadType.PublicThread);
+                    var winnerName = result.WinnerParticipantId == participantA.Id ? nameA : nameB;
+                    var loserName = result.WinnerParticipantId == participantA.Id ? nameB : nameA;
 
-                            threadId = thread.Id;
-                            await SendCombatLogAsync(thread, result.CombatLog, match.Id);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"⚠️ Colosseum thread creation failed for match {match.Id}: {ex.Message}");
-                        }
+                    if (thread != null)
+                    {
+                        await SendWithRetryAsync(
+                            () => thread.SendMessageAsync($"**⚔️ {nameA} vs {nameB}** ({match.BracketType})"),
+                            $"match {match.Id} header");
+                        await SendCombatLogAsync(thread, result.CombatLog, match.Id);
                     }
 
-                    match.ThreadId = threadId;
-                    await colosseumRepo.SaveMatchAsync(match);
-
                     var decided = await bracketService.AdvanceAfterMatchAsync(match, result.WinnerParticipantId, result.LoserParticipantId);
+
+                    if (thread != null)
+                    {
+                        var summary = BuildAdvancementMessage(match, winnerName, loserName, decided);
+                        await SendWithRetryAsync(() => thread.SendMessageAsync(summary), $"match {match.Id} advancement summary");
+                    }
 
                     if (decided.HasValue)
                     {
@@ -279,7 +311,55 @@ namespace Hogs.RPG.Services.ColosseumServices
                         return; // tournament fully decided - nothing left to do this tick
                     }
                 }
+
+                await Task.Delay(TimeSpan.FromSeconds(SecondsPerRound), stoppingToken);
             }
+        }
+
+        // Builds the "X moving on / Y dropping down or eliminated" message
+        // posted after each match. Derived purely from which bracket the
+        // just-resolved match belongs to, plus whether this match happened
+        // to decide the tournament outright.
+        private string BuildAdvancementMessage(ColosseumMatch match, string winnerName, string loserName, (int winnerId, int runnerUpId)? decided)
+        {
+            string winnerText;
+            string loserText;
+
+            switch (match.BracketType)
+            {
+                case ColosseumBracketType.WinnerBracket:
+                    winnerText = $"🟢 **{winnerName}** moves on in the **Winner Bracket**.";
+                    loserText = $"🔻 **{loserName}** drops down to the **Loser Bracket**.";
+                    break;
+
+                case ColosseumBracketType.LoserBracket:
+                    winnerText = $"🟢 **{winnerName}** moves on in the **Loser Bracket**.";
+                    loserText = $"☠️ **{loserName}** is **eliminated**.";
+                    break;
+
+                case ColosseumBracketType.GrandFinal:
+                    if (decided.HasValue)
+                    {
+                        winnerText = $"🏆 **{winnerName}** wins the tournament!";
+                        loserText = $"☠️ **{loserName}** is **eliminated** (runner-up).";
+                    }
+                    else
+                    {
+                        // Loser Bracket champion just beat the Winner
+                        // Bracket champion's first loss - both are tied at
+                        // one loss each, so neither is eliminated yet.
+                        winnerText = $"🟢 **{winnerName}** forces a **Bracket Reset**!";
+                        loserText = $"⚠️ **{loserName}** must win the reset match to survive.";
+                    }
+                    break;
+
+                default: // BracketReset
+                    winnerText = $"🏆 **{winnerName}** wins the tournament!";
+                    loserText = $"☠️ **{loserName}** is **eliminated** (runner-up).";
+                    break;
+            }
+
+            return $"{winnerText}\n{loserText}";
         }
 
         // =========================
@@ -298,12 +378,16 @@ namespace Hogs.RPG.Services.ColosseumServices
             var winnerPrizeText = winner != null && !winner.IsBot ? $"{tournament.WinnerPrizeGold} gold" : "no gold (bot)";
             var runnerUpPrizeText = runnerUp != null && !runnerUp.IsBot ? $"{tournament.RunnerUpPrizeGold} gold" : "no gold (bot)";
 
-            var embed = new EmbedBuilder()
+            var embedBuilder = new EmbedBuilder()
                 .WithTitle("🏛️ The Colosseum has a champion!")
                 .AddField("🥇 Winner", $"{winnerName} — {winnerPrizeText}")
                 .AddField("🥈 Runner-up", $"{runnerUpName} — {runnerUpPrizeText}")
-                .WithColor(new Color(0xF1C40F))
-                .Build();
+                .WithColor(new Color(0xF1C40F));
+
+            if (tournament.MasterThreadId != 0)
+                embedBuilder.AddField("📜 Full bracket", $"<#{tournament.MasterThreadId}>");
+
+            var embed = embedBuilder.Build();
 
             var colosseumChannel = _client.GetChannel(tournament.AnnounceChannelId) as IMessageChannel;
             if (colosseumChannel != null)
@@ -325,37 +409,27 @@ namespace Hogs.RPG.Services.ColosseumServices
         // =========================
         // THREAD CLEANUP
         // =========================
-        // Deletes every match thread for a completed tournament. Each
-        // deletion is independently try/caught - one already-deleted or
-        // permission-denied thread shouldn't stop the rest from being
-        // cleaned up. Called right before opening the next daily
-        // tournament, so players get a full day to review yesterday's
-        // matches before the threads disappear.
-        private async Task CleanupMatchThreadsAsync(ColosseumTournament tournament)
+        // Deletes the single tournament thread. Called right before opening
+        // the next daily tournament, so players get a full day to review
+        // yesterday's bracket before the thread disappears.
+        private async Task CleanupTournamentThreadAsync(ColosseumTournament tournament)
         {
-            var threadIds = tournament.Matches.Where(m => m.ThreadId != 0).Select(m => m.ThreadId).ToList();
-            if (threadIds.Count == 0) return;
+            if (tournament.MasterThreadId == 0) return;
 
-            Console.WriteLine($"🧹 Cleaning up {threadIds.Count} Colosseum match threads for tournament {tournament.Id}...");
+            Console.WriteLine($"🧹 Cleaning up Colosseum thread for tournament {tournament.Id}...");
 
-            var deleted = 0;
-            foreach (var threadId in threadIds)
+            try
             {
-                try
+                if (_client.GetChannel(tournament.MasterThreadId) is IThreadChannel thread)
                 {
-                    if (_client.GetChannel(threadId) is IThreadChannel thread)
-                    {
-                        await thread.DeleteAsync();
-                        deleted++;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"⚠️ Failed to delete Colosseum thread {threadId}: {ex.Message}");
+                    await thread.DeleteAsync();
+                    Console.WriteLine($"🧹 Deleted Colosseum thread for tournament {tournament.Id}.");
                 }
             }
-
-            Console.WriteLine($"🧹 Deleted {deleted}/{threadIds.Count} Colosseum match threads.");
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Failed to delete Colosseum thread for tournament {tournament.Id}: {ex.Message}");
+            }
         }
 
         // =========================

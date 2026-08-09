@@ -55,13 +55,19 @@ namespace Hogs.RPG.Core.Entities.ColosseumObjects
         // =========================
         // Always 32. Real signups (capped at 20) fill first, bots pad out
         // the rest so the bracket is always a clean, fully-seeded size.
-        public int BracketSize { get; set; } = 32;
+        public int BracketSize { get; set; } = 16;
 
-        public int MaxRealPlayers { get; set; } = 20;
+        public int MaxRealPlayers { get; set; } = 16;
 
         // =========================
         // DISCORD CONTEXT
         // =========================
+
+        // Single Discord thread the entire tournament plays out in - every
+        // match's combat log and advancement summary posts here instead of
+        // a separate thread per match. Created once, right after the
+        // bracket is seeded. 0 until then.
+        public ulong MasterThreadId { get; set; } = 0;
         // Channel where the "signups open" announcement and final results
         // are posted. Individual matches get their own threads (tracked on
         // ColosseumMatch), not posted directly here.
