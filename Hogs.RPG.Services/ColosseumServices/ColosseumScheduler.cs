@@ -22,12 +22,14 @@ namespace Hogs.RPG.Services.ColosseumServices
     ///   3. Close registration + seed the bracket once RegistrationEndsAt passes
     ///   4. Resolve every currently-ready match in any InProgress tournament,
     ///      one round at a time, pausing SecondsPerRound between rounds.
-    ///      Each match's combat log posts as a colored embed in the single
-    ///      shared tournament thread (created lazily on first sight of an
-    ///      InProgress tournament, so both the daily flow and
-    ///      /testcolosseum get one), and the advancement result posts as a
-    ///      matching-colored embed in both the thread and the main
-    ///      Colosseum channel.
+    ///      Each match's combat log + individual result posts as a colored
+    ///      embed in the single shared tournament thread (created lazily on
+    ///      first sight of an InProgress tournament). The main Colosseum
+    ///      channel instead gets ONE combined embed per round - grouped by
+    ///      bracket type + round number - so it reads as a clean sequence of
+    ///      stages ("Winner Bracket Round 1" -> "Loser Bracket Round 1" ->
+    ///      "Winner Bracket Round 2" -> ...) rather than a flood of
+    ///      individual match results.
     /// </summary>
     public class ColosseumScheduler : BackgroundService
     {
@@ -35,7 +37,7 @@ namespace Hogs.RPG.Services.ColosseumServices
         private readonly DiscordSocketClient _client;
 
         // Dedicated Colosseum channel - daily open/close announcements and
-        // per-match result summaries post here, and this is the parent
+        // per-round result summaries post here, and this is the parent
         // channel the tournament thread gets created under.
         private readonly ulong _announceChannelId = 1536112830967709776;
 
@@ -271,6 +273,12 @@ namespace Hogs.RPG.Services.ColosseumServices
                 var readyMatches = await bracketService.GetReadyMatchesAsync(tournament.Id);
                 if (!readyMatches.Any()) break;
 
+                // Collects one summary per match resolved this wave, so a
+                // single combined embed per (BracketType, RoundNumber) group
+                // can be posted to the main channel after the wave finishes,
+                // instead of one embed per match.
+                var waveSummaries = new List<(ColosseumMatch match, string winnerName, string loserName, (int winnerId, int runnerUpId)? decided)>();
+
                 foreach (var match in readyMatches)
                 {
                     var participantA = await colosseumRepo.GetParticipantAsync(match.ParticipantAId!.Value);
@@ -294,39 +302,97 @@ namespace Hogs.RPG.Services.ColosseumServices
 
                     var presentation = BuildMatchPresentation(match, winnerName, loserName, decided);
 
-                    // Combat log embed(s) - detailed, thread only.
+                    // Detailed per-match embeds - thread only.
                     if (thread != null)
                     {
                         var logTitle = $"⚔️ {nameA} vs {nameB} ({match.BracketType})";
                         await SendCombatLogEmbedsAsync(thread, logTitle, result.CombatLog, presentation.Color, match.Id);
+
+                        var resultEmbed = BuildAdvancementEmbed(presentation);
+                        await SendWithRetryAsync(() => thread.SendMessageAsync(embed: resultEmbed), $"match {match.Id} result (thread)");
                     }
 
-                    // Advancement result embed - posted to both the thread
-                    // (for anyone reading it top-to-bottom) and the main
-                    // Colosseum channel (so it's visible without opening
-                    // the thread at all).
-                    var resultEmbed = BuildAdvancementEmbed(presentation);
-
-                    if (thread != null)
-                        await SendWithRetryAsync(() => thread.SendMessageAsync(embed: resultEmbed), $"match {match.Id} result (thread)");
-
-                    if (parentChannel != null)
-                        await SendWithRetryAsync(() => parentChannel.SendMessageAsync(embed: resultEmbed), $"match {match.Id} result (channel)");
+                    waveSummaries.Add((match, winnerName, loserName, decided));
 
                     if (decided.HasValue)
                     {
                         await colosseumService.CompleteTournamentAsync(tournament.Id, decided.Value.winnerId, decided.Value.runnerUpId);
+
+                        // Still post this wave's section(s) to the main
+                        // channel before wrapping up, so the last round
+                        // (including the deciding match) shows there too.
+                        if (parentChannel != null)
+                            await PostWaveSectionsAsync(parentChannel, waveSummaries);
+
                         await AnnounceResultsAsync(tournament, decided.Value.winnerId, decided.Value.runnerUpId, playerRepo, colosseumRepo);
                         return; // tournament fully decided - nothing left to do this tick
                     }
                 }
 
+                if (parentChannel != null)
+                    await PostWaveSectionsAsync(parentChannel, waveSummaries);
+
                 await Task.Delay(TimeSpan.FromSeconds(SecondsPerRound), stoppingToken);
             }
         }
 
-        // Everything needed to render one match's log embed + result embed
-        // with a shared color, computed once per match rather than twice.
+        // Groups one wave's resolved matches by (BracketType, RoundNumber)
+        // and posts one combined embed per group to the main channel - this
+        // is the "section" the main channel sees, e.g. "Winner Bracket
+        // Round 2" listing every match that happened in that stage at once.
+        private async Task PostWaveSectionsAsync(
+            ITextChannel channel,
+            List<(ColosseumMatch match, string winnerName, string loserName, (int winnerId, int runnerUpId)? decided)> waveSummaries)
+        {
+            var groups = waveSummaries
+                .GroupBy(s => (s.match.BracketType, s.match.RoundNumber))
+                .OrderBy(g => g.Key.BracketType)
+                .ThenBy(g => g.Key.RoundNumber);
+
+            foreach (var group in groups)
+            {
+                var (bracketType, roundNumber) = group.Key;
+                var (title, color) = GetStageHeader(bracketType, roundNumber);
+
+                var lines = group.Select(s =>
+                {
+                    var outcome = GetOutcomeSuffix(s.match.BracketType, s.decided);
+                    return $"⚔️ **{s.winnerName}** defeats **{s.loserName}** {outcome}";
+                });
+
+                var embed = new EmbedBuilder()
+                    .WithTitle(title)
+                    .WithDescription(string.Join("\n", lines))
+                    .WithColor(color)
+                    .Build();
+
+                await SendWithRetryAsync(() => channel.SendMessageAsync(embed: embed), $"round section ({title})");
+            }
+        }
+
+        // Section header + color for a bracket stage - this line is the
+        // "overview" of where the tournament currently is.
+        private (string title, Color color) GetStageHeader(ColosseumBracketType bracketType, int roundNumber) => bracketType switch
+        {
+            ColosseumBracketType.WinnerBracket => ($"🟢 Winner Bracket — Round {roundNumber}", new Color(0x2ECC71)),
+            ColosseumBracketType.LoserBracket => ($"🔻 Loser Bracket — Round {roundNumber}", new Color(0xE74C3C)),
+            ColosseumBracketType.GrandFinal => ("🏆 Grand Final", new Color(0xF1C40F)),
+            ColosseumBracketType.BracketReset => ("⚠️ Bracket Reset", new Color(0xE67E22)),
+            _ => ("Colosseum", new Color(0x95A5A6))
+        };
+
+        private string GetOutcomeSuffix(ColosseumBracketType bracketType, (int winnerId, int runnerUpId)? decided) => bracketType switch
+        {
+            ColosseumBracketType.WinnerBracket => "→ drops to Loser Bracket",
+            ColosseumBracketType.LoserBracket => "→ ☠️ eliminated",
+            ColosseumBracketType.GrandFinal when decided.HasValue => "→ 🏆 tournament champion!",
+            ColosseumBracketType.GrandFinal => "→ forces a Bracket Reset!",
+            ColosseumBracketType.BracketReset => "→ 🏆 tournament champion!",
+            _ => ""
+        };
+
+        // Everything needed to render one match's log embed + individual
+        // result embed (thread only) with a shared color.
         private readonly record struct MatchPresentation(
             string Title, string AdvanceLabel, string AdvanceText,
             string OutLabel, string OutText, Color Color);
@@ -351,8 +417,6 @@ namespace Hogs.RPG.Services.ColosseumServices
                         "Runner-up", $"**{loserName}**", new Color(0xF1C40F));
 
                 case ColosseumBracketType.GrandFinal:
-                    // Loser Bracket champion just beat the Winner Bracket
-                    // champion's first loss - both tied at one loss each.
                     return new MatchPresentation(
                         "⚠️ BRACKET RESET!", "Forces a decider match", $"**{winnerName}**",
                         "Must win the reset to survive", $"**{loserName}**", new Color(0xE67E22));
