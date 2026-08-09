@@ -88,14 +88,19 @@ namespace Hogs.RPG.Services.ColosseumServices
             }
 
             // Fill the remaining slots up to BracketSize with bots.
+            // GenerateBotParticipant attaches an unsaved Build to the
+            // participant's navigation property, so AddParticipantAsync's
+            // single SaveChangesAsync call inserts both the participant and
+            // its build together (EF Core cascades through populated
+            // navigation properties automatically, fixing up the FK itself).
+            // No separate CreateBuildAsync call needed - doing so was
+            // trying to re-insert the same already-saved build a second
+            // time, which is what caused the duplicate key error.
             var slotsToFill = tournament.BracketSize - tournament.Participants.Count;
             for (var i = 0; i < slotsToFill; i++)
             {
                 var botParticipant = _botBuilderService.GenerateBotParticipant(tournament);
-                var savedParticipant = await _colosseumRepository.AddParticipantAsync(botParticipant);
-
-                botParticipant.Build!.ColosseumParticipantId = savedParticipant.Id;
-                await _colosseumRepository.CreateBuildAsync(botParticipant.Build);
+                await _colosseumRepository.AddParticipantAsync(botParticipant);
             }
 
             // Reload with the freshly added bot participants included, then seed.
