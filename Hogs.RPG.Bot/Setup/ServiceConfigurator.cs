@@ -70,6 +70,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<PlayerAuctionRepository>();
             services.AddScoped<AchievementRepository>();
             services.AddScoped<ColosseumRepository>();
+            services.AddScoped<TowerCompletedThreadRepository>();
 
             // =========================
             // ⚙️ CORE GAME SERVICES (Scoped)
