@@ -48,7 +48,7 @@ namespace Hogs.RPG.Services.ColosseumServices
         private readonly ulong _rpgFeedChannelId = 1485357755433750549;
 
         // Tournament opens once a day at this UTC hour. Change freely.
-        private const int OpenHourUtc = 14;
+        private const int OpenHourUtc = 12;
 
         // Pause between bracket rounds once a tournament is InProgress -
         // gives each round's messages a moment to land before the next

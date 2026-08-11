@@ -50,7 +50,7 @@ namespace Hogs.RPG.Services.ColosseumServices
             {
                 Status = ColosseumTournamentStatus.Registration,
                 RegistrationOpenedAt = DateTime.UtcNow,
-                RegistrationEndsAt = DateTime.UtcNow.AddHours(6),
+                RegistrationEndsAt = DateTime.UtcNow.AddHours(8),
                 AnnounceChannelId = announceChannelId,
                 BuildBudgetAP = RollDailyApBudget()
             };
