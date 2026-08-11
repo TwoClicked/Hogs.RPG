@@ -283,16 +283,16 @@ namespace Hogs.RPG.Services.ColosseumServices
             var (build, error) = await GetUnlockedBuildAsync(participantId);
             if (build == null) return (false, error!);
 
-            var currentCount = GetBuffCount(build, stat);
-            if (currentCount >= Core.GameData.Colosseum.ColosseumBuffShop.MaxPurchasesPerStat)
-                return (false, $"You've already maxed out {stat} buffs ({currentCount}/{Core.GameData.Colosseum.ColosseumBuffShop.MaxPurchasesPerStat}).");
+            var totalBuffsOwned = build.BuffAttackPurchases + build.BuffDefensePurchases + build.BuffHealthPurchases;
+            if (totalBuffsOwned >= Core.GameData.Colosseum.ColosseumBuffShop.MaxTotalBuffPurchases)
+                return (false, $"You've already bought the max of {Core.GameData.Colosseum.ColosseumBuffShop.MaxTotalBuffPurchases} buffs total (across all stats combined).");
 
             var cost = ColosseumPriceRegistry.GetBuffCost(stat);
             var newSpent = build.ApSpent + cost;
             if (newSpent > build.ApBudget)
                 return (false, $"That would put you at {newSpent}/{build.ApBudget} AP - not enough budget left.");
 
-            SetBuffCount(build, stat, currentCount + 1);
+            SetBuffCount(build, stat, GetBuffCount(build, stat) + 1);
             build.ApSpent = newSpent;
             await _colosseumRepository.SaveBuildAsync(build);
 
@@ -436,7 +436,7 @@ namespace Hogs.RPG.Services.ColosseumServices
         // 50 so displayed numbers look intentional rather than arbitrary.
         private static int RollDailyApBudget()
         {
-            var raw = _apBudgetRandom.Next(500, 2001); // upper bound exclusive, so 2000 is reachable
+            var raw = _apBudgetRandom.Next(499, 1501);
             return (int)(Math.Round(raw / 50.0) * 50);
         }
     }

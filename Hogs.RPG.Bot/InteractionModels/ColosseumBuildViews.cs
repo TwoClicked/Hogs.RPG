@@ -209,11 +209,13 @@ namespace Hogs.RPG.Bot.InteractionModels
         // =========================
         public static (Embed embed, MessageComponent components) BuildBuffsMenu(ColosseumBuild build)
         {
+            var totalBuffs = build.BuffAttackPurchases + build.BuffDefensePurchases + build.BuffHealthPurchases;
+
             var embed = new EmbedBuilder()
                 .WithTitle("✨ Store Buffs")
                 .WithDescription(
                     $"**AP spent:** {build.ApSpent} / {build.ApBudget}\n\n" +
-                    $"Each stat capped at {ColosseumBuffShop.MaxPurchasesPerStat} purchases.\n\n" +
+                    $"**Buffs bought:** {totalBuffs} / {ColosseumBuffShop.MaxTotalBuffPurchases} total (across all stats combined)\n\n" +
                     BuildBuffSummary(build))
                 .WithColor(new Color(0xC0392B))
                 .Build();

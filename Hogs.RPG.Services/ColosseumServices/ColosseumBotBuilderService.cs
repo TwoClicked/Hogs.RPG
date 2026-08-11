@@ -114,10 +114,10 @@ namespace Hogs.RPG.Services.ColosseumServices
                         break;
 
                     case CandidateKind.Buff:
-                        if (buffCounts[option.BuffStat!.Value] >= ColosseumBuffShop.MaxPurchasesPerStat)
+                        if (buffCounts.Values.Sum() >= ColosseumBuffShop.MaxTotalBuffPurchases)
                             continue;
                         ApplyBuff(build, option);
-                        buffCounts[option.BuffStat.Value]++;
+                        buffCounts[option.BuffStat!.Value]++;
                         break;
                 }
 
@@ -164,12 +164,16 @@ namespace Hogs.RPG.Services.ColosseumServices
                 pool.Add(new Candidate { Kind = CandidateKind.Passive, Passive = passive, Cost = cost });
             }
 
-            // Buffs: add MaxPurchasesPerStat separate candidates per stat so
-            // the random shuffle can naturally buy 0-3 of each independently.
+            // Buffs: one candidate per stat per possible purchase, up to the
+            // OVERALL cap (not per-stat) - the shuffle-and-buy loop below
+            // already enforces the shared total via buffCounts.Sum(), so
+            // generating MaxTotalBuffPurchases candidates per stat here just
+            // gives the shuffle enough options to pick from; it can never
+            // actually buy more than the shared cap regardless.
             foreach (BuffStat stat in Enum.GetValues<BuffStat>())
             {
                 var cost = ColosseumPriceRegistry.GetBuffCost(stat);
-                for (var i = 0; i < ColosseumBuffShop.MaxPurchasesPerStat; i++)
+                for (var i = 0; i < ColosseumBuffShop.MaxTotalBuffPurchases; i++)
                 {
                     pool.Add(new Candidate { Kind = CandidateKind.Buff, BuffStat = stat, Cost = cost });
                 }

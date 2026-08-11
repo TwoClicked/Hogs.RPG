@@ -61,10 +61,6 @@ namespace Hogs.RPG.Services.PetServices
                 return (false, $"❌ You're not ready to evolve yet:\n{string.Join("\n", missing)}");
             }
 
-            var existing = await _repo.GetPetAsync(userId, Tier3PetId);
-            if (existing != null)
-                return (false, "❌ You already own the **Capytara**!");
-
             _repo.RemovePet(attackPet);
             _repo.RemovePet(defensePet);
             _repo.RemovePet(healthPet);
@@ -99,11 +95,6 @@ namespace Hogs.RPG.Services.PetServices
             bool hasAttack = pets.Any(p => p.PetId == AttackPetId);
             bool hasDefense = pets.Any(p => p.PetId == DefensePetId);
             bool hasHealth = pets.Any(p => p.PetId == HealthPetId);
-            bool hasChimera = pets.Any(p => p.PetId == Tier3PetId);
-
-            if (hasChimera)
-                return "🐉 You already own the **Capytara**!";
-
             string Check(bool has) => has ? "✅" : "❌";
 
             return $"**🧬 Evolution Progress — Capytara**\n\n" +

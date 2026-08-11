@@ -1,7 +1,6 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.ColosseumObjects;
 using Hogs.RPG.Core.Entities.PetObjects;
-using Hogs.RPG.Core.Enums.PlayerEnums;
 using Hogs.RPG.Core.GameData.Colosseum;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
@@ -16,13 +15,14 @@ namespace Hogs.RPG.Services.ColosseumServices
     /// pet passive behavior stays identical to the live game, just applied
     /// symmetrically to both sides instead of player-vs-fixed-enemy.
     ///
-    /// Log formatting is deliberately compact: each strike (including any
-    /// passive triggers - double strike, guardian shield, lifesteal,
-    /// thorns) collapses onto a single line rather than one line per
-    /// effect, and very long fights (tanky Thorns-vs-Thorns grinds
-    /// especially) get truncated to the first/last few exchanges rather
-    /// than printing every single round - a 40-round slugfest was
-    /// producing 100+ lines of near-identical output before this.
+    /// Combat is SIMULTANEOUS: both sides' damage for a round is computed
+    /// from stats as they stood at the start of that round, then applied
+    /// together - there's no "attacker swings, defender's health updates,
+    /// then defender swings" sequencing. HP is allowed to go negative
+    /// during a round (not clamped to 0) specifically so a round where
+    /// BOTH sides die can be resolved fairly: whoever's HP is LESS negative
+    /// (e.g. -34 beats -50) wins that exchange, since they were closer to
+    /// surviving it.
     ///
     /// This service is Discord-agnostic on purpose - it takes two
     /// participants (with resolved display names) and returns a winner plus
@@ -32,28 +32,12 @@ namespace Hogs.RPG.Services.ColosseumServices
     public class ColosseumCombatService
     {
         private readonly PetPassiveService _petPassiveService;
-        private readonly Random _random = new();
-
-        // Every fresh Player starts at Attack 5 / Defense 5 / MaxHealth 100
-        // (see PlayerCommands new-player creation) - using the same baseline
-        // here keeps Colosseum stats in a familiar range rather than
-        // inventing new numbers, and keeps everyone equal regardless of
-        // their real account's level.
-        private const int BaseAttack = 5;
-        private const int BaseDefense = 5;
-        private const int BaseHealth = 100;
-
-        // Colosseum pets are treated as this fixed level for stat purposes -
-        // there's no leveling/XP context in a sandboxed build. Bumped up
-        // from an initial level 1 so pet tier actually contributes
-        // meaningful stats, not just the passive slot.
-        private const int ColosseumPetLevel = 15;
 
         private const int MaxRounds = 100; // safety cap, formula guarantees >=1 dmg/hit so this shouldn't ever bind
 
-        // Long fights get condensed to this many exchanges from the start
-        // and this many from the end, with a summary line in between,
-        // rather than printing every single round.
+        // Long fights get condensed to this many rounds from the start and
+        // this many from the end, with a summary line in between, rather
+        // than printing every single round.
         private const int KeepExchangesEachEnd = 5;
 
         public ColosseumCombatService(PetPassiveService petPassiveService)
@@ -68,27 +52,16 @@ namespace Hogs.RPG.Services.ColosseumServices
             var a = BuildCombatant(participantA, displayNameA);
             var b = BuildCombatant(participantB, displayNameB);
 
-            var strikeLines = new List<string>();
-
-            // Coin flip for who swings first - no structural advantage for
-            // whichever participant happens to be "A" in the match record.
-            var attacker = _random.NextDouble() < 0.5 ? a : b;
-            var defender = attacker == a ? b : a;
-
+            var roundLines = new List<string>();
             var round = 1;
+
             while (a.CurrentHealth > 0 && b.CurrentHealth > 0 && round <= MaxRounds)
             {
-                ResolveStrike(attacker, defender, strikeLines);
-
-                if (defender.CurrentHealth <= 0)
-                    break;
-
-                (attacker, defender) = (defender, attacker);
+                ResolveRound(a, b, roundLines);
                 round++;
             }
 
-            var winner = a.CurrentHealth > 0 ? a : b;
-            var loser = winner == a ? b : a;
+            var (winner, loser) = DetermineWinner(a, b);
 
             var log = new List<string>
             {
@@ -96,10 +69,12 @@ namespace Hogs.RPG.Services.ColosseumServices
                 ""
             };
 
-            log.AddRange(CondenseStrikeLines(strikeLines));
+            log.AddRange(CondenseStrikeLines(roundLines));
 
             log.Add("");
-            log.Add($"🏆 **{winner.DisplayName}** wins! ({winner.CurrentHealth}/{winner.MaxHealth} HP remaining)");
+            log.Add(winner.CurrentHealth > 0
+                ? $"🏆 **{winner.DisplayName}** wins! ({winner.CurrentHealth}/{winner.MaxHealth} HP remaining)"
+                : $"🏆 **{winner.DisplayName}** wins the mutual exchange! ({winner.CurrentHealth} HP vs {loser.CurrentHealth} HP - closer to surviving)");
 
             return new ColosseumCombatResult
             {
@@ -109,7 +84,41 @@ namespace Hogs.RPG.Services.ColosseumServices
             };
         }
 
-        // Keeps the first and last few exchanges of a long fight, replacing
+        // =========================
+        // WINNER DETERMINATION
+        // =========================
+        // Normal case: exactly one combatant is at or below 0 HP - they lose.
+        // Mutual kill (both at or below 0 in the same round): whoever's HP
+        // is LESS negative wins - they were closer to surviving the
+        // exchange. Compared as raw HP, not percentage, per design intent:
+        // a mutual kill is about who almost made it, not about relative
+        // toughness.
+        // MaxRounds safety cap (both still alive, extremely rare - only a
+        // heavy-Lifesteal stalemate could realistically reach it): compared
+        // as a PERCENTAGE of max HP instead, since this is a genuinely
+        // different scenario (nobody died) and builds with very different
+        // HP pools need a proportional comparison to be fair here.
+        private (ColosseumCombatant winner, ColosseumCombatant loser) DetermineWinner(ColosseumCombatant a, ColosseumCombatant b)
+        {
+            var aDead = a.CurrentHealth <= 0;
+            var bDead = b.CurrentHealth <= 0;
+
+            if (aDead && bDead)
+            {
+                // Mutual kill - less negative HP wins.
+                return a.CurrentHealth >= b.CurrentHealth ? (a, b) : (b, a);
+            }
+
+            if (aDead) return (b, a);
+            if (bDead) return (a, b);
+
+            // Neither died - MaxRounds cap was hit. Compare proportionally.
+            double aPercent = (double)a.CurrentHealth / a.MaxHealth;
+            double bPercent = (double)b.CurrentHealth / b.MaxHealth;
+            return aPercent >= bPercent ? (a, b) : (b, a);
+        }
+
+        // Keeps the first and last few rounds of a long fight, replacing
         // the middle with a one-line summary, so a 30+ round grind doesn't
         // dump 30+ near-identical lines into the thread.
         private List<string> CondenseStrikeLines(List<string> lines)
@@ -121,56 +130,76 @@ namespace Hogs.RPG.Services.ColosseumServices
             result.AddRange(lines.Take(KeepExchangesEachEnd));
 
             var omitted = lines.Count - (KeepExchangesEachEnd * 2);
-            result.Add($"*… {omitted} more exchanges …*");
+            result.Add($"*… {omitted} more rounds …*");
 
             result.AddRange(lines.Skip(lines.Count - KeepExchangesEachEnd));
             return result;
         }
 
         // =========================
-        // ONE STRIKE
-        // Builds a single combined line - base hit plus any passive
-        // triggers (outgoing/incoming modifiers, lifesteal, thorns) all
-        // appended to the same line rather than logged separately.
+        // ONE ROUND - SIMULTANEOUS
+        // Both sides' damage is computed from pre-round stats, then applied
+        // together. Thorns reflect from each side factors into the OTHER
+        // side's total damage this same round, so two Thorns builds both
+        // take extra damage from each other's reflection in one pass.
         // =========================
-        private void ResolveStrike(ColosseumCombatant attacker, ColosseumCombatant defender, List<string> log)
+        private void ResolveRound(ColosseumCombatant a, ColosseumCombatant b, List<string> log)
         {
-            int dmg = (int)(attacker.Attack * (100.0 / (100.0 + defender.Defense)));
-            dmg = Math.Max(1, dmg);
+            int aHpBefore = a.CurrentHealth;
+            int bHpBefore = b.CurrentHealth;
 
-            // Attacker's pet: DoubleStrike / Executioner (Executioner needs
-            // the defender's current HP% to check its low-HP threshold).
-            var (outgoingDmg, outgoingTrigger) = _petPassiveService.ModifyOutgoingDamage(
-                dmg, attacker.PetForPassives, attacker.PetDefinition, defender.CurrentHealth, defender.MaxHealth);
-            dmg = outgoingDmg;
+            // ===== Base damage each direction =====
+            int dmgAtoB = Math.Max(1, (int)(a.Attack * (100.0 / (100.0 + b.Defense))));
+            int dmgBtoA = Math.Max(1, (int)(b.Attack * (100.0 / (100.0 + a.Defense))));
 
-            // Defender's pet: GuardianShield chance to reduce incoming damage.
-            var (mitigatedDmg, incomingTrigger) = _petPassiveService.ModifyIncomingDamage(dmg, defender.PetForPassives);
-            dmg = mitigatedDmg;
+            // ===== Outgoing modifiers (DoubleStrike / Executioner) - based on pre-round opponent HP =====
+            var (modAtoB, outTriggerA) = _petPassiveService.ModifyOutgoingDamage(dmgAtoB, a.PetForPassives, a.PetDefinition, bHpBefore, b.MaxHealth);
+            var (modBtoA, outTriggerB) = _petPassiveService.ModifyOutgoingDamage(dmgBtoA, b.PetForPassives, b.PetDefinition, aHpBefore, a.MaxHealth);
+            dmgAtoB = modAtoB;
+            dmgBtoA = modBtoA;
 
-            defender.CurrentHealth = Math.Max(0, defender.CurrentHealth - dmg);
+            // ===== Incoming modifiers (GuardianShield) =====
+            var (mitAtoB, inTriggerB) = _petPassiveService.ModifyIncomingDamage(dmgAtoB, b.PetForPassives);
+            var (mitBtoA, inTriggerA) = _petPassiveService.ModifyIncomingDamage(dmgBtoA, a.PetForPassives);
+            dmgAtoB = mitAtoB;
+            dmgBtoA = mitBtoA;
 
+            // ===== Thorns - defender's reflect adds to the ATTACKER's total damage this round =====
+            int reflectOnA = _petPassiveService.ApplyOnHitTaken(dmgBtoA, a.PetForPassives); // A's Thorns, triggered by B's hit
+            int reflectOnB = _petPassiveService.ApplyOnHitTaken(dmgAtoB, b.PetForPassives); // B's Thorns, triggered by A's hit
+
+            int totalDmgToA = dmgBtoA + reflectOnB; // B's hit on A, plus B's Thorns retaliating A's hit on B
+            int totalDmgToB = dmgAtoB + reflectOnA; // A's hit on B, plus A's Thorns retaliating B's hit on A
+
+            // ===== Apply simultaneously - NOT clamped to 0, so a mutual-kill round can be compared afterward =====
+            a.CurrentHealth -= totalDmgToA;
+            b.CurrentHealth -= totalDmgToB;
+
+            // ===== Lifesteal - only heals if the healer survived this round (no reviving corpses) =====
+            int healA = _petPassiveService.ApplyOnHitEffects(dmgAtoB, null, a.PetForPassives);
+            int healB = _petPassiveService.ApplyOnHitEffects(dmgBtoA, null, b.PetForPassives);
+
+            if (a.CurrentHealth > 0 && healA > 0)
+                a.CurrentHealth = Math.Min(a.MaxHealth, a.CurrentHealth + healA);
+
+            if (b.CurrentHealth > 0 && healB > 0)
+                b.CurrentHealth = Math.Min(b.MaxHealth, b.CurrentHealth + healB);
+
+            // ===== Log line for this round =====
             var line = new System.Text.StringBuilder();
-            line.Append($"🗡️ **{attacker.DisplayName}** hits **{defender.DisplayName}** for **{dmg}** ({defender.CurrentHealth}/{defender.MaxHealth} HP)");
+            line.Append($"🗡️ **{a.DisplayName}** hits **{b.DisplayName}** for {dmgAtoB}");
+            if (outTriggerA != null) line.Append($" · {outTriggerA}");
+            if (inTriggerB != null) line.Append($" · {inTriggerB}");
+            line.Append($" | **{b.DisplayName}** hits **{a.DisplayName}** for {dmgBtoA}");
+            if (outTriggerB != null) line.Append($" · {outTriggerB}");
+            if (inTriggerA != null) line.Append($" · {inTriggerA}");
 
-            if (outgoingTrigger != null) line.Append($" · {outgoingTrigger}");
-            if (incomingTrigger != null) line.Append($" · {incomingTrigger}");
+            if (reflectOnB > 0) line.Append($" · 🌵 {b.DisplayName}'s Thorns reflects {reflectOnB}");
+            if (reflectOnA > 0) line.Append($" · 🌵 {a.DisplayName}'s Thorns reflects {reflectOnA}");
+            if (a.CurrentHealth > 0 && healA > 0) line.Append($" · ❤️ {a.DisplayName} lifesteals {healA}");
+            if (b.CurrentHealth > 0 && healB > 0) line.Append($" · ❤️ {b.DisplayName} lifesteals {healB}");
 
-            // Attacker's pet: Lifesteal heals off the damage actually dealt.
-            var healing = _petPassiveService.ApplyOnHitEffects(dmg, null, attacker.PetForPassives);
-            if (healing > 0)
-            {
-                attacker.CurrentHealth = Math.Min(attacker.MaxHealth, attacker.CurrentHealth + healing);
-                line.Append($" · ❤️ lifesteals {healing} ({attacker.CurrentHealth}/{attacker.MaxHealth})");
-            }
-
-            // Defender's pet: Thorns reflects some damage back at the attacker.
-            var reflect = _petPassiveService.ApplyOnHitTaken(dmg, defender.PetForPassives);
-            if (reflect > 0 && defender.CurrentHealth > 0)
-            {
-                attacker.CurrentHealth = Math.Max(0, attacker.CurrentHealth - reflect);
-                line.Append($" · 🌵 thorns {reflect} back ({attacker.DisplayName}: {attacker.CurrentHealth}/{attacker.MaxHealth})");
-            }
+            line.Append($" ({a.DisplayName}: {a.CurrentHealth}/{a.MaxHealth} | {b.DisplayName}: {b.CurrentHealth}/{b.MaxHealth})");
 
             log.Add(line.ToString());
         }
@@ -221,7 +250,7 @@ namespace Hogs.RPG.Services.ColosseumServices
             public int Attack { get; set; }
             public int Defense { get; set; }
             public int MaxHealth { get; set; }
-            public int CurrentHealth { get; set; }
+            public int CurrentHealth { get; set; } // allowed to go negative during a round
             public PetDefinition? PetDefinition { get; set; }
             public PlayerPet PetForPassives { get; set; } = null!;
         }
