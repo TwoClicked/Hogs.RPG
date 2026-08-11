@@ -29,12 +29,12 @@ namespace Hogs.RPG.Core.GameData.Colosseum
         public static readonly Dictionary<PetPassive, int> ApCostByPassive = new()
         {
             { PetPassive.Executioner,     PassiveTier1Cost },
-            { PetPassive.Thorns,          PassiveTier1Cost },
 
             { PetPassive.Lifesteal,       PassiveTier2Cost },
             { PetPassive.GuardianShield,  PassiveTier2Cost },
 
             { PetPassive.DoubleStrike,    PassiveTier3Cost },
+            { PetPassive.Thorns,          PassiveTier3Cost },
         };
     }
 }

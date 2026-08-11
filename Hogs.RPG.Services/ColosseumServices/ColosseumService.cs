@@ -50,8 +50,9 @@ namespace Hogs.RPG.Services.ColosseumServices
             {
                 Status = ColosseumTournamentStatus.Registration,
                 RegistrationOpenedAt = DateTime.UtcNow,
-                RegistrationEndsAt = DateTime.UtcNow.AddHours(12),
-                AnnounceChannelId = announceChannelId
+                RegistrationEndsAt = DateTime.UtcNow.AddHours(6),
+                AnnounceChannelId = announceChannelId,
+                BuildBudgetAP = RollDailyApBudget()
             };
 
             return await _colosseumRepository.CreateTournamentAsync(tournament);
@@ -417,13 +418,26 @@ namespace Hogs.RPG.Services.ColosseumServices
                 Status = ColosseumTournamentStatus.Registration,
                 RegistrationOpenedAt = DateTime.UtcNow,
                 RegistrationEndsAt = DateTime.UtcNow, // already "closed" - nothing to wait out
-                AnnounceChannelId = announceChannelId
+                AnnounceChannelId = announceChannelId,
+                BuildBudgetAP = RollDailyApBudget()
             };
 
             tournament = await _colosseumRepository.CreateTournamentAsync(tournament);
             await StartTournamentAsync(tournament.Id);
 
             return tournament;
+        }
+
+        private static readonly Random _apBudgetRandom = new();
+
+        // Rolls a random build budget for a new tournament - keeps the
+        // meta fresh day to day (tight budgets force hard trade-offs, loose
+        // ones let more builds approach full BiS). Rounded to the nearest
+        // 50 so displayed numbers look intentional rather than arbitrary.
+        private static int RollDailyApBudget()
+        {
+            var raw = _apBudgetRandom.Next(500, 2001); // upper bound exclusive, so 2000 is reachable
+            return (int)(Math.Round(raw / 50.0) * 50);
         }
     }
 }

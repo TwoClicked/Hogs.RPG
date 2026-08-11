@@ -8,9 +8,9 @@
         public const int DefenseBuffCost = 30;
         public const int DefenseBuffAmount = 20;
 
-        public const int HealthBuffCost = 30;
-        public const int HealthBuffAmount = 100;
+        public const int HealthBuffCost = 40;
+        public const int HealthBuffAmount = 50;
 
-        public const int MaxPurchasesPerStat = 3;
+        public const int MaxPurchasesPerStat = 2;
     }
 }

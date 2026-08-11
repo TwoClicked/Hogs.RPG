@@ -15,6 +15,10 @@ namespace Hogs.RPG.Bot.InteractionModels
     /// access here, just view construction, so both ColosseumModule (first
     /// send) and ColosseumBuildInteractionModule (every button/select
     /// handler) can share the exact same rendering without duplicating it.
+    ///
+    /// All stat numbers shown here come from ColosseumStatCalculator - the
+    /// same calculator ColosseumCombatService uses for actual combat - so
+    /// what a player sees while building always matches what fights with.
     /// </summary>
     public static class ColosseumBuildViews
     {
@@ -37,11 +41,13 @@ namespace Hogs.RPG.Bot.InteractionModels
         public static (Embed embed, MessageComponent components) BuildMainMenu(ColosseumParticipant participant)
         {
             var build = participant.Build!;
+            var (atk, def, hp) = ColosseumStatCalculator.CalculateStats(build);
 
             var embed = new EmbedBuilder()
                 .WithTitle("🏛️ Colosseum Build")
                 .WithDescription(
-                    $"**AP spent:** {build.ApSpent} / {build.ApBudget}\n\n" +
+                    $"**AP spent:** {build.ApSpent} / {build.ApBudget}\n" +
+                    $"**Total Stats:** ⚔️ {atk} ATK · 🛡️ {def} DEF · ❤️ {hp} HP\n\n" +
                     BuildGearSummary(build) + "\n" +
                     BuildPetSummary(build) + "\n" +
                     BuildBuffSummary(build) +
@@ -70,9 +76,14 @@ namespace Hogs.RPG.Bot.InteractionModels
         // =========================
         public static (Embed embed, MessageComponent components) BuildGearSlotPicker(ColosseumBuild build)
         {
+            var (atk, def, hp) = ColosseumStatCalculator.CalculateStats(build);
+
             var embed = new EmbedBuilder()
                 .WithTitle("🛡️ Choose a slot to upgrade")
-                .WithDescription($"**AP spent:** {build.ApSpent} / {build.ApBudget}\n\n{BuildGearSummary(build)}")
+                .WithDescription(
+                    $"**AP spent:** {build.ApSpent} / {build.ApBudget}\n" +
+                    $"**Total Stats:** ⚔️ {atk} ATK · 🛡️ {def} DEF · ❤️ {hp} HP\n\n" +
+                    BuildGearSummary(build))
                 .WithColor(new Color(0xC0392B))
                 .Build();
 
@@ -98,9 +109,10 @@ namespace Hogs.RPG.Bot.InteractionModels
         {
             var currentItemId = ColosseumPriceRegistry.ResolveGearId(slot, GetGearField(build, slot));
             var currentItem = EquipmentRegistry.All.TryGetValue(currentItemId, out var cur) ? cur.Name : currentItemId;
+            var (curA, curD, curH) = ColosseumStatCalculator.GetGearItemStats(currentItemId);
 
             var embed = new EmbedBuilder()
-                .WithTitle($"🛡️ {slot} — currently: {currentItem}")
+                .WithTitle($"🛡️ {slot} — currently: {currentItem} ({ColosseumStatCalculator.FormatStats(curA, curD, curH)})")
                 .WithDescription($"**AP spent:** {build.ApSpent} / {build.ApBudget}")
                 .WithColor(new Color(0xC0392B))
                 .Build();
@@ -112,7 +124,11 @@ namespace Hogs.RPG.Bot.InteractionModels
             // Free T1 baseline option first, so they can revert.
             var baselineId = ColosseumGearPrices.T1BaselineBySlot[slot];
             var baselineItem = EquipmentRegistry.All[baselineId];
-            menu.AddOption($"{baselineItem.Name} (T1 baseline, free)", "baseline");
+            var (baseA, baseD, baseH) = ColosseumStatCalculator.GetGearItemStats(baselineId);
+            menu.AddOption(
+                $"{baselineItem.Name} (T1 baseline, free)",
+                "baseline",
+                description: ColosseumStatCalculator.FormatStats(baseA, baseD, baseH));
 
             if (ColosseumPriceRegistry.PurchasableGearOptionsBySlot.TryGetValue(slot, out var options))
             {
@@ -120,7 +136,11 @@ namespace Hogs.RPG.Bot.InteractionModels
                 {
                     var item = EquipmentRegistry.All[itemId];
                     var cost = ColosseumPriceRegistry.GetGearCost(itemId);
-                    menu.AddOption($"{item.Name} — {cost} AP", itemId);
+                    var (a, d, h) = ColosseumStatCalculator.GetGearItemStats(itemId);
+                    menu.AddOption(
+                        $"{item.Name} — {cost} AP",
+                        itemId,
+                        description: ColosseumStatCalculator.FormatStats(a, d, h));
                 }
             }
 
@@ -147,12 +167,21 @@ namespace Hogs.RPG.Bot.InteractionModels
                 .WithCustomId("colosseum_pet_select")
                 .WithPlaceholder("Choose a pet...");
 
-            petMenu.AddOption("Verdant Cat (T1 baseline, free)", "baseline");
+            var (baselineA, baselineD, baselineH) = ColosseumStatCalculator.GetPetStats("verdant_cat");
+            petMenu.AddOption(
+                "Verdant Cat (T1 baseline, free)",
+                "baseline",
+                description: ColosseumStatCalculator.FormatStats(baselineA, baselineD, baselineH));
+
             foreach (var (petId, cost) in ColosseumPetPrices.ApCostByPetId)
             {
                 if (cost == 0) continue;
                 var pet = PetRegistry.Get(petId);
-                petMenu.AddOption($"{pet.Name} (T{pet.Tier}) — {cost} AP", petId);
+                var (a, d, h) = ColosseumStatCalculator.GetPetStats(petId);
+                petMenu.AddOption(
+                    $"{pet.Name} (T{pet.Tier}) — {cost} AP",
+                    petId,
+                    description: ColosseumStatCalculator.FormatStats(a, d, h));
             }
 
             var passiveMenu = new SelectMenuBuilder()
@@ -190,11 +219,11 @@ namespace Hogs.RPG.Bot.InteractionModels
                 .Build();
 
             var components = new ComponentBuilder()
-                .WithButton($"➕ Attack ({ColosseumBuffShop.AttackBuffCost} AP)", "colosseum_buff_buy:Attack", ButtonStyle.Success, row: 0)
+                .WithButton($"➕ Attack ({ColosseumBuffShop.AttackBuffCost} AP, +{ColosseumBuffShop.AttackBuffAmount})", "colosseum_buff_buy:Attack", ButtonStyle.Success, row: 0)
                 .WithButton("➖ Attack", "colosseum_buff_remove:Attack", ButtonStyle.Secondary, row: 0)
-                .WithButton($"➕ Defense ({ColosseumBuffShop.DefenseBuffCost} AP)", "colosseum_buff_buy:Defense", ButtonStyle.Success, row: 1)
+                .WithButton($"➕ Defense ({ColosseumBuffShop.DefenseBuffCost} AP, +{ColosseumBuffShop.DefenseBuffAmount})", "colosseum_buff_buy:Defense", ButtonStyle.Success, row: 1)
                 .WithButton("➖ Defense", "colosseum_buff_remove:Defense", ButtonStyle.Secondary, row: 1)
-                .WithButton($"➕ Health ({ColosseumBuffShop.HealthBuffCost} AP)", "colosseum_buff_buy:Health", ButtonStyle.Success, row: 2)
+                .WithButton($"➕ Health ({ColosseumBuffShop.HealthBuffCost} AP, +{ColosseumBuffShop.HealthBuffAmount})", "colosseum_buff_buy:Health", ButtonStyle.Success, row: 2)
                 .WithButton("➖ Health", "colosseum_buff_remove:Health", ButtonStyle.Secondary, row: 2)
                 .WithButton("⬅️ Back", "colosseum_main_menu", ButtonStyle.Secondary, row: 3)
                 .Build();
@@ -207,11 +236,14 @@ namespace Hogs.RPG.Bot.InteractionModels
         // =========================
         public static (Embed embed, MessageComponent components) BuildLockConfirm(ColosseumBuild build)
         {
+            var (atk, def, hp) = ColosseumStatCalculator.CalculateStats(build);
+
             var embed = new EmbedBuilder()
                 .WithTitle("🔒 Lock in this build?")
                 .WithDescription(
                     "Once locked, you can't make any more changes before the tournament starts.\n\n" +
-                    $"**AP spent:** {build.ApSpent} / {build.ApBudget}\n\n" +
+                    $"**AP spent:** {build.ApSpent} / {build.ApBudget}\n" +
+                    $"**Total Stats:** ⚔️ {atk} ATK · 🛡️ {def} DEF · ❤️ {hp} HP\n\n" +
                     BuildGearSummary(build) + "\n" +
                     BuildPetSummary(build) + "\n" +
                     BuildBuffSummary(build))
@@ -236,7 +268,8 @@ namespace Hogs.RPG.Bot.InteractionModels
             {
                 var itemId = ColosseumPriceRegistry.ResolveGearId(slot, GetGearField(build, slot));
                 var name = EquipmentRegistry.All.TryGetValue(itemId, out var item) ? item.Name : itemId;
-                lines.Add($"{emoji} {label}: {name}");
+                var (a, d, h) = ColosseumStatCalculator.GetGearItemStats(itemId);
+                lines.Add($"{emoji} {label}: {name} ({ColosseumStatCalculator.FormatStats(a, d, h)})");
             }
             return string.Join("\n", lines);
         }
@@ -245,8 +278,9 @@ namespace Hogs.RPG.Bot.InteractionModels
         {
             var petId = ColosseumPriceRegistry.ResolvePetId(build.PetId);
             var petName = PetRegistry.All.TryGetValue(petId, out var pet) ? pet.Name : petId;
+            var (a, d, h) = ColosseumStatCalculator.GetPetStats(petId);
             var passiveName = build.PetPassive.HasValue ? PetPassiveRegistry.All[build.PetPassive.Value].Name : "None";
-            return $"**Pet:** {petName} (T{build.PetTier})\n**Passive:** {passiveName}";
+            return $"**Pet:** {petName} (T{build.PetTier}) — {ColosseumStatCalculator.FormatStats(a, d, h)}\n**Passive:** {passiveName}";
         }
 
         private static string BuildBuffSummary(ColosseumBuild build)

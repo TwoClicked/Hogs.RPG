@@ -182,50 +182,10 @@ namespace Hogs.RPG.Services.ColosseumServices
         {
             var build = participant.Build ?? throw new Exception($"Colosseum: participant {participant.Id} has no build to resolve combat with.");
 
-            int attack = BaseAttack;
-            int defense = BaseDefense;
-            int health = BaseHealth;
+            var (attack, defense, health) = ColosseumStatCalculator.CalculateStats(build);
 
-            // ===== Gear =====
-            var slots = new[]
-            {
-                (EquipmentSlot.MainHand, build.GearMainHandId),
-                (EquipmentSlot.OffHand, build.GearOffHandId),
-                (EquipmentSlot.Helmet, build.GearHelmetId),
-                (EquipmentSlot.Body, build.GearBodyId),
-                (EquipmentSlot.Legs, build.GearLegsId),
-                (EquipmentSlot.Gloves, build.GearGlovesId),
-                (EquipmentSlot.Boots, build.GearBootsId),
-                (EquipmentSlot.Ring, build.GearRingId),
-                (EquipmentSlot.Amulet, build.GearAmuletId),
-            };
-
-            foreach (var (slot, purchasedId) in slots)
-            {
-                var itemId = ColosseumPriceRegistry.ResolveGearId(slot, purchasedId);
-                if (EquipmentRegistry.All.TryGetValue(itemId, out var item))
-                {
-                    attack += item.Attack;
-                    defense += item.Defense;
-                    health += item.Health;
-                }
-            }
-
-            // ===== Pet =====
             var petId = ColosseumPriceRegistry.ResolvePetId(build.PetId);
-            PetDefinition? petDef = null;
-            if (PetRegistry.All.TryGetValue(petId, out var resolvedPetDef))
-            {
-                petDef = resolvedPetDef;
-                attack += resolvedPetDef.BaseAttack + (int)(ColosseumPetLevel * resolvedPetDef.Scaling);
-                defense += resolvedPetDef.BaseDefense + (int)(ColosseumPetLevel * resolvedPetDef.Scaling);
-                health += resolvedPetDef.BaseHealth + (int)(ColosseumPetLevel * resolvedPetDef.Scaling * 5);
-            }
-
-            // ===== Store buffs =====
-            attack += build.BuffAttackPurchases * ColosseumBuffShop.AttackBuffAmount;
-            defense += build.BuffDefensePurchases * ColosseumBuffShop.DefenseBuffAmount;
-            health += build.BuffHealthPurchases * ColosseumBuffShop.HealthBuffAmount;
+            PetRegistry.All.TryGetValue(petId, out var petDef);
 
             // PetPassiveService reads passives off a PlayerPet entity
             // (Passive1/Passive2). Colosseum builds only ever have one

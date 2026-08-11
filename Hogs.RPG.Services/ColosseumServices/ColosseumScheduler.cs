@@ -48,7 +48,7 @@ namespace Hogs.RPG.Services.ColosseumServices
         private readonly ulong _rpgFeedChannelId = 1485357755433750549;
 
         // Tournament opens once a day at this UTC hour. Change freely.
-        private const int OpenHourUtc = 12;
+        private const int OpenHourUtc = 14;
 
         // Pause between bracket rounds once a tournament is InProgress -
         // gives each round's messages a moment to land before the next
@@ -143,7 +143,7 @@ namespace Hogs.RPG.Services.ColosseumServices
             var embed = new EmbedBuilder()
                 .WithTitle("🏛️ The Colosseum is open!")
                 .WithDescription(
-                    $"Sign up with `/colosseum signup` — buy-in is **{tournament.BuyInGold} gold**.\n" +
+                    $"Sign up with `/colosseum` — buy-in is **{tournament.BuyInGold} gold**.\n" +
                     $"You'll get a DM to build your loadout with **{tournament.BuildBudgetAP} Arena Points**.\n\n" +
                     $"Registration closes <t:{new DateTimeOffset(tournament.RegistrationEndsAt).ToUnixTimeSeconds()}:R> — " +
                     $"any unfinished build gets randomized, same as the bots filling the rest of the bracket.\n\n" +
