@@ -84,6 +84,7 @@ namespace Hogs.RPG.Core.GameData.Colosseum
             { "thorlak_leggings",   GlobalBossGearCost },
             { "punisher_ring",      GlobalBossGearCost },
             { "gullveig_amulet",    GlobalBossGearCost },
+            { "sir_racha_boots",    GlobalBossGearCost },
         };
 
         public static readonly Dictionary<EquipmentSlot, string> T1BaselineBySlot = new()
