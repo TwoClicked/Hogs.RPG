@@ -82,4 +82,14 @@ public static class GlobalBossGear
         Defense = 10,
         Health = 120
     };
+    // 🌶️ BOOTS - BALANCED / MOBILITY
+    public static readonly EquipmentDefinition SirRachaBoots = new()
+    {
+        Id = "sir_racha_boots",
+        Name = "The Scoville Stompers",
+        Slot = EquipmentSlot.Boots,
+        Attack = 45,
+        Defense = 30,
+        Health = 180
+    };
 }

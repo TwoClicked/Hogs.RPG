@@ -20,7 +20,8 @@ namespace Hogs.RPG.Core.Registries
                 { AllBosses.TwoTierTyr.Id, AllBosses.TwoTierTyr },
                 { AllBosses.KingThorlak.Id, AllBosses.KingThorlak },
                 { AllBosses.ClickPunisher.Id, AllBosses.ClickPunisher },
-                { AllBosses.GullveigHuld.Id, AllBosses.GullveigHuld }
+                { AllBosses.GullveigHuld.Id, AllBosses.GullveigHuld },
+                { AllBosses.SirRacha.Id, AllBosses.SirRacha }
             };
 
         // ============================================================

@@ -108,5 +108,18 @@ namespace Hogs.RPG.Core.GameData.GlobalBosses
             Type = BossType.Daily,
             AbilitiesText = "Golden Curse; Fate-Weaver’s Knot; Rebirth of Flame; Seiðr Dominion"
         };
+
+        public static readonly BossDefinition SirRacha = new ()
+        {
+            Id = "sir_racha_09",
+            Name = "Sir Racha, the Saucecerer",
+            Description = "Archmage of Heat. Keeper of the Flame. Master of the Burn.",
+            ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1539674512612786327/image.png?ex=6a872d21&is=6a85dba1&hm=88d0bcd57cc30123d95ee85badd15c9b042ef05d9fa219cdfac6a451ee0e0319",
+            MaxHealth = 350000,
+            Defense = 32,
+            RewardGold = 750,
+            Type = BossType.Daily,
+            AbilitiesText = "Cursed knowledge; Saucebrewing; Flame Control; Burn Mastery"
+        };
     }
 }

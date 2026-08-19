@@ -92,5 +92,15 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
                 MaxAmount = 1
             }
         };
+        public static List<BossLoot> SirRacha = new()
+        {
+            new BossLoot
+            {
+                ItemId = "sir_racha_boots",
+                DropChance = 1,
+                MinAmount = 1,
+                MaxAmount = 1
+            }
+        };
     }
 }

@@ -19,7 +19,8 @@ namespace Hogs.RPG.Core.Registries
             { "click_punisher_07", BossDropTables.Punisher},
             { "two_tier_tyr_05", BossDropTables.Tyr },
             { "king_thorlak_06", BossDropTables.Thorlak },
-            { "gullveig_huld_08", BossDropTables.Gullveig }
+            { "gullveig_huld_08", BossDropTables.Gullveig },
+            { "sir_racha_09", BossDropTables.SirRacha }
         };
     }
 }

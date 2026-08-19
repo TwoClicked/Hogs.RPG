@@ -153,6 +153,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             { DailyWeeklyBossDrops.TyrHelmItem.Id, DailyWeeklyBossDrops.TyrHelmItem },
             { DailyWeeklyBossDrops.ThrolakLeggingsItem.Id, DailyWeeklyBossDrops.ThrolakLeggingsItem },
             { DailyWeeklyBossDrops.GullveigAmuletItem.Id, DailyWeeklyBossDrops.GullveigAmuletItem },
+            { DailyWeeklyBossDrops.SirRachaBootsItem.Id, DailyWeeklyBossDrops.SirRachaBootsItem },
 
             // ===== RAID KEYS =====
             { RaidKeyItems.LairKey.Id, RaidKeyItems.LairKey },

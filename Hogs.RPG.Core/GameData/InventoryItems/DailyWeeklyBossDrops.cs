@@ -79,5 +79,13 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Type = "Equipment",
             Description = "An ancient amulet infused with forbidden Seiðr magic, bending fate itself."
         };
+        public static readonly ItemDefinition SirRachaBootsItem = new()
+        {
+            Id = "sir_racha_boots",
+            Name = "The Scoville Stompers",
+            Icon = "<:The_Scoville_Stompers:1539676391425966173>",
+            Type = "Equipment",
+            Description = "Boots forged in the Saucecerer's own kitchen, still smoldering with residual heat."
+        };
     }
 }

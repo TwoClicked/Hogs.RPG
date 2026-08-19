@@ -81,6 +81,7 @@ public static class EquipmentRegistry
         { GlobalBossGear.ThrolakLeggings.Id,  GlobalBossGear.ThrolakLeggings  },
         { GlobalBossGear.PunisherRing.Id,     GlobalBossGear.PunisherRing     },
         { GlobalBossGear.GullveigAmulet.Id,   GlobalBossGear.GullveigAmulet   },
+        { GlobalBossGear.SirRachaBoots.Id,    GlobalBossGear.SirRachaBoots    },
 
         // ===== Hunter's Gear (Trail Shop Exclusive) =====
         { HunterTrackerGear.HunterHelm.Id,      HunterTrackerGear.HunterHelm      },
