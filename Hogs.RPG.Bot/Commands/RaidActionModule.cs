@@ -47,7 +47,16 @@ namespace Hogs.RPG.Bot.Commands
                 return;
             }
 
-            var participant = currentSession.Participants.FirstOrDefault(p => p.DiscordId == Context.User.Id);
+            // Group raids: exactly one participant row per DiscordId. Solo raids:
+            // 3 rows share one DiscordId (one per role), so we disambiguate by
+            // which role's action set matches the button pressed — same logic
+            // RaidService.SubmitActionAsync uses server-side, reused here via
+            // IsValidAction so isReselect reflects the right role's state.
+            var candidates = currentSession.Participants.Where(p => p.DiscordId == Context.User.Id).ToList();
+            var participant = candidates.Count == 1
+                ? candidates[0]
+                : candidates.FirstOrDefault(p => _raidService.IsValidAction(p.Role, action));
+
             if (participant == null)
             {
                 await FollowupAsync("❌ You are not in this raid.", ephemeral: true);
@@ -273,7 +282,9 @@ namespace Hogs.RPG.Bot.Commands
                     _ => "❓"
                 };
 
-                bool hasAggro = session.AggroDiscordId == p.DiscordId;
+                // Aggro now keys off the participant row (Id), not DiscordId —
+                // required so solo's 3 same-DiscordId rows tag the right role.
+                bool hasAggro = session.AggroParticipantId == p.Id;
                 string aggroTag = hasAggro ? " 🎯" : "";
 
                 roundEmbed.AddField(
@@ -298,7 +309,10 @@ namespace Hogs.RPG.Bot.Commands
                     $"<@{participant.DiscordId}> — Round {freshSession.CurrentRound} actions ({participant.Role}):",
                     components: actionComponents);
 
-                await _raidService.UpdateParticipantActionMessageIdAsync(sessionId, participant.DiscordId, msg.Id);
+                // Keyed by participant.Id now, not DiscordId — see RaidService.cs
+                // for why (solo's 3 rows sharing one DiscordId would otherwise
+                // all overwrite the same stored message ID).
+                await _raidService.UpdateParticipantActionMessageIdAsync(sessionId, participant.Id, msg.Id);
             }
         }
 

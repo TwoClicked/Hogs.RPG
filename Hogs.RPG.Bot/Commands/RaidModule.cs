@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿// Hogs.RPG.Bot/Commands/RaidModule.cs
+using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Bot.Preconditions;
@@ -132,6 +133,70 @@ namespace Hogs.RPG.Bot.Commands
                 $"⚔️ **Tier {tier} Raid** — Choose your role to open the lobby:",
                 components: components,
                 ephemeral: true);
+        }
+
+        // =========================
+        // /raid-solo
+        // No lobby, no role picker — creates all 3 role slots under the
+        // player's own account and drops straight into the thread. Uses
+        // CreateSoloRaidAsync, which already returns the fully-populated
+        // session (unlike StartRaidAsync's thread-id string), so we can post
+        // the opening embed and per-role buttons immediately.
+        // =========================
+        [SlashCommand("raid-solo", "Start a solo raid — you play all 3 roles yourself")]
+        public async Task RaidSolo(
+            [Summary("tier", "Raid tier (1-5)")] int tier)
+        {
+            if (!await EnsureRaidChannelAsync()) return;
+            await DeferAsync();
+
+            if (!await EnsurePlayerAsync()) return;
+
+            if (tier < 1 || tier > 5)
+            {
+                await FollowupAsync("❌ Invalid tier. Choose between 1 and 5.", ephemeral: true);
+                return;
+            }
+
+            var raidChannel = _client.GetChannel(RAID_CHANNEL_ID) as ITextChannel;
+            if (raidChannel == null)
+            {
+                await FollowupAsync("❌ Raid channel not found.", ephemeral: true);
+                return;
+            }
+
+            var (success, message, session) = await _raidService.CreateSoloRaidAsync(
+                Context.User.Id, tier, raidChannel);
+
+            if (!success || session == null)
+            {
+                await FollowupAsync(message, ephemeral: true);
+                return;
+            }
+
+            var thread = _client.GetChannel(session.ThreadId) as IThreadChannel;
+            if (thread != null)
+            {
+                var raidDef = RaidRegistry.GetByTier(session.Tier);
+                var freshSession = await _raidService.GetSessionAsync(session.Id);
+
+                // Post public raid status embed in thread
+                var embed = BuildRaidEmbed(freshSession, raidDef, "⚔️ Solo raid begun! You're playing all 3 roles — action buttons for each below.");
+                await thread.SendMessageAsync($"<@{Context.User.Id}>", embed: embed);
+
+                // One action message per role, all tagging the same player.
+                foreach (var participant in freshSession.Participants)
+                {
+                    var actionComponents = BuildActionButtonsForRole(session.Id, freshSession.CurrentRound, participant);
+                    var msg = await thread.SendMessageAsync(
+                        $"<@{participant.DiscordId}> — Your actions ({participant.Role}):",
+                        components: actionComponents);
+
+                    await _raidService.UpdateParticipantActionMessageIdAsync(session.Id, participant.Id, msg.Id);
+                }
+            }
+
+            await FollowupAsync($"✅ Solo raid started! Head to the thread.", ephemeral: true);
         }
 
         // =========================
@@ -285,7 +350,7 @@ namespace Hogs.RPG.Bot.Commands
                         $"<@{participant.DiscordId}> — Your actions ({participant.Role}):",
                         components: actionComponents);
 
-                    await _raidService.UpdateParticipantActionMessageIdAsync(sessionId, participant.DiscordId, msg.Id);
+                    await _raidService.UpdateParticipantActionMessageIdAsync(sessionId, participant.Id, msg.Id);
                 }
             }
 
@@ -419,7 +484,9 @@ namespace Hogs.RPG.Bot.Commands
                     _ => "❓"
                 };
 
-                bool hasAggro = session.AggroDiscordId == p.DiscordId;
+                // Aggro now keys off the participant row (Id), not DiscordId —
+                // required so solo's 3 same-DiscordId rows tag the right role.
+                bool hasAggro = session.AggroParticipantId == p.Id;
                 string aggroTag = hasAggro ? " 🎯" : "";
 
                 embed.AddField(

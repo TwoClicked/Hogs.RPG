@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿// Hogs.RPG.Services/RaidServices/RaidService.cs
+using Discord;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.PetObjects;
@@ -70,8 +71,12 @@ namespace Hogs.RPG.Services.RaidServices
 
         // =========================
         // ⏳ COOLDOWN CHECK
+        // isSolo picks which daily counter to check. Group raids call this with
+        // no argument (defaults to false) so every existing call site keeps
+        // working unchanged. Both counters share LastRaidDayReset since they
+        // always roll over together at UTC midnight.
         // =========================
-        public async Task<(bool onCooldown, TimeSpan remaining)> CheckCooldownAsync(ulong discordId)
+        public async Task<(bool onCooldown, TimeSpan remaining)> CheckCooldownAsync(ulong discordId, bool isSolo = false)
         {
             var player = await _playerRepo.GetByDiscordIdAsync(discordId);
             if (player == null) return (false, TimeSpan.Zero);
@@ -80,11 +85,13 @@ namespace Hogs.RPG.Services.RaidServices
             if (player.LastRaidDayReset != todayUtc)
             {
                 player.RaidsToday = 0;
+                player.SoloRaidsToday = 0;
                 player.LastRaidDayReset = todayUtc;
                 await _playerRepo.UpdatePlayerAsync(player);
             }
 
-            if (player.RaidsToday >= MaxRaidsPerDay)
+            int attemptsUsed = isSolo ? player.SoloRaidsToday : player.RaidsToday;
+            if (attemptsUsed >= MaxRaidsPerDay)
             {
                 var tomorrow = DateTime.UtcNow.Date.AddDays(1);
                 var remaining = tomorrow - DateTime.UtcNow;
@@ -219,7 +226,8 @@ namespace Hogs.RPG.Services.RaidServices
         }
 
         // =========================
-        // 🔑 CHECK KEY
+        // 🔑 CHECK KEY — group raids only. Each of the 3 real players checks
+        // their own inventory independently, so "quantity > 0" is correct here.
         // =========================
         public async Task<bool> HasKeyAsync(ulong discordId, int tier)
         {
@@ -230,7 +238,26 @@ namespace Hogs.RPG.Services.RaidServices
         }
 
         // =========================
-        // ▶️ START RAID
+        // 🔑 CHECK KEYS (cumulative) — solo raids need 3 keys out of ONE
+        // inventory. Checking ">0" three times against the same inventory
+        // (like the group loop does) would pass with just 1 key, since nothing
+        // is removed between checks — this validates the full amount upfront.
+        // =========================
+        public async Task<bool> HasKeysAsync(ulong discordId, int tier, int requiredCount)
+        {
+            var keyItemId = $"raid_key_t{tier}";
+            var inventory = await _inventoryRepo.GetInventoryAsync(discordId);
+            var key = inventory.FirstOrDefault(i => i.ItemId == keyItemId);
+            return key != null && key.Quantity >= requiredCount;
+        }
+
+        // =========================
+        // ▶️ START RAID (group)
+        // Leader/participant-count checks and the per-player key check stay
+        // here since they're group-specific (3 different players, 3 different
+        // inventories, each needing only 1 key). Everything after that — HP
+        // setup, boss scaling, thread creation — is identical to solo, so it's
+        // shared via BeginCombatAsync.
         // =========================
         public async Task<(bool success, string message)> StartRaidAsync(
             ulong leaderId, int sessionId, ITextChannel raidChannel)
@@ -251,6 +278,90 @@ namespace Hogs.RPG.Services.RaidServices
                     return (false, $"❌ <@{p.DiscordId}> doesn't have a Tier {session.Tier} Raid Key.");
             }
 
+            return await BeginCombatAsync(session, raidChannel);
+        }
+
+        // =========================
+        // ▶️ CREATE SOLO RAID
+        // No lobby wait — a solo player doesn't need anyone else to join.
+        // Builds all 3 RaidParticipant rows under the player's own DiscordId
+        // (one per role), validates they hold 3 keys upfront (see HasKeysAsync
+        // above for why that check has to be different from group's), then
+        // hands off to the exact same BeginCombatAsync group raids use — so
+        // combat, boss scaling, and aggro all behave identically either way.
+        // =========================
+        public async Task<(bool success, string message, RaidSession? session)> CreateSoloRaidAsync(
+            ulong discordId, int tier, ITextChannel raidChannel)
+        {
+            var raidDef = RaidRegistry.GetByTier(tier);
+            if (raidDef == null)
+                return (false, "❌ Invalid raid tier.", null);
+
+            var player = await _playerRepo.GetByDiscordIdAsync(discordId);
+            if (player == null)
+                return (false, "❌ You need to start your adventure first.", null);
+
+            if (player.Level < raidDef.RequiredLevel)
+                return (false, $"❌ You need to be Level {raidDef.RequiredLevel} to enter this raid.", null);
+
+            var (onCooldown, remaining) = await CheckCooldownAsync(discordId, isSolo: true);
+            if (onCooldown)
+                return (false, $"⏳ You've used all **{MaxRaidsPerDay} solo raids** for today. Resets in **{(int)remaining.TotalHours}h {remaining.Minutes}m** (UTC midnight).", null);
+
+            var existing = await _raidRepo.GetPlayerActiveSessionAsync(discordId);
+            if (existing != null)
+                return (false, "❌ You are already in a raid lobby or active raid.", null);
+
+            if (!await HasKeysAsync(discordId, tier, 3))
+                return (false, $"❌ Solo raids need **3x Tier {tier} Raid Keys** (one per role). Check `/raidkeys`.", null);
+
+            var session = new RaidSession
+            {
+                Tier = tier,
+                Status = RaidStatus.Lobby,
+                LeaderDiscordId = discordId,
+                LobbyChannelId = raidChannel.Id,
+                LobbyMessageId = 0,
+                IsSolo = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _raidRepo.CreateSessionAsync(session);
+
+            foreach (var role in new[] { RaidRole.Tank, RaidRole.Dps, RaidRole.Healer })
+            {
+                await _raidRepo.AddParticipantAsync(new RaidParticipant
+                {
+                    RaidSessionId = session.Id,
+                    DiscordId = discordId,
+                    Role = role,
+                    CurrentHp = 0,
+                    MaxHp = 0
+                });
+            }
+
+            // Re-fetch so session.Participants is populated before combat setup —
+            // the AddParticipantAsync calls above didn't update our in-memory copy.
+            var populatedSession = await _raidRepo.GetSessionAsync(session.Id);
+            if (populatedSession == null)
+                return (false, "❌ Something went wrong creating the raid.", null);
+
+            var (success, message) = await BeginCombatAsync(populatedSession, raidChannel);
+            if (!success)
+                return (false, message, null);
+
+            return (true, message, populatedSession);
+        }
+
+        // =========================
+        // ⚔️ BEGIN COMBAT (shared by group + solo)
+        // Everything StartRaidAsync used to do after its own checks passed.
+        // Key removal, HP setup, and boss scaling all operate generically over
+        // session.Participants, so they work correctly whether those 3 rows
+        // belong to 3 different players or 1 player wearing 3 hats.
+        // =========================
+        private async Task<(bool success, string message)> BeginCombatAsync(RaidSession session, ITextChannel raidChannel)
+        {
             var raidDef = RaidRegistry.GetByTier(session.Tier);
 
             foreach (var p in session.Participants)
@@ -273,6 +384,9 @@ namespace Hogs.RPG.Services.RaidServices
             // the only two stats that actually drive damage in and out of the
             // fight. A party-wide average let players sandbag the Tank/Healer's
             // gear to drag the average down while the DPS hit at full power.
+            // For solo, DPS and Tank are the same player, so this scales exactly
+            // like a group raid at that player's gear level — no separate knob
+            // needed for solo.
             // =========================
             var dpsParticipant = session.Participants.First(p => p.Role == RaidRole.Dps);
             var tankParticipant = session.Participants.First(p => p.Role == RaidRole.Tank);
@@ -285,14 +399,17 @@ namespace Hogs.RPG.Services.RaidServices
             session.BossAttack = (int)(scalingDef * raidDef.AttackMultiplier);
             session.BossDefense = (int)(scalingAtk * raidDef.DefenseMultiplier);
 
-            session.AggroDiscordId = tankParticipant.DiscordId;
+            // Aggro now tracks the specific participant row (see RaidSession.cs),
+            // not a DiscordId — required so solo can tell its 3 same-DiscordId
+            // rows apart.
+            session.AggroParticipantId = tankParticipant.Id;
 
             session.Status = RaidStatus.Active;
             session.CurrentRound = 1;
             session.RoundStartedAt = DateTime.UtcNow;
 
             var thread = await raidChannel.CreateThreadAsync(
-                name: $"⚔️ {raidDef.Name} — Tier {session.Tier} Raid",
+                name: $"⚔️ {raidDef.Name} — Tier {session.Tier} Raid{(session.IsSolo ? " (Solo)" : "")}",
                 autoArchiveDuration: ThreadArchiveDuration.OneDay,
                 type: ThreadType.PublicThread
             );
@@ -319,11 +436,19 @@ namespace Hogs.RPG.Services.RaidServices
             if (session.Status != RaidStatus.Active)
                 return (false, "❌ This raid is not active.", null);
 
-            var participant = session.Participants.FirstOrDefault(p => p.DiscordId == discordId);
-            if (participant == null)
+            // Group raids: exactly one participant row per DiscordId — behaves
+            // exactly as before. Solo raids: 3 rows share one DiscordId (one per
+            // role), so we route to whichever row's action set actually matches
+            // the button pressed, since action names are already role-exclusive.
+            var candidates = session.Participants.Where(p => p.DiscordId == discordId).ToList();
+            if (candidates.Count == 0)
                 return (false, "❌ You are not in this raid.", null);
 
-            if (!IsValidAction(participant.Role, action))
+            var participant = candidates.Count == 1
+                ? candidates[0]
+                : candidates.FirstOrDefault(p => IsValidAction(p.Role, action));
+
+            if (participant == null || !IsValidAction(participant.Role, action))
                 return (false, "❌ Invalid action for your role.", null);
 
             bool isReselect = participant.HasActedThisRound;
@@ -361,7 +486,7 @@ namespace Hogs.RPG.Services.RaidServices
             // TANK
             if (tank.PendingAction == "taunt")
             {
-                session.AggroDiscordId = tank.DiscordId;
+                session.AggroParticipantId = tank.Id;
                 result.TankText = "📣 Tank taunted the boss — aggro restored!";
                 tank.ShatterCooldownRoundsRemaining = Math.Max(0, tank.ShatterCooldownRoundsRemaining - 1);
             }
@@ -408,7 +533,7 @@ namespace Hogs.RPG.Services.RaidServices
                     dps.ConsecutiveHits = 0;
                 }
 
-                    var empowerEffect = session.ActiveEffects.FirstOrDefault(e => e.EffectType == ActiveEffectType.EmpowerAttack && e.TargetDiscordId == dps.DiscordId);
+                var empowerEffect = session.ActiveEffects.FirstOrDefault(e => e.EffectType == ActiveEffectType.EmpowerAttack && e.TargetDiscordId == dps.DiscordId);
                 if (empowerEffect != null)
                     dpsAtk = (int)(dpsAtk * (1f + (float)empowerEffect.Value));
 
@@ -581,7 +706,7 @@ namespace Hogs.RPG.Services.RaidServices
             if (_random.NextDouble() < raidDef.AggroSwapChance && session.CurrentRound - session.LastAggroSwapRound >= 2)
             {
                 var nonTank = session.Participants.Where(p => p.Role != RaidRole.Tank).OrderBy(_ => _random.Next()).First();
-                session.AggroDiscordId = nonTank.DiscordId;
+                session.AggroParticipantId = nonTank.Id;
                 session.LastAggroSwapRound = session.CurrentRound;
                 result.BossText += $"🔄 **Boss swapped target to {nonTank.Role}!** Tank must Taunt!\n";
             }
@@ -594,7 +719,7 @@ namespace Hogs.RPG.Services.RaidServices
                 result.BossText += HandleBossAbility(session, ability, raidDef, tankIsHolding, damageReduction, tankDef);
             }
 
-            var aggroTarget = session.Participants.First(p => p.DiscordId == session.AggroDiscordId);
+            var aggroTarget = session.Participants.First(p => p.Id == session.AggroParticipantId);
             bool aggroOnTank = aggroTarget.Role == RaidRole.Tank;
 
             if (aggroOnTank)
@@ -690,7 +815,7 @@ namespace Hogs.RPG.Services.RaidServices
 
                 case BossAbilityType.Frenzy:
                     int frenzyDamage = (int)(session.BossAttack * 0.75);
-                    var frenzyTarget = session.Participants.First(p => p.DiscordId == session.AggroDiscordId);
+                    var frenzyTarget = session.Participants.First(p => p.Id == session.AggroParticipantId);
                     frenzyTarget.CurrentHp = Math.Max(0, frenzyTarget.CurrentHp - frenzyDamage);
                     return $"\n💨 **Frenzy!** Boss strikes again for **{frenzyDamage}** damage!";
 
@@ -781,7 +906,13 @@ namespace Hogs.RPG.Services.RaidServices
             session.Status = RaidStatus.Victory;
             result.Session = session;
 
-            foreach (var p in session.Participants)
+            // Group by unique DiscordId so a solo player (3 participant rows,
+            // 1 DiscordId) is paid out once instead of once per role. Group
+            // raids are unaffected — each of the 3 real players already has a
+            // distinct DiscordId, so this is a no-op for them.
+            var uniquePlayers = session.Participants.GroupBy(p => p.DiscordId).Select(g => g.First());
+
+            foreach (var p in uniquePlayers)
             {
                 var player = await _playerRepo.GetByDiscordIdAsync(p.DiscordId);
                 if (player == null) continue;
@@ -799,7 +930,13 @@ namespace Hogs.RPG.Services.RaidServices
                 player.RaidsCompleted++;
 
                 var todayUtc = DateTime.UtcNow.ToString("yyyy-MM-dd");
-                if (player.LastRaidDayReset != todayUtc) { player.RaidsToday = 1; player.LastRaidDayReset = todayUtc; }
+                if (player.LastRaidDayReset != todayUtc)
+                {
+                    player.RaidsToday = 0;
+                    player.SoloRaidsToday = 0;
+                    player.LastRaidDayReset = todayUtc;
+                }
+                if (session.IsSolo) player.SoloRaidsToday++;
                 else player.RaidsToday++;
 
                 var (levelMessage, _) = _levelService.CheckLevelUp(player);
@@ -841,7 +978,11 @@ namespace Hogs.RPG.Services.RaidServices
         {
             session.Status = RaidStatus.Wiped;
 
-            foreach (var p in session.Participants)
+            // Same unique-DiscordId grouping as HandleVictoryAsync, and for the
+            // same reason — a solo player only takes the wipe penalty once.
+            var uniquePlayers = session.Participants.GroupBy(p => p.DiscordId).Select(g => g.First());
+
+            foreach (var p in uniquePlayers)
             {
                 var player = await _playerRepo.GetByDiscordIdAsync(p.DiscordId);
                 if (player == null) continue;
@@ -851,7 +992,13 @@ namespace Hogs.RPG.Services.RaidServices
                 player.Deaths++;
 
                 var todayUtc = DateTime.UtcNow.ToString("yyyy-MM-dd");
-                if (player.LastRaidDayReset != todayUtc) { player.RaidsToday = 1; player.LastRaidDayReset = todayUtc; }
+                if (player.LastRaidDayReset != todayUtc)
+                {
+                    player.RaidsToday = 0;
+                    player.SoloRaidsToday = 0;
+                    player.LastRaidDayReset = todayUtc;
+                }
+                if (session.IsSolo) player.SoloRaidsToday++;
                 else player.RaidsToday++;
 
                 var (_, _, maxHp) = await _statService.CalculateStatsAsync(player);
@@ -879,11 +1026,18 @@ namespace Hogs.RPG.Services.RaidServices
             await _raidRepo.SaveSessionAsync(session);
         }
 
-        public async Task UpdateParticipantActionMessageIdAsync(int sessionId, ulong discordId, ulong messageId)
+        // =========================
+        // Now keyed by participant.Id instead of DiscordId — with 3 rows
+        // sharing one DiscordId in solo raids, the old lookup would always hit
+        // the same first-matched row and overwrite its ActionMessageId 3 times
+        // instead of tracking each role's button message separately.
+        // Call sites (RaidModule.cs, RaidActionModule.cs) now pass participant.Id.
+        // =========================
+        public async Task UpdateParticipantActionMessageIdAsync(int sessionId, int participantId, ulong messageId)
         {
             var session = await _raidRepo.GetSessionAsync(sessionId);
             if (session == null) return;
-            var participant = session.Participants.FirstOrDefault(p => p.DiscordId == discordId);
+            var participant = session.Participants.FirstOrDefault(p => p.Id == participantId);
             if (participant == null) return;
             participant.ActionMessageId = messageId;
             await _raidRepo.SaveSessionAsync(session);
@@ -902,7 +1056,7 @@ namespace Hogs.RPG.Services.RaidServices
             };
         }
 
-        private bool IsValidAction(RaidRole role, string action)
+        public bool IsValidAction(RaidRole role, string action)
         {
             return role switch
             {

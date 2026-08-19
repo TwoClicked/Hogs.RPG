@@ -59,6 +59,10 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
         public int RaidsToday { get; set; } = 0;
         public string? LastRaidDayReset { get; set; }
 
+        // Solo raids track their own daily count, resetting alongside RaidsToday
+        // off the same LastRaidDayReset field — same day, two separate pools.
+        public int SoloRaidsToday { get; set; } = 0;
+
         // Leaderboard
         public int DungeonRunsCompleted { get; set; }
         public int RaidsCompleted { get; set; }

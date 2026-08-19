@@ -1,4 +1,5 @@
-﻿using Discord;
+﻿// Hogs.RPG.Services/RaidServices/RaidTimerService.cs
+using Discord;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.GameData.Registries;
@@ -210,7 +211,9 @@ namespace Hogs.RPG.Services.RaidServices
                     _ => "❓"
                 };
 
-                bool hasAggro = session.AggroDiscordId == p.DiscordId;
+                // Aggro now keys off the participant row (Id), not DiscordId —
+                // required so solo's 3 same-DiscordId rows tag the right role.
+                bool hasAggro = session.AggroParticipantId == p.Id;
                 string aggroTag = hasAggro ? " 🎯" : "";
 
                 embed.AddField(
