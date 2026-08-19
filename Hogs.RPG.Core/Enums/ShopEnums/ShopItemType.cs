@@ -4,13 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hogs.RPG.Core.Enums
+namespace Hogs.RPG.Core.Enums.ShopEnums
 {
-    public enum ListingType
+    public enum ShopItemType
     {
-        Item = 0,
-        Pet = 1,
-        Relic = 2
+        FixedPrice,
+        Auction
     }
 }
-

@@ -6,6 +6,7 @@ using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.AchievementServices;
+using Hogs.RPG.Services.ColosseumServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PetServices;
@@ -32,6 +33,7 @@ namespace Hogs.RPG.Bot.Commands
         private readonly PetService _petService;
         private readonly RelicService _relicService;
         private readonly AchievementService _achievementService;
+        private readonly ColosseumService _colosseumService;
 
         public TestCommands(
             BossService bossService,
@@ -40,7 +42,8 @@ namespace Hogs.RPG.Bot.Commands
             InventoryService inventoryService,
             PetService petService,
             RelicService relicService,
-            AchievementService achievementService)
+            AchievementService achievementService,
+            ColosseumService colosseumService)
         {
             _bossService = bossService;
             _playerService = playerService;
@@ -49,6 +52,7 @@ namespace Hogs.RPG.Bot.Commands
             _petService = petService;
             _relicService = relicService;
             _achievementService = achievementService;
+            _colosseumService = colosseumService;
         }
 
         // =========================
@@ -152,7 +156,7 @@ namespace Hogs.RPG.Bot.Commands
 
                 if (pets.Count == 0) continue;
 
-                player.TotalPetsOwned = pets.Count;
+                player.TotalPetsOwned = pets.Select(p => p.PetId).Distinct().Count();
                 player.HighestPetLevel = pets.Max(p => p.Level);
                 player.HuntingCompanionUnlocked = player.HasHuntingPet;
 
@@ -310,6 +314,42 @@ namespace Hogs.RPG.Bot.Commands
             {
                 await _achievementService.RunRetroactiveMigrationAsync();
             });
+        }
+
+        [SlashCommand("fix-unknown-pets", "Remove PlayerPet rows pointing at pet IDs no longer in the registry (Admin Only)")]
+        public async Task FixUnknownPets()
+        {
+            if (!await EnsureAdminAsync()) return;
+
+            await DeferAsync(ephemeral: true);
+
+            var players = await _playerRepository.GetAllPlayersAsync();
+            int totalRemoved = 0;
+
+            foreach (var player in players)
+            {
+                totalRemoved += await _petService.RemoveUnknownPetsAsync(player.DiscordId);
+            }
+
+            await FollowupAsync($"✅ Removed **{totalRemoved}** pet(s) with unrecognized pet IDs.", ephemeral: true);
+        }
+
+        // =========================
+        // TEST COLOSSEUM (ALL BOTS)
+        // =========================
+        [SlashCommand("testcolosseum", "Run a full Colosseum tournament with 32 bots, no real players (Admin Only)")]
+        public async Task TestColosseum()
+        {
+            if (!await EnsureAdminAsync()) return;
+
+            await DeferAsync(ephemeral: true);
+
+            var tournament = await _colosseumService.CreateTestTournamentAsync(Context.Channel.Id);
+
+            await FollowupAsync(
+                $"🏛️ Test tournament {tournament.Id} started with 16 bots - " +
+                $"ColosseumScheduler will resolve it on its next tick(s) and post to <#{Context.Channel.Id}>.",
+                ephemeral: true);
         }
     }
 }

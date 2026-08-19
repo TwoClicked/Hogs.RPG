@@ -1,4 +1,4 @@
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.TowerEnums;
 using Hogs.RPG.Core.GameData.Tower;
 
 namespace Hogs.RPG.Core.Entities.TowerObjects
@@ -24,8 +24,10 @@ namespace Hogs.RPG.Core.Entities.TowerObjects
         public int BossRound { get; set; }
         public DateTime? NextBossRoundAt { get; set; }
 
-        // Merchant shop — appears at most once per run. 0 means it hasn't appeared yet.
+        // Merchant shop — appears up to twice per run (floor 40+, then again floor 150+).
+        // 0 = hasn't appeared, 1 = first shop done, 2 = second shop done.
         // Purchases are only valid while Floor == MerchantFloor.
         public int MerchantFloor { get; set; } = 0;
+        public int ShopAppearances { get; set; } = 0;
     }
 }

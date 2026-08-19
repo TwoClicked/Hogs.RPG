@@ -1,5 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.JobObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.ShopEnums;
 
 namespace Hogs.RPG.Core.GameData.Shop
 {

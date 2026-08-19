@@ -1,4 +1,5 @@
-﻿using Hogs.RPG.Core.GameData.Pets;
+﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.AchievementServices;
@@ -32,26 +33,33 @@ namespace Hogs.RPG.Services.PetServices
         {
             var pets = await _repo.GetPetsAsync(userId);
 
-            var attackPet = pets.FirstOrDefault(p => p.PetId == AttackPetId);
-            var defensePet = pets.FirstOrDefault(p => p.PetId == DefensePetId);
-            var healthPet = pets.FirstOrDefault(p => p.PetId == HealthPetId);
+            var attackPet = pets.FirstOrDefault(p => p.PetId == AttackPetId && !p.IsEquipped);
+            var defensePet = pets.FirstOrDefault(p => p.PetId == DefensePetId && !p.IsEquipped);
+            var healthPet = pets.FirstOrDefault(p => p.PetId == HealthPetId && !p.IsEquipped);
 
             if (attackPet == null || defensePet == null || healthPet == null)
             {
+                string Describe(string petId, PlayerPet? unequippedMatch, string label)
+                {
+                    if (unequippedMatch != null) return "";
+
+                    bool ownsAnyEquipped = pets.Any(p => p.PetId == petId && p.IsEquipped);
+                    return ownsAnyEquipped
+                        ? $"{label} (equipped — unequip it first)"
+                        : $"{label} (missing)";
+                }
+
                 var missing = new List<string>();
-                if (attackPet == null) missing.Add($"⚔️ **Armored Capybara** (Attack pet — from Blazewing's Gorge)");
-                if (defensePet == null) missing.Add($"🛡️ **El Tata de Frog** (Defense pet — from Stonehall Depths)");
-                if (healthPet == null) missing.Add($"❤️ **Ice Wolf** (Health pet — from Drowned Archives)");
+                var attackLine = Describe(AttackPetId, attackPet, "⚔️ **Armored Capybara** (Attack pet — from Blazewing's Gorge)");
+                var defenseLine = Describe(DefensePetId, defensePet, "🛡️ **El Tata de Frog** (Defense pet — from Stonehall Depths)");
+                var healthLine = Describe(HealthPetId, healthPet, "❤️ **Ice Wolf** (Health pet — from Drowned Archives)");
 
-                return (false, $"❌ You are missing the following pets:\n{string.Join("\n", missing)}");
+                if (attackLine != "") missing.Add(attackLine);
+                if (defenseLine != "") missing.Add(defenseLine);
+                if (healthLine != "") missing.Add(healthLine);
+
+                return (false, $"❌ You're not ready to evolve yet:\n{string.Join("\n", missing)}");
             }
-
-            if (attackPet.IsEquipped || defensePet.IsEquipped || healthPet.IsEquipped)
-                return (false, "❌ You cannot evolve a pet that is currently equipped. Unequip the pet(s) first.");
-
-            var existing = await _repo.GetPetAsync(userId, Tier3PetId);
-            if (existing != null)
-                return (false, "❌ You already own the **Capytara**!");
 
             _repo.RemovePet(attackPet);
             _repo.RemovePet(defensePet);
@@ -87,11 +95,6 @@ namespace Hogs.RPG.Services.PetServices
             bool hasAttack = pets.Any(p => p.PetId == AttackPetId);
             bool hasDefense = pets.Any(p => p.PetId == DefensePetId);
             bool hasHealth = pets.Any(p => p.PetId == HealthPetId);
-            bool hasChimera = pets.Any(p => p.PetId == Tier3PetId);
-
-            if (hasChimera)
-                return "🐉 You already own the **Capytara**!";
-
             string Check(bool has) => has ? "✅" : "❌";
 
             return $"**🧬 Evolution Progress — Capytara**\n\n" +

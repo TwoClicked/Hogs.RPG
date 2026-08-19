@@ -1,5 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.JobObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.ShopEnums;
 using Hogs.RPG.Core.GameData.Shop;
 using System.Collections.Generic;
 using System.Linq;

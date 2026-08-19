@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Enums;
+﻿using Hogs.RPG.Core.Enums.RelicEnums;
 
 namespace Hogs.RPG.Core.Entities.PlayerObjects
 {

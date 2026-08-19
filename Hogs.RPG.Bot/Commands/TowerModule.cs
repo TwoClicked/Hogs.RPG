@@ -2,7 +2,7 @@ using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities.TowerObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.TowerEnums;
 using Hogs.RPG.Core.GameData.Tower;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.TowerServices;

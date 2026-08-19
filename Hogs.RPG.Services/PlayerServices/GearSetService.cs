@@ -211,9 +211,9 @@ namespace Hogs.RPG.Services.GameplayServices
             if (!string.IsNullOrEmpty(set.PetId))
             {
                 var pets = await _petService.GetPetsAsync(userId);
-                bool ownsPet = pets.Any(p => p.PetId == set.PetId);
-                if (ownsPet)
-                    await _petService.EquipPetAsync(userId, set.PetId);
+                var ownedPet = pets.FirstOrDefault(p => p.PetId == set.PetId);
+                if (ownedPet != null)
+                    await _petService.EquipPetAsync(userId, ownedPet.Id);
             }
 
             // Clamp health to new max

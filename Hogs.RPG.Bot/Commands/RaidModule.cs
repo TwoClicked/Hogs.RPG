@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.Entities.RaidObjects;
 using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.RaidEnums;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.RaidServices;
@@ -310,7 +311,7 @@ namespace Hogs.RPG.Bot.Commands
                 return;
             }
 
-            if (session.Status != Core.Enums.RaidStatus.Lobby)
+            if (session.Status != RaidStatus.Lobby)
             {
                 await FollowupAsync("❌ You cannot leave a raid that has already started.", ephemeral: true);
                 return;
@@ -352,7 +353,7 @@ namespace Hogs.RPG.Bot.Commands
                 return;
             }
 
-            if (session.Status != Core.Enums.RaidStatus.Lobby)
+            if (session.Status != RaidStatus.Lobby)
             {
                 await FollowupAsync("❌ You cannot disband a raid that has already started.", ephemeral: true);
                 return;

@@ -105,7 +105,10 @@ namespace Hogs.RPG.Bot.Commands
 
             // 🐾 Give starter pet
             await _petService.GivePetAsync(Context.User.Id, "verdant_cat");
-            await _petService.EquipPetAsync(Context.User.Id, "verdant_cat");
+            var starterPets = await _petService.GetPetsAsync(Context.User.Id);
+            var starterPet = starterPets.FirstOrDefault(p => p.PetId == "verdant_cat");
+            if (starterPet != null)
+                await _petService.EquipPetAsync(Context.User.Id, starterPet.Id);
 
             // 🎭 Assign RPG role
             var guild = _client.GetGuild(Context.Guild.Id);
@@ -123,7 +126,7 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         // PROFILE
         // =========================
-        [SlashCommand("profile", "View your character")]
+        [SlashCommand("profile", "View your character information")]
         public async Task Profile()
         {
             if (Context.Channel.Id != 1486017679016857752UL)

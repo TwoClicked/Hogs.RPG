@@ -1,5 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.EquipmentObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.PlayerEnums;
 
 public static class Tier3Warlord
 {

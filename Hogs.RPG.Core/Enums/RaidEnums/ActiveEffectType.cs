@@ -1,4 +1,4 @@
-﻿namespace Hogs.RPG.Core.Enums
+﻿namespace Hogs.RPG.Core.Enums.RaidEnums
 {
     public enum ActiveEffectType
     {

@@ -120,7 +120,7 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         [SlashCommand("pet-equip", "Equip a pet")]
         public async Task EquipPet(
-        [Autocomplete(typeof(PetBagAutocompleteHandler))] string petId)
+        [Autocomplete(typeof(PetBagAutocompleteHandler))] int petInstanceId)
         {
             await DeferAsync(ephemeral: true);
 
@@ -133,18 +133,18 @@ namespace Hogs.RPG.Bot.Commands
             }
 
             var pets = await _petService.GetPetsAsync(Context.User.Id);
+            var pet = pets.FirstOrDefault(p => p.Id == petInstanceId);
 
-            if (!pets.Any(p => p.PetId == petId))
+            if (pet == null)
             {
                 await FollowupAsync("❌ You don't own that pet.", ephemeral: true);
                 return;
             }
 
-            await _petService.EquipPetAsync(Context.User.Id, petId);
+            await _petService.EquipPetAsync(Context.User.Id, petInstanceId);
 
-            if (PetRegistry.All.TryGetValue(petId, out var def))
+            if (PetRegistry.All.TryGetValue(pet.PetId, out var def))
             {
-                var pet = pets.First(p => p.PetId == petId);
                 string dispName = pet.CustomName ?? def.Name;
                 await FollowupAsync($"🐾 Equipped **{dispName}**!", ephemeral: true);
             }

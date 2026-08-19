@@ -1,5 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.PetObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.PlayerEnums;
 using Hogs.RPG.Core.GameData.Pets;
 using System.Collections.Generic;
 

@@ -4,6 +4,8 @@ using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.PetObjects;
 using Hogs.RPG.Core.Entities.RaidObjects;
 using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.BossEnums;
+using Hogs.RPG.Core.Enums.RaidEnums;
 using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;

@@ -4,6 +4,7 @@ using Google.Apis.Logging;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.JobObjects;
 using Hogs.RPG.Core.Entities.TradeObjects;
+using Hogs.RPG.Core.Enums.ShopEnums;
 using Hogs.RPG.Core.GameData.Shop;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -73,7 +74,7 @@ namespace Hogs.RPG.Services.ShopServices
             await playerRepo.UpdatePlayerAsync(player);
 
             // Declare before use
-            bool isInstant = item.Category == Hogs.RPG.Core.Enums.ShopCategory.RpgPerks;
+            bool isInstant = item.Category == ShopCategory.RpgPerks;
 
             // Log purchase — mark as fulfilled immediately for instant perks
             await shopRepo.AddPurchaseAsync(new ShopPurchase
@@ -156,7 +157,7 @@ namespace Hogs.RPG.Services.ShopServices
             if (!ShopRegistry.All.TryGetValue(itemId, out var item))
                 return (false, "Item not found.", null);
 
-            if (item.Type != Hogs.RPG.Core.Enums.ShopItemType.Auction)
+            if (item.Type != ShopItemType.Auction)
                 return (false, "This item is not an auction item.", null);
 
             if (item.RequiredRoleId.HasValue)

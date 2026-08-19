@@ -1,5 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.PlayerObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.PlayerEnums;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.InventoryServices;
 using System.Collections.Generic;

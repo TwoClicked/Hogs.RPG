@@ -1,4 +1,4 @@
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.TowerEnums;
 
 namespace Hogs.RPG.Core.GameData.Tower
 {
@@ -23,9 +23,10 @@ namespace Hogs.RPG.Core.GameData.Tower
             new() { Type = TowerBuffType.DoubleStrike, Emoji = "⚡", Name = "Double Strike", Description = "20% chance to hit twice (stacks add 10% each)", MaxStacks = 3 },
             new() { Type = TowerBuffType.IronSkin,     Emoji = "🛡️", Name = "Iron Skin",     Description = "Reduce incoming damage by 15% per stack", MaxStacks = 4 },
             new() { Type = TowerBuffType.Thorns,       Emoji = "🌵", Name = "Thorns",        Description = "Reflect 15% of damage taken back per stack" },
-            new() { Type = TowerBuffType.Precision,    Emoji = "🎯", Name = "Precision",     Description = "Ignore 33% of enemy defense per stack" },
+            new() { Type = TowerBuffType.Precision,    Emoji = "🎯", Name = "Precision",     Description = "Ignore 33% of enemy defense per stack", MaxStacks = 4 },
             new() { Type = TowerBuffType.Evasion,      Emoji = "💨", Name = "Evasion",       Description = "15% dodge chance per stack (max 45%)", MaxStacks = 3 },
-            new() { Type = TowerBuffType.Frenzy,       Emoji = "🔥", Name = "Frenzy",        Description = "+5% damage per consecutive floor cleared without taking a hit" },
+            new() { Type = TowerBuffType.Frenzy,       Emoji = "🔥", Name = "Frenzy",        Description = "+1% damage per floor cleared, per stack owned (caps at +200%)" },
+            new() { Type = TowerBuffType.Vitality,     Emoji = "💗", Name = "Vitality",      Description = "+10% Max HP per stack, applied immediately", MaxStacks = 5 },
         };
 
         public static TowerBuffDefinition Get(TowerBuffType type) =>

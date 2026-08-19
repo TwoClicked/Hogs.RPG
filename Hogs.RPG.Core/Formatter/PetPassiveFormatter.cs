@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Enums;
+﻿using Hogs.RPG.Core.Enums.PlayerEnums;
 using Hogs.RPG.Core.GameData.Registries;
 
 public static class PetPassiveFormatter

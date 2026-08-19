@@ -424,10 +424,15 @@ namespace Hogs.RPG.Services.DungeonServices
 
                         if (!isCompanion)
                         {
-                            await petService.GivePetAsync(userId, drop.PetId);
-                            petDropText += PetRegistry.All.TryGetValue(drop.PetId, out var droppedPet)
-                                ? $"\n🎉 **{droppedPet.Icon} {droppedPet.Name}** joined your party!"
-                                : $"\n🎉 **New pet acquired!**";
+
+                            bool added = await petService.GivePetAsync(userId, drop.PetId);
+                            if (added)
+                            {
+                                petDropText += PetRegistry.All.TryGetValue(drop.PetId, out var droppedPet)
+                                    ? $"\n🎉 **{droppedPet.Icon} {droppedPet.Name}** joined your party!"
+                                    : $"\n🎉 **New pet acquired!**";
+                            }
+
                         }
                     }
                 }

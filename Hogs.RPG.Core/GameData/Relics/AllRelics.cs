@@ -1,5 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.RaidObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.RelicEnums;
 
 namespace Hogs.RPG.Core.GameData.Relics
 {

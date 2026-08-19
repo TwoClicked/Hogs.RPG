@@ -1,6 +1,6 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.GameLoopObjects;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.MiscEnums;
 
 namespace Hogs.RPG.GameData.Hunts
 {

@@ -1,4 +1,4 @@
-﻿using Hogs.RPG.Core.Enums;
+﻿using Hogs.RPG.Core.Enums.ShopEnums;
 using System;
 using System.Collections.Generic;
 using System.Linq;

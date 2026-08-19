@@ -28,11 +28,11 @@ public class PetBagAutocompleteHandler : AutocompleteHandler
                 PetRegistry.All.TryGetValue(p.PetId, out var def);
                 string displayName = p.CustomName ?? def.Name;
                 string label = $"{def.Icon} {displayName} (Lv. {p.Level}){(p.IsEquipped ? " ✅ Equipped" : "")}";
-                return new { p.PetId, Label = label };
+                return new { p.Id, Label = label };
             })
             .Where(p => p.Label.Contains(input, StringComparison.OrdinalIgnoreCase))
             .Take(25)
-            .Select(p => new AutocompleteResult(p.Label, p.PetId))
+            .Select(p => new AutocompleteResult(p.Label, p.Id))
             .ToList();
 
         return AutocompletionResult.FromSuccess(results);

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
-using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.BossEnums;
 
 namespace Hogs.RPG.Core.Entities.PlayerObjects
 {
