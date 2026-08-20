@@ -33,6 +33,8 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
         public string? Ring { get; set; }
         public string? Amulet { get; set; }
 
+        // Gear
+
         // Cooldown for gear set swapping — prevents duplication exploits
         public DateTime? LastGearSwapAt { get; set; }
         // Date string of the last Trail Tonic drink — separate from the shop trail reset
