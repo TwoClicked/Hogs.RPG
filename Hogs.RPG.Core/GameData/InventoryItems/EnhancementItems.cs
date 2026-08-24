@@ -78,7 +78,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "upgrade_piece_legs",
             Name = "Upgrade Piece (Legs)",
-            Icon = "🧩",
+            Icon = "<:LegsUpgradePiece:1541567674922958868>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "A fragment of overseer craftsmanship. Required to push Legs past +15."
@@ -88,7 +88,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "upgrade_piece_gloves",
             Name = "Upgrade Piece (Gloves)",
-            Icon = "🧩",
+            Icon = "<:GlovesUpgradePiece:1541567730346500226>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "A fragment of overseer craftsmanship. Required to push Gloves past +15."
@@ -98,7 +98,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "upgrade_piece_boots",
             Name = "Upgrade Piece (Boots)",
-            Icon = "🧩",
+            Icon = "<:BootsUpgradePiece:1541567778430128148>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "A fragment of overseer craftsmanship. Required to push Boots past +15."
@@ -108,7 +108,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "upgrade_piece_amulet",
             Name = "Upgrade Piece (Amulet)",
-            Icon = "🧩",
+            Icon = "<:AmuletUpgradePiece:1541567956146978897>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "A fragment of overseer craftsmanship. Required to push an Amulet past +15."
@@ -118,7 +118,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "upgrade_piece_ring",
             Name = "Upgrade Piece (Ring)",
-            Icon = "🧩",
+            Icon = "<:RingUpgradePiece:1541568022278578218>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "A fragment of overseer craftsmanship. Required to push a Ring past +15."
@@ -128,7 +128,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "upgrade_piece_mainhand",
             Name = "Upgrade Piece (Main Hand)",
-            Icon = "🧩",
+            Icon = "<:WeaponUpgradePiece:1541567889247707146>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "A fragment of overseer craftsmanship. Required to push a Main Hand weapon past +15."
@@ -138,7 +138,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "upgrade_piece_offhand",
             Name = "Upgrade Piece (Off Hand)",
-            Icon = "🧩",
+            Icon = "<:ShieldUpgradePiece:1541567834755178556>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "A fragment of overseer craftsmanship. Required to push an Off Hand item past +15."
