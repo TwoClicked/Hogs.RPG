@@ -169,5 +169,38 @@ namespace Hogs.RPG.Core.GameData.Shop
             Price = 3_000
         };
 
+        public static readonly ShopItemDefinition CronStone = new()
+        {
+            Id = "rpg_cron_stone",
+            Name = "Cron Stone",
+            Description = "Adds +0.1% success chance to a single enhancement attempt.",
+            Icon = "💠",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 2_500
+        };
+
+        public static readonly ShopItemDefinition Blackstone = new()
+        {
+            Id = "rpg_blackstone",
+            Name = "Blackstone",
+            Description = "Consumed to attempt enhancing Global Boss Gear.",
+            Icon = "🪨",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 250
+        };
+
+        public static readonly ShopItemDefinition SoloRaidReset = new()
+        {
+            Id = "rpg_solo_raid_reset",
+            Name = "Solo Raid Cooldown Reset",
+            Description = "Grants 1 additional solo raid attempt for today.",
+            Icon = "⚔️",
+            Category = ShopCategory.RpgPerks,
+            Type = ShopItemType.FixedPrice,
+            Price = 6_000
+        };
+
     }
 }

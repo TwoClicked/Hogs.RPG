@@ -134,7 +134,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
             MaxHealth = 5500,
             Attack = 400,
             Defense = 80,
-            ImageUrl = "https://media.discordapp.net/attachments/1499080557995360267/1514179175232311406/AA4D0FD6-4777-4CF7-9C4F-9394A1302F9B.png?ex=6a2a6cbf&is=6a291b3f&hm=b1cbf0f3ef694260fda8a236d62a4141c1c5b55d37bec74fff81a106f9017396&=&format=webp&quality=lossless&width=968&height=968",
+            ImageUrl = "https://cdn.discordapp.com/attachments/1499080557995360267/1541545501370093729/image.png?ex=6a8dfba0&is=6a8caa20&hm=434f7aeb9be89699c015794c06b21e9076b4d23337afbf22d6f93985bf244af1&",
             BehaviorId = "forge_slam",
             AbilitiesText = "Below 40% HP, enters forge fury — all attacks deal +30% damage and have a 15% chance to stun.",
             PetDrops = new List<PetDrop>

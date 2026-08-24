@@ -279,13 +279,15 @@ namespace Hogs.RPG.Bot.Commands
                         "⚔️ **Gear** — Hunter's gear set pieces (shop exclusive)\n" +
                         "🧱 **Craft** — Hunt craft materials in bulk\n" +
                         "★ **Rare** — Rare hunt materials\n" +
-                        "🐾 **Snacks** — Pet snack for your companion");
+                        "🐾 **Snacks** — Pet snack for your companion\n" +
+                        "🗝️ **Raid Keys** — Skip the crafting bench");
 
                     components
                         .WithButton("⚔️ Gear", "trail_shop_gear_0", ButtonStyle.Primary, row: 0)
                         .WithButton("🧱 Craft", "trail_shop_craft_0", ButtonStyle.Secondary, row: 0)
                         .WithButton("★ Rare", "trail_shop_rare_0", ButtonStyle.Secondary, row: 0)
-                        .WithButton("🐾 Snacks", "trail_shop_snack_0", ButtonStyle.Secondary, row: 0);
+                        .WithButton("🐾 Snacks", "trail_shop_snack_0", ButtonStyle.Secondary, row: 0)
+                        .WithButton("🗝️ Raid Keys", "trail_shop_raid_key_0", ButtonStyle.Secondary, row: 1);
                     break;
 
                 case "gear":
@@ -302,6 +304,10 @@ namespace Hogs.RPG.Bot.Commands
 
                 case "snack":
                     BuildSnackShop(embed, components);
+                    break;
+
+                case "raid_key":
+                    BuildRaidKeyShop(embed, components, page);
                     break;
             }
 
@@ -331,6 +337,13 @@ namespace Hogs.RPG.Bot.Commands
                 "craft" => (name, 50, "100"),
                 "rare" => (name, 75, "5"),
                 "snack" => ("Trail Pet Snack", 8, "1"),
+                "raid_key" => (name, itemId switch
+                {
+                    "raid_key_t1" or "raid_key_t2" or "raid_key_t3" => 200,
+                    "raid_key_t4" or "raid_key_t5" => 300,
+                    "raid_key_t6" => 400,
+                    _ => 0
+                }, "1"),
                 _ => (name, 0, "1")
             };
         }
@@ -499,6 +512,49 @@ namespace Hogs.RPG.Bot.Commands
                 "*The gold shop version gives +50 XP — this is the trail flavour.*");
 
             components.WithButton("Buy Trail Pet Snack (8🪙)", "trail_buy_trail-pet-snack_snack_0", ButtonStyle.Success, row: 0);
+        }
+
+        private void BuildRaidKeyShop(EmbedBuilder embed, ComponentBuilder components, int page)
+        {
+            embed.WithTitle("🏕️ Tracker's Camp — 🗝️ Raid Keys");
+
+            var items = new[]
+            {
+                ("raid_key_t1", "Lair Key (T1)",        200),
+                ("raid_key_t2", "Stronghold Key (T2)",  200),
+                ("raid_key_t3", "Fortress Key (T3)",    200),
+                ("raid_key_t4", "Citadel Key (T4)",     300),
+                ("raid_key_t5", "World Boss Key (T5)",  300),
+                ("raid_key_t6", "Voidforge Key (T6)",   400),
+            };
+
+            const int perPage = 4;
+            int totalPages = (int)Math.Ceiling(items.Length / (double)perPage);
+            page = Math.Clamp(page, 0, totalPages - 1);
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Buy a raid key directly, no crafting required.\n");
+
+            var pageItems = items.Skip(page * perPage).Take(perPage).ToList();
+            foreach (var (id, name, cost) in pageItems)
+                sb.AppendLine($"🗝️ **{name}** — {cost} tokens");
+
+            embed.WithDescription(sb.ToString().Trim());
+            embed.WithFooter($"Page {page + 1}/{totalPages} ·");
+
+            for (int i = 0; i < pageItems.Count; i++)
+            {
+                var (id, name, cost) = pageItems[i];
+                components.WithButton($"Buy {name} ({cost}🪙)", $"trail_buy_{id}_raid_key_{page}", ButtonStyle.Success, row: i);
+            }
+
+            if (totalPages > 1)
+            {
+                var navRow = new ActionRowBuilder();
+                if (page > 0) navRow.WithButton("⬅️", $"trail_shop_raid_key_{page - 1}", ButtonStyle.Secondary);
+                if (page < totalPages - 1) navRow.WithButton("➡️", $"trail_shop_raid_key_{page + 1}", ButtonStyle.Secondary);
+                components.AddRow(navRow);
+            }
         }
     }
 }

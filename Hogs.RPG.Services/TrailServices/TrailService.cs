@@ -544,6 +544,19 @@ namespace Hogs.RPG.Services.TrailServices
                     itemId = "trail_pet_snack";
                     break;
 
+                case "raid_key":
+                    cost = itemId switch
+                    {
+                        "raid_key_t1" or "raid_key_t2" or "raid_key_t3" => 200,
+                        "raid_key_t4" or "raid_key_t5" => 300,
+                        "raid_key_t6" => 400,
+                        _ => 0
+                    };
+                    if (cost == 0)
+                        return "❌ Unknown raid key.";
+                    quantity = 1;
+                    break;
+
                 default:
                     return "❌ Unknown shop category.";
             }

@@ -5,6 +5,7 @@ using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.JobObjects;
 using Hogs.RPG.Core.Entities.TradeObjects;
 using Hogs.RPG.Core.Enums.ShopEnums;
+using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Shop;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -583,6 +584,38 @@ namespace Hogs.RPG.Services.ShopServices
                 case "rpg_duo_tower_reset":
                     player.LastDuoTowerRun = null;
                     await playerRepo.UpdatePlayerAsync(player);
+                    break;
+
+                // =========================
+                // ⚔️ SOLO RAID COOLDOWN RESET
+                // =========================
+                case "rpg_solo_raid_reset":
+                    player.SoloRaidsToday = Math.Max(0, player.SoloRaidsToday - 1);
+                    await playerRepo.UpdatePlayerAsync(player);
+                    break;
+
+                // =========================
+                // 🔨 CRON STONE
+                // =========================
+                case "rpg_cron_stone":
+                    using (var scope = _scopeFactory.CreateScope())
+                    {
+                        var inventoryService = scope.ServiceProvider
+                            .GetRequiredService<Hogs.RPG.Services.InventoryServices.InventoryService>();
+                        await inventoryService.GiveItemAsync(userId, EnhancementItems.CronStone.Id, 1);
+                    }
+                    break;
+
+                // =========================
+                // 🔨 BLACKSTONE
+                // =========================
+                case "rpg_blackstone":
+                    using (var scope = _scopeFactory.CreateScope())
+                    {
+                        var inventoryService = scope.ServiceProvider
+                            .GetRequiredService<Hogs.RPG.Services.InventoryServices.InventoryService>();
+                        await inventoryService.GiveItemAsync(userId, EnhancementItems.Blackstone.Id, 1);
+                    }
                     break;
             }
         }
