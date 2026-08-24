@@ -83,7 +83,8 @@ namespace Hogs.RPG.Bot.Commands
                  ("raid_key_t2", "T2 — Stronghold Key"),
                  ("raid_key_t3", "T3 — Fortress Key"),
                  ("raid_key_t4", "T4 — Citadel Key"),
-                 ("raid_key_t5", "T5 — World Boss Key")
+                 ("raid_key_t5", "T5 — World Boss Key"),
+                 ("raid_key_t6", "T6 — Voidforge Key")
             };
 
             var embed = new EmbedBuilder()

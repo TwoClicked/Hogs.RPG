@@ -287,7 +287,7 @@ namespace Hogs.RPG.Bot.Commands
                         .WithButton("🧱 Craft", "trail_shop_craft_0", ButtonStyle.Secondary, row: 0)
                         .WithButton("★ Rare", "trail_shop_rare_0", ButtonStyle.Secondary, row: 0)
                         .WithButton("🐾 Snacks", "trail_shop_snack_0", ButtonStyle.Secondary, row: 0)
-                        .WithButton("🗝️ Raid Keys", "trail_shop_raid_key_0", ButtonStyle.Secondary, row: 1);
+                        .WithButton("🗝️ Raid Keys", "trail_shop_raidkey_0", ButtonStyle.Secondary, row: 1);
                     break;
 
                 case "gear":
@@ -306,7 +306,7 @@ namespace Hogs.RPG.Bot.Commands
                     BuildSnackShop(embed, components);
                     break;
 
-                case "raid_key":
+                case "raidkey":
                     BuildRaidKeyShop(embed, components, page);
                     break;
             }
@@ -337,11 +337,11 @@ namespace Hogs.RPG.Bot.Commands
                 "craft" => (name, 50, "100"),
                 "rare" => (name, 75, "5"),
                 "snack" => ("Trail Pet Snack", 8, "1"),
-                "raid_key" => (name, itemId switch
+                "raidkey" => (name, itemId switch
                 {
-                    "raid_key_t1" or "raid_key_t2" or "raid_key_t3" => 200,
-                    "raid_key_t4" or "raid_key_t5" => 300,
-                    "raid_key_t6" => 400,
+                    "raid-key-t1" or "raid-key-t2" or "raid-key-t3" => 200,
+                    "raid-key-t4" or "raid-key-t5" => 300,
+                    "raid-key-t6" => 400,
                     _ => 0
                 }, "1"),
                 _ => (name, 0, "1")
@@ -520,12 +520,12 @@ namespace Hogs.RPG.Bot.Commands
 
             var items = new[]
             {
-                ("raid_key_t1", "Lair Key (T1)",        200),
-                ("raid_key_t2", "Stronghold Key (T2)",  200),
-                ("raid_key_t3", "Fortress Key (T3)",    200),
-                ("raid_key_t4", "Citadel Key (T4)",     300),
-                ("raid_key_t5", "World Boss Key (T5)",  300),
-                ("raid_key_t6", "Voidforge Key (T6)",   400),
+                ("raid-key-t1", "Lair Key (T1)",        200),
+                ("raid-key-t2", "Stronghold Key (T2)",  200),
+                ("raid-key-t3", "Fortress Key (T3)",    200),
+                ("raid-key-t4", "Citadel Key (T4)",     300),
+                ("raid-key-t5", "World Boss Key (T5)",  300),
+                ("raid-key-t6", "Voidforge Key (T6)",   400),
             };
 
             const int perPage = 4;
@@ -545,14 +545,14 @@ namespace Hogs.RPG.Bot.Commands
             for (int i = 0; i < pageItems.Count; i++)
             {
                 var (id, name, cost) = pageItems[i];
-                components.WithButton($"Buy {name} ({cost}🪙)", $"trail_buy_{id}_raid_key_{page}", ButtonStyle.Success, row: i);
+                components.WithButton($"Buy {name} ({cost}🪙)", $"trail_buy_{id}_raidkey_{page}", ButtonStyle.Success, row: i);
             }
 
             if (totalPages > 1)
             {
                 var navRow = new ActionRowBuilder();
-                if (page > 0) navRow.WithButton("⬅️", $"trail_shop_raid_key_{page - 1}", ButtonStyle.Secondary);
-                if (page < totalPages - 1) navRow.WithButton("➡️", $"trail_shop_raid_key_{page + 1}", ButtonStyle.Secondary);
+                if (page > 0) navRow.WithButton("⬅️", $"trail_shop_raidkey_{page - 1}", ButtonStyle.Secondary);
+                if (page < totalPages - 1) navRow.WithButton("➡️", $"trail_shop_raidkey_{page + 1}", ButtonStyle.Secondary);
                 components.AddRow(navRow);
             }
         }
