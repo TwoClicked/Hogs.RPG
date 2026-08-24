@@ -45,6 +45,9 @@ namespace Hogs.RPG.Core.Registries
             { RpgPerkShopItems.TrailReset.Id,       RpgPerkShopItems.TrailReset },
             { RpgPerkShopItems.SoloTowerReset.Id,   RpgPerkShopItems.SoloTowerReset },
             { RpgPerkShopItems.DuoTowerReset.Id,    RpgPerkShopItems.DuoTowerReset },
+            { RpgPerkShopItems.CronStone.Id,        RpgPerkShopItems.CronStone },
+            { RpgPerkShopItems.Blackstone.Id,       RpgPerkShopItems.Blackstone },
+            { RpgPerkShopItems.SoloRaidReset.Id,    RpgPerkShopItems.SoloRaidReset },
 
         };
 
