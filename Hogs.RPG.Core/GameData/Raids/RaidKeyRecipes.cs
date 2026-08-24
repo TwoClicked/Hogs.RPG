@@ -92,5 +92,18 @@ namespace Hogs.RPG.Core.GameData.Raids
                 { "sky_relic", 3 }
             }
         };
+
+        public static readonly Recipe VoidforgeKey = new()
+        {
+            Id = "raid_key_t6",
+            Name = "Voidforge Key",
+            ResultItem = "raid_key_t6",
+            ResultAmount = 1,
+            Materials = new Dictionary<string, int>
+            {
+                { "mythic_heart", 20 },
+                { "sky_relic", 20 }
+            }
+        };
     }
 }

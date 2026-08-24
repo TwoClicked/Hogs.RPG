@@ -1,8 +1,10 @@
 ﻿using Hogs.RPG.Core.Entities.ColosseumObjects;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.Enums.PlayerEnums;
+using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.InventoryServices;
 
 namespace Hogs.RPG.Services.ColosseumServices
 {
@@ -23,18 +25,31 @@ namespace Hogs.RPG.Services.ColosseumServices
         private readonly PlayerRepository _playerRepository;
         private readonly ColosseumBotBuilderService _botBuilderService;
         private readonly ColosseumBracketService _bracketService;
+        private readonly InventoryService _inventoryService;
+
+        // 🔨 Cron Stone rewards — flat totals, not additive. Every real
+        // participant gets the base; winner/runner-up get their higher
+        // total instead of base + bonus. Public so ColosseumScheduler can
+        // reference the same numbers in its announcement text.
+        public const int BaseCronStoneReward = 4;
+        public const int RunnerUpCronStoneReward = 7;
+        public const int WinnerCronStoneReward = 10;
 
         public ColosseumService(
             ColosseumRepository colosseumRepository,
             PlayerRepository playerRepository,
             ColosseumBotBuilderService botBuilderService,
-            ColosseumBracketService bracketService)
+            ColosseumBracketService bracketService,
+            InventoryService inventoryService)
         {
             _colosseumRepository = colosseumRepository;
             _playerRepository = playerRepository;
             _botBuilderService = botBuilderService;
             _bracketService = bracketService;
+            _inventoryService = inventoryService;
         }
+
+
 
         // =========================
         // TOURNAMENT LIFECYCLE
@@ -134,11 +149,22 @@ namespace Hogs.RPG.Services.ColosseumServices
             await _colosseumRepository.SaveParticipantAsync(winner);
             await _colosseumRepository.SaveParticipantAsync(runnerUp);
 
+            // 🔨 Cron Stones replace gold as the Colosseum reward. Winner and
+            // runner-up get their flat total (not base + bonus); every other
+            // real (non-bot) participant gets the base reward.
             if (!winner.IsBot)
-                await PayGoldAsync(winner.DiscordId, tournament.WinnerPrizeGold);
+                await PayCronStonesAsync(winner.DiscordId, WinnerCronStoneReward);
 
             if (!runnerUp.IsBot)
-                await PayGoldAsync(runnerUp.DiscordId, tournament.RunnerUpPrizeGold);
+                await PayCronStonesAsync(runnerUp.DiscordId, RunnerUpCronStoneReward);
+
+            foreach (var participant in tournament.Participants)
+            {
+                if (participant.IsBot) continue;
+                if (participant.Id == winner.Id || participant.Id == runnerUp.Id) continue;
+
+                await PayCronStonesAsync(participant.DiscordId, BaseCronStoneReward);
+            }
 
             tournament.Status = ColosseumTournamentStatus.Completed;
             tournament.CompletedAt = DateTime.UtcNow;
@@ -147,13 +173,9 @@ namespace Hogs.RPG.Services.ColosseumServices
             await _colosseumRepository.SaveTournamentAsync(tournament);
         }
 
-        private async Task PayGoldAsync(ulong discordId, int amount)
+        private async Task PayCronStonesAsync(ulong discordId, int amount)
         {
-            var player = await _playerRepository.GetByDiscordIdAsync(discordId);
-            if (player == null) return; // shouldn't happen, but don't blow up prize payout over it
-
-            player.Gold += amount;
-            await _playerRepository.UpdatePlayerAsync(player);
+            await _inventoryService.GiveItemAsync(discordId, EnhancementItems.CronStone.Id, amount);
         }
 
         // =========================

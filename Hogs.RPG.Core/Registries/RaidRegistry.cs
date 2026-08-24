@@ -12,6 +12,7 @@ namespace Hogs.RPG.Core.GameData.Registries
             { AllRaids.Fortress.Id, AllRaids.Fortress },
             { AllRaids.Citadel.Id, AllRaids.Citadel },
             { AllRaids.WorldBoss.Id, AllRaids.WorldBoss },
+            { AllRaids.Voidmaw.Id, AllRaids.Voidmaw },
         };
 
         public static RaidDefinition Get(string id)

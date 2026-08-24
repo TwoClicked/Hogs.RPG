@@ -147,7 +147,7 @@ namespace Hogs.RPG.Services.ColosseumServices
                     $"You'll get a DM to build your loadout with **{tournament.BuildBudgetAP} Arena Points**.\n\n" +
                     $"Registration closes <t:{new DateTimeOffset(tournament.RegistrationEndsAt).ToUnixTimeSeconds()}:R> — " +
                     $"any unfinished build gets randomized, same as the bots filling the rest of the bracket.\n\n" +
-                    $"🥇 Winner: **{tournament.WinnerPrizeGold} gold** · 🥈 Runner-up: **{tournament.RunnerUpPrizeGold} gold**")
+                    $"🥇 Winner: **{ColosseumService.WinnerCronStoneReward} Cron Stones** · 🥈 Runner-up: **{ColosseumService.RunnerUpCronStoneReward} Cron Stones** · Every entrant gets **{ColosseumService.BaseCronStoneReward}**")
                 .WithColor(new Color(0xC0392B))
                 .Build();
 
@@ -497,8 +497,8 @@ namespace Hogs.RPG.Services.ColosseumServices
             var winnerName = winner == null ? "Unknown" : await ResolveDisplayNameAsync(winner, playerRepo);
             var runnerUpName = runnerUp == null ? "Unknown" : await ResolveDisplayNameAsync(runnerUp, playerRepo);
 
-            var winnerPrizeText = winner != null && !winner.IsBot ? $"{tournament.WinnerPrizeGold} gold" : "no gold (bot)";
-            var runnerUpPrizeText = runnerUp != null && !runnerUp.IsBot ? $"{tournament.RunnerUpPrizeGold} gold" : "no gold (bot)";
+            var winnerPrizeText = winner != null && !winner.IsBot ? $"{ColosseumService.WinnerCronStoneReward} Cron Stones" : "no reward (bot)";
+            var runnerUpPrizeText = runnerUp != null && !runnerUp.IsBot ? $"{ColosseumService.RunnerUpCronStoneReward} Cron Stones" : "no reward (bot)";
 
             var embedBuilder = new EmbedBuilder()
                 .WithTitle("🏛️ The Colosseum has a champion!")

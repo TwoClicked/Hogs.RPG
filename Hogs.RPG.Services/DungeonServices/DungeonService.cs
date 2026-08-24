@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Hogs.RPG.Core.Entities.DungeonObjects;
 using Hogs.RPG.Core.Entities.PetObjects;
 using Hogs.RPG.Core.GameData.Achievements;
+using Hogs.RPG.Core.GameData.Enhancement;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
@@ -491,9 +492,12 @@ namespace Hogs.RPG.Services.Game
             var relicBonuses = await relicService.GetRelicBonusesAsync(userId);
             var sigilBonuses = await sigilService.GetSigilBonusesAsync(userId);
 
-            int gold = (int)(250 * (1f + relicBonuses.BonusGoldPercent + sigilBonuses.BonusGoldPercent));
-            int xp = (int)(1000 * (1f + relicBonuses.BonusPlayerXpPercent + sigilBonuses.BonusPlayerXpPercent));
-            int petXp = (int)(50 * (1f + relicBonuses.BonusPetXpPercent));
+            // dungeon.RewardMultiplier is 1.0 for every existing dungeon (no
+            // change in behavior) and 2.0 for the lvl 36/38/40 enhancement
+            // gate dungeons, per your request to double their gold/XP/pet XP.
+            int gold = (int)(250 * dungeon.RewardMultiplier * (1f + relicBonuses.BonusGoldPercent + sigilBonuses.BonusGoldPercent));
+            int xp = (int)(1000 * dungeon.RewardMultiplier * (1f + relicBonuses.BonusPlayerXpPercent + sigilBonuses.BonusPlayerXpPercent));
+            int petXp = (int)(50 * dungeon.RewardMultiplier * (1f + relicBonuses.BonusPetXpPercent));
 
             if (session.GoldBoostPercent > 0)
                 gold = (int)(gold * (1 + session.GoldBoostPercent));
@@ -530,6 +534,28 @@ namespace Hogs.RPG.Services.Game
                             ? $"\n🎁 **{item.Name}**"
                             : $"\n🎁 **{drop.ItemId.Replace("_", " ")}**";
                     }
+                }
+            }
+
+            // =========================
+            // 🔨 UPGRADE PIECE DROP
+            // One slot randomly picked from the boss's pool, THEN rolled
+            // against that dungeon's rate. At most one piece per clear.
+            // Appends to dropText, so it rides the same completion embed
+            // and feed announcement as every other drop below.
+            // =========================
+            if (dungeon.Boss?.UpgradePieceSlots != null && dungeon.Boss.UpgradePieceSlots.Count > 0)
+            {
+                var chosenSlot = dungeon.Boss.UpgradePieceSlots[_random.Next(dungeon.Boss.UpgradePieceSlots.Count)];
+                double upgradeRoll = _random.NextDouble() * 100.0;
+
+                if (upgradeRoll < dungeon.Boss.UpgradePieceDropChancePercent)
+                {
+                    string upgradeItemId = EnhancementSlotMap.GetUpgradePieceItemId(chosenSlot);
+                    await inventoryService.GiveItemAsync(userId, upgradeItemId, 1);
+
+                    InventoryItemDefinitions.All.TryGetValue(upgradeItemId, out var upgradeItemDef);
+                    dropText += $"\n🧩 **{upgradeItemDef?.Name ?? upgradeItemId}**";
                 }
             }
 
@@ -745,6 +771,99 @@ namespace Hogs.RPG.Services.Game
             return null;
         }
 
+        private string HandleBleedingSlam(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            session.BleedingSlamTurnCounter++;
+
+            // The slam lands the turn AFTER the warning
+            if (session.BleedingSlamWarned)
+            {
+                session.BleedingSlamWarned = false;
+                session.BleedingSlamTurnCounter = 0;
+                enemyDamage = (int)(enemyDamage * 2.5);
+                return $"💥 **{boss.Name} unleashes the crushing slam!**";
+            }
+
+            // Telegraph on the 4th turn — one turn of warning before it lands
+            if (session.BleedingSlamTurnCounter >= 4)
+            {
+                session.BleedingSlamWarned = true;
+                return $"⚠️ **{boss.Name} begins winding up a crushing slam — brace yourself!**";
+            }
+
+            // Otherwise: stacking bleed, caps at 5 stacks
+            if (session.BleedingSlamStacks < 5)
+                session.BleedingSlamStacks++;
+
+            int bleedDamage = session.BleedingSlamStacks * 15;
+            enemyDamage += bleedDamage;
+
+            return $"🩸 **{boss.Name}'s wounds carve deeper — bleed +{bleedDamage} ({session.BleedingSlamStacks} stacks)**";
+        }
+
+        private string HandleReinforcedBerserk(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            // Phase 2: berserk triggers once at 50% HP, permanent 1.6x from here on
+            if (!session.ReinforcedBerserkTriggered && session.EnemyHealth <= boss.MaxHealth * 0.5)
+            {
+                session.ReinforcedBerserkTriggered = true;
+                enemyDamage = (int)(enemyDamage * 1.6);
+                return $"😡 **{boss.Name} abandons the call and goes BERSERK! Damage sharply increased!**";
+            }
+
+            if (session.ReinforcedBerserkTriggered)
+            {
+                enemyDamage = (int)(enemyDamage * 1.6);
+                return null;
+            }
+
+            // Phase 1: reinforcements stack a permanent +15% every 3rd turn
+            session.ReinforcedTurnCounter++;
+
+            if (session.ReinforcedTurnCounter % 3 == 0)
+            {
+                session.ReinforcedStacks++;
+                enemyDamage = (int)(enemyDamage * (1 + session.ReinforcedStacks * 0.15));
+                return $"📯 **Reinforcements empower {boss.Name}! ({session.ReinforcedStacks} stack{(session.ReinforcedStacks > 1 ? "s" : "")})**";
+            }
+
+            if (session.ReinforcedStacks > 0)
+                enemyDamage = (int)(enemyDamage * (1 + session.ReinforcedStacks * 0.15));
+
+            return null;
+        }
+
+        private string HandleVoidriftTyrant(ActiveDungeon session, DungeonBossDefinition boss, ref int enemyDamage)
+        {
+            session.VoidriftTurnCounter++;
+
+            // One-time execute burst below 30% HP
+            if (!session.VoidriftExecuteTriggered && session.EnemyHealth <= boss.MaxHealth * 0.3)
+            {
+                session.VoidriftExecuteTriggered = true;
+                enemyDamage = (int)(enemyDamage * 3.0);
+                return $"💀 **{boss.Name} senses the kill and unleashes a void-execute burst!**";
+            }
+
+            // Hard enrage past turn 20 — permanent, stacks with everything else
+            if (session.VoidriftTurnCounter >= 20)
+            {
+                enemyDamage = (int)(enemyDamage * 2.0);
+                return $"⏳ **{boss.Name} enrages — this fight has gone on far too long!**";
+            }
+
+            // True damage tick every 5th turn — added AFTER defense mitigation,
+            // so it can't be reduced away by stacking DEF
+            if (session.VoidriftTurnCounter % 5 == 0)
+            {
+                const int trueDamage = 250;
+                enemyDamage += trueDamage;
+                return $"🌌 **{boss.Name} tears a rift through your defenses — {trueDamage} true damage!**";
+            }
+
+            return null;
+        }
+
         // =========================
         // HELPERS
         // =========================
@@ -774,6 +893,9 @@ namespace Hogs.RPG.Services.Game
                 "maniacal_encore" => HandleManiacalEncore(session, boss, ref enemyDamage),
                 "gold_shine" => HandleGoldShine(session, boss, ref enemyDamage),
                 "star_iron_madness" => HandleStarIronMadness(session, boss, ref enemyDamage),
+                "bleeding_slam" => HandleBleedingSlam(session, boss, ref enemyDamage),
+                "reinforced_berserk" => HandleReinforcedBerserk(session, boss, ref enemyDamage),
+                "voidrift_tyrant" => HandleVoidriftTyrant(session, boss, ref enemyDamage),
                 _ => null
             };
         }

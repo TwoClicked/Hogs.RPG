@@ -58,5 +58,16 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             Tier = 5,
             SubCategory = "Raid"
         };
+
+        public static readonly ItemDefinition VoidforgeKey = new()
+        {
+            Id = "raid_key_t6",
+            Name = "Voidforge Key",
+            Icon = "🗝️",
+            Type = "Key",
+            Description = "A key forged purely from the rarest hunt materials. Required to enter a Tier 6 Raid.",
+            Tier = 6,
+            SubCategory = "Raid"
+        };
     }
 }

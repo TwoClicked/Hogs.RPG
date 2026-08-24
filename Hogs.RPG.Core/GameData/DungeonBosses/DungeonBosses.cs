@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.DungeonObjects;
+using Hogs.RPG.Core.Enums.PlayerEnums;
 using System.Runtime.InteropServices;
 
 namespace Hogs.RPG.Core.GameData.DungeonBosses
@@ -108,7 +109,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
         // =========================
         // LEVEL 18 BOSS
         // =========================
-        public static readonly DungeonBossDefinition AmphivosTaterous = new ()
+        public static readonly DungeonBossDefinition AmphivosTaterous = new()
         {
             Id = "amphivos_taterous",
             Name = "Amphivos Taterous",
@@ -156,7 +157,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
         // =========================
         // LEVEL 22 BOSS (NEW)
         // =========================
-        public static readonly DungeonBossDefinition SkarrTheClownOfCarnage = new ()
+        public static readonly DungeonBossDefinition SkarrTheClownOfCarnage = new()
         {
             Id = "skarr_the_clown_of_carnage",
             Name = "Skarr, The Clown of Carnage",
@@ -180,7 +181,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
         // =========================
         // LEVEL 23 BOSS
         // =========================
-        public static readonly DungeonBossDefinition GrimblexTheGildedTyrant = new ()
+        public static readonly DungeonBossDefinition GrimblexTheGildedTyrant = new()
         {
             Id = "grimblex_the_gilded_tyrant",
             Name = "Grimblex, The Gilded Tyrant",
@@ -247,6 +248,72 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
             {
                 new DungeonDrop { ItemId = "gritch_warplate", ChancePercent = 3 }
             }
+        };
+
+        // =========================
+        // LEVEL 36 BOSS (NEW — Enhancement gate: HELM/BODY/LEGS)
+        // =========================
+        public static readonly DungeonBossDefinition VrathgarBonecarver = new()
+        {
+            Id = "vrathgar_bonecarver",
+            Name = "Vrathgar the Bonecarver",
+            Description = "A butcher of the deep mines, Vrathgar carves trophies from those who linger too long in his tunnels.",
+
+            MaxHealth = 8000,
+            Attack = 650,
+            Defense = 140,
+
+            ImageUrl = "", // TODO: add permanent image host, not a Discord CDN link
+
+            BehaviorId = "bleeding_slam",
+            AbilitiesText = "Every hit deepens a stacking bleed. Every 5th turn he winds up a crushing slam — watch for the warning.",
+
+            UpgradePieceSlots = new List<EquipmentSlot> { EquipmentSlot.Helmet, EquipmentSlot.Body, EquipmentSlot.Legs },
+            UpgradePieceDropChancePercent = 10.0
+        };
+
+        // =========================
+        // LEVEL 38 BOSS (NEW — Enhancement gate: GLOVES/BOOTS/AMULET)
+        // =========================
+        public static readonly DungeonBossDefinition KaelgrimWarcaller = new()
+        {
+            Id = "kaelgrim_warcaller",
+            Name = "Kaelgrim the Warcaller",
+            Description = "His horn still echoes through the siege camp — every blast calls fresh reinforcements to his side.",
+
+            MaxHealth = 12000,
+            Attack = 800,
+            Defense = 170,
+
+            ImageUrl = "",
+
+            BehaviorId = "reinforced_berserk",
+            AbilitiesText = "Reinforcements empower him every 3rd turn. At half health he abandons the call and goes berserk permanently.",
+
+            UpgradePieceSlots = new List<EquipmentSlot> { EquipmentSlot.Gloves, EquipmentSlot.Boots, EquipmentSlot.Amulet },
+            UpgradePieceDropChancePercent = 5.0
+        };
+
+        // =========================
+        // LEVEL 40 BOSS (NEW — Enhancement gate: RING/MAIN HAND/OFF HAND)
+        // =========================
+        public static readonly DungeonBossDefinition SkollAshenDevourer = new()
+        {
+            Id = "skoll_ashen_devourer",
+            Name = "Skoll, the Ashen Devourer",
+            Description = "A beast out of the old myths, chasing the last light of the world. It does not tire, and it does not stop.",
+
+            MaxHealth = 16000,
+            Attack = 1000,
+            Defense = 200,
+
+            ImageUrl = "",
+
+            BehaviorId = "voidrift_tyrant",
+            AbilitiesText = "Tears a rift through your defenses every 5th turn. Enrages permanently past turn 20. Executes hard below 30% health.",
+
+            UpgradePieceSlots = new List<EquipmentSlot> { EquipmentSlot.Ring, EquipmentSlot.MainHand, EquipmentSlot.OffHand },
+            UpgradePieceDropChancePercent = 2.5
         };
     }
 }

@@ -186,6 +186,8 @@ namespace Hogs.RPG.Bot.Commands
                     sb.AppendLine($"  💰 +{reward.Gold} Gold | ⭐ +{reward.PlayerXp} XP | 🐾 +{reward.PetXp} Pet XP");
                     if (reward.ShardDropped)
                         sb.AppendLine($"  💎 Relic Shard (Tier {reward.ShardTier}) dropped!");
+                    if (reward.InfuseCrystalDropped)
+                        sb.AppendLine($"  🔮 Infuse Crystal dropped!");
                     if (!string.IsNullOrEmpty(reward.LevelUpMessage))
                         sb.AppendLine($"  🎊 {reward.LevelUpMessage}");
 
@@ -345,6 +347,8 @@ namespace Hogs.RPG.Bot.Commands
 
                 if (reward.ShardDropped)
                     sb.Append($"\n  💎 **Tier {reward.ShardTier} Relic Shard dropped!**");
+                if (reward.InfuseCrystalDropped)
+                    sb.Append($"\n  🔮 **Infuse Crystal dropped!**");
 
                 sb.AppendLine();
             }

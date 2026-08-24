@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities;
+using Hogs.RPG.Core.Entities.EquipmentObjects;
 using Hogs.RPG.Core.Entities.RaidObjects;
 using Hogs.RPG.Core.Enums.BossEnums;
 
@@ -133,5 +134,35 @@ namespace Hogs.RPG.Core.GameData.Raids
 
             KeyIngredients = new List<RaidKeyIngredient>()
         };
+
+        public static readonly RaidDefinition Voidmaw = new()
+        {
+            Id = "raid_t6",
+            Name = "Voidmaw, the Sovereign Beyond",
+            Description = "Beyond the world-ending flames of Zarokh lies something that was never meant to wake. No relics survive its passage — only Infuse Crystals remain.",
+            Tier = 6,
+            RequiredLevel = 35,
+            ImageUrl = "", // TODO: add permanent image host
+
+            HpMultiplier = 24f,
+            AttackMultiplier = 1.5f,
+            DefenseMultiplier = 0.9f,
+            AggroSwapChance = 0.45f,
+
+            AbilityPool = new List<BossAbilityType>
+            {
+                BossAbilityType.SavageCleave,
+                BossAbilityType.TargetSwap,
+                BossAbilityType.CrushingBlow,
+                BossAbilityType.Enrage,
+                BossAbilityType.Frenzy,
+                BossAbilityType.Venom,
+                BossAbilityType.Execute
+            },
+
+            KeyIngredients = new List<RaidKeyIngredient>()
+        };
+
+
     }
 }

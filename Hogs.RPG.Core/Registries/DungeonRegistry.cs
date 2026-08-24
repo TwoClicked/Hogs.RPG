@@ -20,6 +20,9 @@ namespace Hogs.RPG.Core.GameData.Registries
             { AllDungeons.GildedVault.Id,         AllDungeons.GildedVault         },  // Lv 23
             { AllDungeons.TempleOfRuin.Id,        AllDungeons.TempleOfRuin        },  // Lv 25
             { AllDungeons.SparkiteMines.Id,       AllDungeons.SparkiteMines       },  // Lv 27
+            { AllDungeons.BonecarversDescent.Id,  AllDungeons.BonecarversDescent  },  // Lv 36
+            { AllDungeons.WarcallersSiege.Id,     AllDungeons.WarcallersSiege     },  // Lv 38
+            { AllDungeons.AshenEnd.Id,             AllDungeons.AshenEnd            },  // Lv 40
         };
     }
 

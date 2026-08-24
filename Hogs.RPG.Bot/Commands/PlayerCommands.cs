@@ -4,6 +4,8 @@ using Discord.WebSocket;
 using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.PlayerObjects;
+using Hogs.RPG.Core.Enums.PlayerEnums;
+using Hogs.RPG.Core.GameData.Enhancement;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -226,18 +228,21 @@ namespace Hogs.RPG.Bot.Commands
                 .AddField("🧪 Alchemist Level", $"Level **{player.AlchemistLevel}** — {player.AlchemistXP:N0} XP", true)
                 .AddField("🏆 Achievements", $"**{player.AchievementCount}** earned" + (string.IsNullOrEmpty(player.Title) ? "" : $" · {player.Title}"), true)
 
-                // Gear
+                // Gear — slot tags show the ACTIVE enhancement (piece must be
+                // equipped for it to count, per StatService's gating rule).
+                // Banked-but-unequipped progress is called out separately below.
                 .AddField(
                     "⚒ Equipment",
-                    $"Main Hand: {FormatItem(player.MainHand)}\n" +
-                    $"Off Hand:  {FormatItem(player.OffHand)}\n" +
-                    $"Helmet:    {FormatItem(player.Helmet)}\n" +
-                    $"Body:      {FormatItem(player.Body)}\n" +
-                    $"Legs:      {FormatItem(player.Legs)}\n" +
-                    $"Gloves:    {FormatItem(player.Gloves)}\n" +
-                    $"Boots:     {FormatItem(player.Boots)}\n" +
-                    $"Ring:      {FormatItem(player.Ring)}\n" +
-                    $"Amulet:    {FormatItem(player.Amulet)}",
+                    $"Main Hand{SlotTag(player, EquipmentSlot.MainHand, player.MainHand)}: {FormatItem(player.MainHand, EquipmentSlot.MainHand, player)}\n" +
+                    $"Off Hand{SlotTag(player, EquipmentSlot.OffHand, player.OffHand)}: {FormatItem(player.OffHand, EquipmentSlot.OffHand, player)}\n" +
+                    $"Helmet{SlotTag(player, EquipmentSlot.Helmet, player.Helmet)}: {FormatItem(player.Helmet, EquipmentSlot.Helmet, player)}\n" +
+                    $"Body{SlotTag(player, EquipmentSlot.Body, player.Body)}: {FormatItem(player.Body, EquipmentSlot.Body, player)}\n" +
+                    $"Legs{SlotTag(player, EquipmentSlot.Legs, player.Legs)}: {FormatItem(player.Legs, EquipmentSlot.Legs, player)}\n" +
+                    $"Gloves{SlotTag(player, EquipmentSlot.Gloves, player.Gloves)}: {FormatItem(player.Gloves, EquipmentSlot.Gloves, player)}\n" +
+                    $"Boots{SlotTag(player, EquipmentSlot.Boots, player.Boots)}: {FormatItem(player.Boots, EquipmentSlot.Boots, player)}\n" +
+                    $"Ring{SlotTag(player, EquipmentSlot.Ring, player.Ring)}: {FormatItem(player.Ring, EquipmentSlot.Ring, player)}\n" +
+                    $"Amulet{SlotTag(player, EquipmentSlot.Amulet, player.Amulet)}: {FormatItem(player.Amulet, EquipmentSlot.Amulet, player)}" +
+                    BankedEnhancementLine(player),
                     false);
 
             // =========================
@@ -358,8 +363,10 @@ namespace Hogs.RPG.Bot.Commands
 
         // =========================
         // FORMAT ITEM HELPER
+        // slot/player are optional so any other future caller isn't forced
+        // to supply enhancement context — only the Equipment field passes them.
         // =========================
-        private string FormatItem(string id)
+        private string FormatItem(string id, EquipmentSlot? slot = null, Player player = null)
         {
             if (string.IsNullOrEmpty(id))
                 return "*None*";
@@ -370,10 +377,27 @@ namespace Hogs.RPG.Bot.Commands
 
             InventoryItemDefinitions.All.TryGetValue(id, out var itemDef);
 
+            int atk = equip.Attack;
+            int def = equip.Defense;
+            int hp = equip.Health;
+
+            // Bake the enhancement bonus into the displayed numbers when this
+            // is the actively-enhanced Global Boss Gear piece for the slot —
+            // same gating check as StatService, so what's shown here matches
+            // what actually applies in combat.
+            if (slot.HasValue && player != null && id == EnhancementSlotMap.GetGlobalBossItemId(slot.Value))
+            {
+                int level = EnhancementSlotMap.GetEnhancementLevel(player, slot.Value);
+                var (bonusAtk, bonusDef, bonusHp) = EnhancementStatGains.GetCumulativeBonus(level);
+                atk += bonusAtk;
+                def += bonusDef;
+                hp += bonusHp;
+            }
+
             var stats = new List<string>();
-            if (equip.Attack > 0) stats.Add($"+{equip.Attack} ATK");
-            if (equip.Defense > 0) stats.Add($"+{equip.Defense} DEF");
-            if (equip.Health > 0) stats.Add($"+{equip.Health} HP");
+            if (atk > 0) stats.Add($"+{atk} ATK");
+            if (def > 0) stats.Add($"+{def} DEF");
+            if (hp > 0) stats.Add($"+{hp} HP");
 
             var statText = stats.Count > 0 ? $" ({string.Join(", ", stats)})" : "";
 
@@ -384,6 +408,57 @@ namespace Hogs.RPG.Bot.Commands
             var name = itemDef?.Name ?? equip.Name;
 
             return $"{icon}{name}{statText}";
+        }
+
+        // Returns " (+15)" / " (PRI)" etc., or "" if the equipped item in this
+        // slot isn't the enhanceable Global Boss Gear piece, or the level is 0.
+        private string SlotTag(Player player, EquipmentSlot slot, string equippedItemId)
+        {
+            if (string.IsNullOrEmpty(equippedItemId))
+                return "";
+
+            if (equippedItemId != EnhancementSlotMap.GetGlobalBossItemId(slot))
+                return "";
+
+            int level = EnhancementSlotMap.GetEnhancementLevel(player, slot);
+            string label = EnhancementLevelLabels.GetLabel(level);
+
+            return string.IsNullOrEmpty(label) ? "" : $" ({label})";
+        }
+
+        // Lists any slot with a banked enhancement level (> 0) that isn't
+        // currently contributing stats — either nothing's equipped there,
+        // or something other than the Global Boss Gear piece is. Returns ""
+        // when there's nothing to report, so most profiles show no extra line.
+        private string BankedEnhancementLine(Player player)
+        {
+            var banked = new List<string>();
+
+            void Check(EquipmentSlot slot, string equippedItemId, string slotName)
+            {
+                int level = EnhancementSlotMap.GetEnhancementLevel(player, slot);
+                if (level <= 0)
+                    return;
+
+                if (equippedItemId == EnhancementSlotMap.GetGlobalBossItemId(slot))
+                    return; // active — already shown inline above
+
+                banked.Add($"{slotName} {EnhancementLevelLabels.GetLabel(level)}");
+            }
+
+            Check(EquipmentSlot.MainHand, player.MainHand, "Main Hand");
+            Check(EquipmentSlot.OffHand, player.OffHand, "Off Hand");
+            Check(EquipmentSlot.Helmet, player.Helmet, "Helmet");
+            Check(EquipmentSlot.Body, player.Body, "Body");
+            Check(EquipmentSlot.Legs, player.Legs, "Legs");
+            Check(EquipmentSlot.Gloves, player.Gloves, "Gloves");
+            Check(EquipmentSlot.Boots, player.Boots, "Boots");
+            Check(EquipmentSlot.Ring, player.Ring, "Ring");
+            Check(EquipmentSlot.Amulet, player.Amulet, "Amulet");
+
+            return banked.Count > 0
+                ? $"\n\n🔒 Banked (not active): {string.Join(", ", banked)}"
+                : "";
         }
 
 

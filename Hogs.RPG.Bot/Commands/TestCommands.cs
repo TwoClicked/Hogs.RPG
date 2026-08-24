@@ -287,9 +287,9 @@ namespace Hogs.RPG.Bot.Commands
             if (!await EnsureAdminAsync()) return;
             await DeferAsync(ephemeral: true);
 
-            if (tier < 1 || tier > 5)
+            if (tier < 1 || tier > 6)
             {
-                await FollowupAsync("❌ Tier must be between 1 and 5.", ephemeral: true);
+                await FollowupAsync("❌ Invalid tier. Choose between 1 and 6.", ephemeral: true);
                 return;
             }
 

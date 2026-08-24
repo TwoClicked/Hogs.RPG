@@ -74,6 +74,7 @@ public static class RecipeRegistry
         { RaidKeyRecipes.FortressKey.Id, RaidKeyRecipes.FortressKey },
         { RaidKeyRecipes.CitadelKey.Id, RaidKeyRecipes.CitadelKey },
         { RaidKeyRecipes.WorldBossKey.Id, RaidKeyRecipes.WorldBossKey },
+        { RaidKeyRecipes.VoidforgeKey.Id, RaidKeyRecipes.VoidforgeKey },
 
     };
 }

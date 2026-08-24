@@ -1,6 +1,8 @@
 ﻿using Hogs.RPG.Core.Entities.PlayerObjects;
 using Hogs.RPG.Core.Enums;
+using Hogs.RPG.Core.Enums.PlayerEnums;
 using Hogs.RPG.Core.GameData.Achievements;
+using Hogs.RPG.Core.GameData.Enhancement;
 using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Core.Registries;
@@ -41,20 +43,20 @@ namespace Hogs.RPG.Services.GameplayServices
             // =========================
             // 🛡 EQUIPMENT
             // =========================
-            var equippedItems = new[]
+            var equippedSlots = new (EquipmentSlot Slot, string? ItemId)[]
             {
-                player.MainHand,
-                player.OffHand,
-                player.Helmet,
-                player.Body,
-                player.Legs,
-                player.Gloves,
-                player.Boots,
-                player.Ring,
-                player.Amulet
+                (EquipmentSlot.MainHand, player.MainHand),
+                (EquipmentSlot.OffHand, player.OffHand),
+                (EquipmentSlot.Helmet, player.Helmet),
+                (EquipmentSlot.Body, player.Body),
+                (EquipmentSlot.Legs, player.Legs),
+                (EquipmentSlot.Gloves, player.Gloves),
+                (EquipmentSlot.Boots, player.Boots),
+                (EquipmentSlot.Ring, player.Ring),
+                (EquipmentSlot.Amulet, player.Amulet)
             };
 
-            foreach (var itemId in equippedItems)
+            foreach (var (slot, itemId) in equippedSlots)
             {
                 if (string.IsNullOrEmpty(itemId))
                     continue;
@@ -66,6 +68,22 @@ namespace Hogs.RPG.Services.GameplayServices
                 attack += item.Attack;
                 defense += item.Defense;
                 health += item.Health;
+
+                // 🔨 ENHANCEMENT BONUS
+                // Only applies when the item equipped in this slot IS the
+                // Global Boss Gear piece for that slot. A player can bank
+                // enhancement levels on a slot before owning the piece
+                // (see Player.cs), but the stat bonus stays dormant until
+                // the real item is actually equipped here.
+                if (itemId == EnhancementSlotMap.GetGlobalBossItemId(slot))
+                {
+                    int enhanceLevel = EnhancementSlotMap.GetEnhancementLevel(player, slot);
+                    var (enhAtk, enhDef, enhHp) = EnhancementStatGains.GetCumulativeBonus(enhanceLevel);
+
+                    attack += enhAtk;
+                    defense += enhDef;
+                    health += enhHp;
+                }
             }
 
             // =========================

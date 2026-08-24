@@ -33,6 +33,7 @@ namespace Hogs.RPG.Services.RaidServices
         private readonly DiscordSocketClient _client;
         private readonly AchievementService _achievementService;
         private readonly SigilService _sigilService;
+        private readonly IMessageChannel _announcementChannel;
 
         private static readonly Random _random = new();
 
@@ -67,6 +68,7 @@ namespace Hogs.RPG.Services.RaidServices
             _client = client;
             _achievementService = achievementService;
             _sigilService = sigilService;
+            _announcementChannel = client.GetChannel(1485357755433750549) as IMessageChannel;
         }
 
         // =========================
@@ -949,22 +951,53 @@ namespace Hogs.RPG.Services.RaidServices
 
                 await _petService.AddXPAsync(p.DiscordId, petXp);
 
-                float shardDropChance = GetShardDropChance(session.Tier) + relicBonuses.BonusLootRollPercent;
-                bool shardDropped = _random.NextDouble() < shardDropChance;
-                if (shardDropped)
-                    await _relicService.GiveShardAsync(p.DiscordId, session.Tier);
-
-                result.Rewards.Add(new RaidReward
+                // =========================
+                // 🔨 T6: no relics — Infuse Crystal instead
+                // =========================
+                if (session.Tier == 6)
                 {
-                    DiscordId = p.DiscordId,
-                    Role = p.Role,
-                    Gold = gold,
-                    PlayerXp = xp,
-                    PetXp = petXp,
-                    ShardDropped = shardDropped,
-                    ShardTier = session.Tier,
-                    LevelUpMessage = levelMessage
-                });
+                    const float infuseCrystalDropChance = 0.10f;
+                    bool infuseCrystalDropped = _random.NextDouble() < infuseCrystalDropChance + relicBonuses.BonusLootRollPercent;
+
+                    if (infuseCrystalDropped)
+                    {
+                        await _inventoryRepo.AddItemAsync(p.DiscordId, "infuse_crystal", 1);
+
+                        if (_announcementChannel != null)
+                            await _announcementChannel.SendMessageAsync(
+                                $"🔮 <@{p.DiscordId}> obtained an **Infuse Crystal** from a Tier 6 Raid!");
+                    }
+
+                    result.Rewards.Add(new RaidReward
+                    {
+                        DiscordId = p.DiscordId,
+                        Role = p.Role,
+                        Gold = gold,
+                        PlayerXp = xp,
+                        PetXp = petXp,
+                        InfuseCrystalDropped = infuseCrystalDropped,
+                        LevelUpMessage = levelMessage
+                    });
+                }
+                else
+                {
+                    float shardDropChance = GetShardDropChance(session.Tier) + relicBonuses.BonusLootRollPercent;
+                    bool shardDropped = _random.NextDouble() < shardDropChance;
+                    if (shardDropped)
+                        await _relicService.GiveShardAsync(p.DiscordId, session.Tier);
+
+                    result.Rewards.Add(new RaidReward
+                    {
+                        DiscordId = p.DiscordId,
+                        Role = p.Role,
+                        Gold = gold,
+                        PlayerXp = xp,
+                        PetXp = petXp,
+                        ShardDropped = shardDropped,
+                        ShardTier = session.Tier,
+                        LevelUpMessage = levelMessage
+                    });
+                }
             }
 
             await SettlePotionCostsAsync(session, result);

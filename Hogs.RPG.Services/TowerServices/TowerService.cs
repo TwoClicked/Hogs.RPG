@@ -2,10 +2,12 @@ using Discord;
 using Discord.WebSocket;
 using Hogs.RPG.Core.Entities.TowerObjects;
 using Hogs.RPG.Core.Enums.TowerEnums;
+using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Tower;
 using Hogs.RPG.Data.Repositories;
 using Hogs.RPG.Services.AchievementServices;
 using Hogs.RPG.Services.GameplayServices;
+using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.PlayerServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -1845,8 +1847,15 @@ namespace Hogs.RPG.Services.TowerServices
             var petService = scope.ServiceProvider.GetRequiredService<PetServices.PetService>();
             var achievementService = scope.ServiceProvider.GetRequiredService<AchievementServices.AchievementService>();
             var completedThreadRepo = scope.ServiceProvider.GetRequiredService<TowerCompletedThreadRepository>();
+            var inventoryService = scope.ServiceProvider.GetRequiredService<InventoryService>();
 
             var rewardLines = new System.Text.StringBuilder();
+
+            // 🔨 Blackstones — separate from AccumulatedGold entirely (that
+            // pot stays gold: base floors, boss floors, choose-your-reward,
+            // and gambling all remain untouched). Computed purely from the
+            // floor reached: 1 per 10 floors, 5 per boss (every 25th floor).
+            int blackstonesEarned = (session.Floor / 10) + ((session.Floor / 25) * 5);
 
             foreach (var p in session.Participants.Concat(session.FallenParticipants))
             {
@@ -1866,8 +1875,12 @@ namespace Hogs.RPG.Services.TowerServices
                 await petService.AddXPAsync(p.DiscordId, FlatPetXp);
                 await achievementService.CheckAndAwardAsync(p.DiscordId);
 
+                if (blackstonesEarned > 0)
+                    await inventoryService.GiveItemAsync(p.DiscordId, EnhancementItems.Blackstone.Id, blackstonesEarned);
+
                 string status = p.CurrentHp <= 0 ? "💀 Fell" : "🏃 Survived";
-                rewardLines.AppendLine($"{status} **{p.Username}** — 💰 +{gold} gold | ⭐ +{FlatXp} XP | 🐾 +{FlatPetXp} pet XP");
+                string blackstoneText = blackstonesEarned > 0 ? $" | 🪨 +{blackstonesEarned} Blackstones" : "";
+                rewardLines.AppendLine($"{status} **{p.Username}** — 💰 +{gold} gold | ⭐ +{FlatXp} XP | 🐾 +{FlatPetXp} pet XP{blackstoneText}");
             }
 
             int floorReached = session.Floor;

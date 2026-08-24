@@ -70,9 +70,33 @@
         public bool HasRevival { get; set; } = false;               // Revival Draught
         public double GoldBoostPercent { get; set; } = 0;           // Gold Rush Flask
         public bool FirstStrikeUsed { get; set; } = false;          // Track if first strike reduction consumed
+
         // =========================
         // 💎 RELIC COMBAT STATE
         // =========================
         public int ConsecutiveHits { get; set; } = 0;
+
+        // =========================
+        // 🔨 LV36 — Vrathgar the Bonecarver
+        // Stacking bleed + telegraphed slam every 5th turn
+        // =========================
+        public int BleedingSlamStacks { get; set; } = 0;
+        public int BleedingSlamTurnCounter { get; set; } = 0;
+        public bool BleedingSlamWarned { get; set; } = false;
+
+        // =========================
+        // 🔨 LV38 — Kaelgrim the Warcaller
+        // Periodic reinforcement stacks pre-50%, one-time berserk at 50%
+        // =========================
+        public bool ReinforcedBerserkTriggered { get; set; } = false;
+        public int ReinforcedTurnCounter { get; set; } = 0;
+        public int ReinforcedStacks { get; set; } = 0;
+
+        // =========================
+        // 🔨 LV40 — Skoll, the Ashen Devourer
+        // True damage tick, hard enrage, sub-30% execute burst
+        // =========================
+        public int VoidriftTurnCounter { get; set; } = 0;
+        public bool VoidriftExecuteTriggered { get; set; } = false;
     }
 }

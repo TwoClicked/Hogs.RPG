@@ -33,7 +33,35 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
         public string? Ring { get; set; }
         public string? Amulet { get; set; }
 
-        // Gear
+        // =========================
+        // 🔨 ENHANCEMENT SYSTEM
+        // One counter per slot, 0–20:
+        //   0        = unenhanced base
+        //   1–15     = +1 through +15
+        //   16–20    = PRI, DUO, TRI, TET, PEN
+        // Single continuous int so EnhancementRates / EnhancementCosts /
+        // EnhancementStatGains can all index off the same number.
+        //
+        // GATING RULE (important — read before touching StatService or
+        // EnhancementService):
+        // A player can raise these levels via /enhance even if they don't
+        // currently own or have equipped the matching Global Boss Gear
+        // piece — the level is just "banked" progress at that point.
+        // The stat BONUS from a level only applies in StatService when the
+        // actual Global Boss Gear item for that slot is equipped. This
+        // keeps grinding ahead of a drop worthwhile without letting
+        // enhancement stats apply regardless of what's equipped (which
+        // would compound the existing gear-sandbagging concern).
+        // =========================
+        public int MainHandEnhancementLevel { get; set; } = 0;
+        public int OffHandEnhancementLevel { get; set; } = 0;
+        public int HelmetEnhancementLevel { get; set; } = 0;
+        public int BodyEnhancementLevel { get; set; } = 0;
+        public int LegsEnhancementLevel { get; set; } = 0;
+        public int GlovesEnhancementLevel { get; set; } = 0;
+        public int BootsEnhancementLevel { get; set; } = 0;
+        public int RingEnhancementLevel { get; set; } = 0;
+        public int AmuletEnhancementLevel { get; set; } = 0;
 
         // Cooldown for gear set swapping — prevents duplication exploits
         public DateTime? LastGearSwapAt { get; set; }

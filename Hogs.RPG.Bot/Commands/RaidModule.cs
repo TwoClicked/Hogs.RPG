@@ -109,16 +109,16 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         [SlashCommand("raid-start", "Open a raid lobby and choose your role")]
         public async Task RaidStart(
-            [Summary("tier", "Raid tier (1-5)")] int tier)
+            [Summary("tier", "Raid tier (1-6)")] int tier)
         {
             if (!await EnsureRaidChannelAsync()) return;
             await DeferAsync();
 
             if (!await EnsurePlayerAsync()) return;
 
-            if (tier < 1 || tier > 5)
+            if (tier < 1 || tier > 6)
             {
-                await FollowupAsync("❌ Invalid tier. Choose between 1 and 5.", ephemeral: true);
+                await FollowupAsync("❌ Invalid tier. Choose between 1 and 6.", ephemeral: true);
                 return;
             }
 
@@ -145,16 +145,16 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         [SlashCommand("raid-solo", "Start a solo raid — you play all 3 roles yourself")]
         public async Task RaidSolo(
-            [Summary("tier", "Raid tier (1-5)")] int tier)
+            [Summary("tier", "Raid tier (1-6)")] int tier)
         {
             if (!await EnsureRaidChannelAsync()) return;
             await DeferAsync();
 
             if (!await EnsurePlayerAsync()) return;
 
-            if (tier < 1 || tier > 5)
+            if (tier < 1 || tier > 6)
             {
-                await FollowupAsync("❌ Invalid tier. Choose between 1 and 5.", ephemeral: true);
+                await FollowupAsync("❌ Invalid tier. Choose between 1 and 6.", ephemeral: true);
                 return;
             }
 

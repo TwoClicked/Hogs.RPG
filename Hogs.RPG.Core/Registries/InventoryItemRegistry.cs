@@ -161,6 +161,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             { RaidKeyItems.FortressKey.Id, RaidKeyItems.FortressKey },
             { RaidKeyItems.CitadelKey.Id, RaidKeyItems.CitadelKey },
             { RaidKeyItems.WorldBossKey.Id, RaidKeyItems.WorldBossKey },
+            { RaidKeyItems.VoidforgeKey.Id, RaidKeyItems.VoidforgeKey },
 
                         // ===== Smithing Ores =====
             { OreItems.BronzeOre.Id,      OreItems.BronzeOre      },
@@ -216,6 +217,32 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
             { AlchemyPotionItems.ShadowSalve.Id,         AlchemyPotionItems.ShadowSalve         },
             { AlchemyPotionItems.VoidTincture.Id,        AlchemyPotionItems.VoidTincture        },
             { AlchemyPotionItems.DragonBlood.Id,         AlchemyPotionItems.DragonBlood         },
+
+            // ===== Enhancement Materials =====
+
+            { EnhancementItems.Blackstone.Id,  EnhancementItems.Blackstone  },
+            { EnhancementItems.CronStone.Id,   EnhancementItems.CronStone   },
+            { EnhancementItems.InfuseCrystal.Id, EnhancementItems.InfuseCrystal },
+
+            { EnhancementItems.HelmetUpgradePiece.Id,  EnhancementItems.HelmetUpgradePiece  },
+            { EnhancementItems.BodyUpgradePiece.Id,    EnhancementItems.BodyUpgradePiece    },
+            { EnhancementItems.LegsUpgradePiece.Id,    EnhancementItems.LegsUpgradePiece    },
+            { EnhancementItems.GlovesUpgradePiece.Id,  EnhancementItems.GlovesUpgradePiece  },
+            { EnhancementItems.BootsUpgradePiece.Id,   EnhancementItems.BootsUpgradePiece   },
+            { EnhancementItems.AmuletUpgradePiece.Id,  EnhancementItems.AmuletUpgradePiece  },
+            { EnhancementItems.RingUpgradePiece.Id,    EnhancementItems.RingUpgradePiece    },
+            { EnhancementItems.MainHandUpgradePiece.Id, EnhancementItems.MainHandUpgradePiece },
+            { EnhancementItems.OffHandUpgradePiece.Id, EnhancementItems.OffHandUpgradePiece },
+
+            { EnhancementItems.HelmetConcentratedBlackstone.Id,  EnhancementItems.HelmetConcentratedBlackstone  },
+            { EnhancementItems.BodyConcentratedBlackstone.Id,    EnhancementItems.BodyConcentratedBlackstone    },
+            { EnhancementItems.LegsConcentratedBlackstone.Id,    EnhancementItems.LegsConcentratedBlackstone    },
+            { EnhancementItems.GlovesConcentratedBlackstone.Id,  EnhancementItems.GlovesConcentratedBlackstone  },
+            { EnhancementItems.BootsConcentratedBlackstone.Id,   EnhancementItems.BootsConcentratedBlackstone   },
+            { EnhancementItems.AmuletConcentratedBlackstone.Id,  EnhancementItems.AmuletConcentratedBlackstone  },
+            { EnhancementItems.RingConcentratedBlackstone.Id,    EnhancementItems.RingConcentratedBlackstone    },
+            { EnhancementItems.MainHandConcentratedBlackstone.Id, EnhancementItems.MainHandConcentratedBlackstone },
+            { EnhancementItems.OffHandConcentratedBlackstone.Id, EnhancementItems.OffHandConcentratedBlackstone },
         };
     }
 }

@@ -274,6 +274,8 @@ namespace Hogs.RPG.Services.RaidServices
 
                 if (reward.ShardDropped)
                     description += $"💎 **Tier {reward.ShardTier} Relic Shard dropped!**\n";
+                if (reward.InfuseCrystalDropped)
+                    description += $"🔮 **Infuse Crystal dropped!**\n";
 
                 if (!string.IsNullOrEmpty(reward.LevelUpMessage))
                     description += $"{reward.LevelUpMessage}\n";
@@ -320,6 +322,8 @@ namespace Hogs.RPG.Services.RaidServices
 
                 if (reward.ShardDropped)
                     sb.Append($"\n  💎 **Tier {reward.ShardTier} Relic Shard dropped!**");
+                if (reward.InfuseCrystalDropped)
+                    sb.Append($"\n  🔮 **Infuse Crystal dropped!**");
 
                 sb.AppendLine();
             }

@@ -164,5 +164,56 @@ namespace Hogs.RPG.Core.GameData.Dungeons
             EnemyAttackScaling = 37,
             Boss = DungeonBosses.DungeonBosses.Gritch
         };
+
+        // =========================
+        // LEVEL 36 DUNGEON (NEW)
+        // =========================
+        public static readonly DungeonDefinition BonecarversDescent = new()
+        {
+            Id = "bonecarvers_descent",
+            Name = "Bonecarver's Descent",
+            RequiredLevel = 36,
+            Floors = 13,
+            BaseEnemyHealth = 520,
+            EnemyHealthScaling = 125,
+            BaseEnemyAttack = 320,
+            EnemyAttackScaling = 45,
+            Boss = DungeonBosses.DungeonBosses.VrathgarBonecarver,
+            RewardMultiplier = 2.0
+        };
+
+        // =========================
+        // LEVEL 38 DUNGEON (NEW)
+        // =========================
+        public static readonly DungeonDefinition WarcallersSiege = new()
+        {
+            Id = "warcallers_siege",
+            Name = "The Warcaller's Siege",
+            RequiredLevel = 38,
+            Floors = 14,
+            BaseEnemyHealth = 600,
+            EnemyHealthScaling = 145,
+            BaseEnemyAttack = 380,
+            EnemyAttackScaling = 52,
+            Boss = DungeonBosses.DungeonBosses.KaelgrimWarcaller,
+            RewardMultiplier = 3.0
+        };
+
+        // =========================
+        // LEVEL 40 DUNGEON (NEW)
+        // =========================
+        public static readonly DungeonDefinition AshenEnd = new()
+        {
+            Id = "ashen_end",
+            Name = "The Ashen End",
+            RequiredLevel = 40,
+            Floors = 15,
+            BaseEnemyHealth = 700,
+            EnemyHealthScaling = 170,
+            BaseEnemyAttack = 450,
+            EnemyAttackScaling = 60,
+            Boss = DungeonBosses.DungeonBosses.SkollAshenDevourer,
+            RewardMultiplier = 4.0
+        };
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Hogs.RPG.Core.Entities.PetObjects;
+using Hogs.RPG.Core.Enums.PlayerEnums;
 
 namespace Hogs.RPG.Core.Entities.DungeonObjects
 {
@@ -25,5 +26,14 @@ namespace Hogs.RPG.Core.Entities.DungeonObjects
 
         // Abilities
         public string BehaviorId { get; set; }
+
+        // =========================
+        // 🔨 UPGRADE PIECE DROP (Enhancement system)
+        // One slot is randomly picked from this list, then rolled against
+        // UpgradePieceDropChancePercent. At most one Upgrade Piece per
+        // clear — never independent per-slot rolls.
+        // =========================
+        public List<EquipmentSlot> UpgradePieceSlots { get; set; } = new();
+        public double UpgradePieceDropChancePercent { get; set; } = 0;
     }
 }
