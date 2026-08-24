@@ -8,6 +8,7 @@ using Hogs.RPG.Services.AlchemyServices;
 using Hogs.RPG.Services.AuctionServices;
 using Hogs.RPG.Services.ColosseumServices;
 using Hogs.RPG.Services.DungeonServices;
+using Hogs.RPG.Services.EnhancementServices;
 using Hogs.RPG.Services.Game;
 using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.GatheringServices;
@@ -79,6 +80,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<HealService>();
             services.AddScoped<StatService>();
             services.AddScoped<InventoryService>();
+            services.AddScoped<EnhancementService>();
             services.AddScoped<HuntService>();
             services.AddScoped<HunterStaminaService>();
             services.AddScoped<LevelService>();
