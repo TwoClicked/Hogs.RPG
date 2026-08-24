@@ -1,6 +1,7 @@
 ﻿using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.AchievementObjects;
 using Hogs.RPG.Core.Entities.PlayerObjects;
+using System.Linq;
 
 namespace Hogs.RPG.Core.GameData.Achievements
 {
