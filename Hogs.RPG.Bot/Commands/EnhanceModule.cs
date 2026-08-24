@@ -95,7 +95,7 @@ namespace Hogs.RPG.Bot.Commands
             embed.AddField("Progress",
                 $"{(string.IsNullOrEmpty(currentLabel) ? "Base" : currentLabel)} → **{targetLabel}**", false);
 
-            embed.AddField("🪨 Blackstones",
+            embed.AddField("<:BlackStone:1541556030855577650> Blackstones",
                 $"{preview.BlackstoneCost} needed — you have {preview.BlackstonesOwned}", true);
 
             if (preview.RequiresConcentratedBlackstone)
@@ -104,7 +104,7 @@ namespace Hogs.RPG.Bot.Commands
                     preview.HasConcentratedBlackstone ? "✅ Ready" : "❌ Missing — craft with `/enhance craft`", true);
             }
 
-            embed.AddField("💠 Cron Stones applied",
+            embed.AddField("<:Cronstone:1541556705052074074> Cron Stones applied",
                 $"{preview.CronStonesToUse} (+{preview.BonusSuccessPercent:0.##}%) — you have {preview.CronStonesOwned}", true);
 
             embed.AddField("🎯 Success Chance",

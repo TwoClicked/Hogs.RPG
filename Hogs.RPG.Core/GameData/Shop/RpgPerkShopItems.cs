@@ -174,7 +174,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Id = "rpg_cron_stone",
             Name = "Cron Stone",
             Description = "Adds +0.1% success chance to a single enhancement attempt.",
-            Icon = "💠",
+            Icon = "<:Cronstone:1541556705052074074>",
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
             Price = 2_500
@@ -185,7 +185,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Id = "rpg_blackstone",
             Name = "Blackstone",
             Description = "Consumed to attempt enhancing Global Boss Gear.",
-            Icon = "🪨",
+            Icon = "<:BlackStone:1541556030855577650>",
             Category = ShopCategory.RpgPerks,
             Type = ShopItemType.FixedPrice,
             Price = 250

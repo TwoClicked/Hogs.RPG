@@ -1879,7 +1879,7 @@ namespace Hogs.RPG.Services.TowerServices
                     await inventoryService.GiveItemAsync(p.DiscordId, EnhancementItems.Blackstone.Id, blackstonesEarned);
 
                 string status = p.CurrentHp <= 0 ? "💀 Fell" : "🏃 Survived";
-                string blackstoneText = blackstonesEarned > 0 ? $" | 🪨 +{blackstonesEarned} Blackstones" : "";
+                string blackstoneText = blackstonesEarned > 0 ? $" | <:BlackStone:1541556030855577650> +{blackstonesEarned} Blackstones" : "";
                 rewardLines.AppendLine($"{status} **{p.Username}** — 💰 +{gold} gold | ⭐ +{FlatXp} XP | 🐾 +{FlatPetXp} pet XP{blackstoneText}");
             }
 
