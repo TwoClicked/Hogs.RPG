@@ -153,7 +153,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "concentrated_blackstone_helmet",
             Name = "Concentrated Blackstone (Helmet)",
-            Icon = "<:ConcentratedBlackstone:1541557666390868128>", // placeholder
+            Icon = "<:ConcentratedBlackstone:1541557666390868128>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "Required to attempt enhancing a Helmet from +15 to PRI."
