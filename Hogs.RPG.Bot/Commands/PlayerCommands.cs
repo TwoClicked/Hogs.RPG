@@ -347,15 +347,12 @@ namespace Hogs.RPG.Bot.Commands
                 // Row 3
                 .AddField("💀 Deaths", $"{player.Deaths}\n{Rank(ranks.Deaths)}", true)
                 .AddField("🏕️ Trails", $"{player.TrailsCompleted}\n{Rank(ranks.Trails)}", true)
-                .AddField("🐾 Pet Power", petPowerValue, true)
+                .AddField("🔨 Enhance Attempts", $"{player.TotalEnhancementAttempts:N0}\n{Rank(ranks.EnhancementAttempts)}", true)
 
                 // Row 4
                 .AddField("⚒️ Smithing", $"Lv. {player.SmithingLevel}\n{Rank(ranks.SmithingLevel)}", true)
                 .AddField("🏆 Achievements", $"{player.AchievementCount}\n{Rank(ranks.AchievementCount)}", true)
-                .AddField("\ud83d\udcb8 Gold Spent", $"{player.TotalGoldSpent:N0}\n{Rank(ranks.GoldSpent)}", true)
-
-                // Row 5
-                .AddField("🔨 Enhance Attempts", $"{player.TotalEnhancementAttempts:N0}\n{Rank(ranks.EnhancementAttempts)}", true);
+                .AddField("\ud83d\udcb8 Gold Spent", $"{player.TotalGoldSpent:N0}\n{Rank(ranks.GoldSpent)}", true);
 
             await ModifyOriginalResponseAsync(msg =>
             {
