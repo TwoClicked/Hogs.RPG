@@ -29,6 +29,7 @@ namespace Hogs.RPG.Services
             int SoloTowerFloor,
             int DuoTowerFloor,
             int GoldSpent,
+            int EnhancementAttempts,
             int TotalPlayers
         );
 
@@ -139,6 +140,12 @@ namespace Hogs.RPG.Services
             => await _playerRepository.GetTopRaidsCompletedAsync(count);
 
         // =========================
+        // ⚔️ ENHANCE ATTEMPTS
+        // =========================
+        public async Task<List<Player>> GetTopEnhancementAttempts(int count = 5)
+    => await _playerRepository.GetTopEnhancementAttemptsAsync(count);
+
+        // =========================
         // 💥 BOSS DAMAGE
         // =========================
         public async Task<List<Player>> GetTopBossDamage(int count = 5)
@@ -190,6 +197,7 @@ namespace Hogs.RPG.Services
             var soloTowerRank = await _playerRepository.GetRankBySoloTowerFloorAsync(discordId);
             var duoTowerRank = await _playerRepository.GetRankByDuoTowerFloorAsync(discordId);
             var goldSpentRank = await _playerRepository.GetRankByGoldSpentAsync(discordId);
+            var enhancementAttemptsRank = await _playerRepository.GetRankByEnhancementAttemptsAsync(discordId);
 
             // Gear score rank — compute from buffered list (same as top-5 display)
             var allForGear = await _playerRepository.GetTopForGearScoreAsync(1000);
@@ -209,7 +217,7 @@ namespace Hogs.RPG.Services
             var myPet = petScores.FirstOrDefault(x => x.DiscordId == discordId);
             int petRank = myPet == default ? total : petScores.IndexOf(myPet) + 1;
 
-            return new PlayerRanks(goldRank, levelRank, gearRank, dungeonsRank, raidsRank, bossDmgRank, petRank, deathsRank, trailsRank, smithingRank, alchemistRank, achievementRank, soloTowerRank, duoTowerRank, goldSpentRank, total);
+            return new PlayerRanks(goldRank, levelRank, gearRank, dungeonsRank, raidsRank, bossDmgRank, petRank, deathsRank, trailsRank, smithingRank, alchemistRank, achievementRank, soloTowerRank, duoTowerRank, goldSpentRank, enhancementAttemptsRank, total);
         }
     }
 }

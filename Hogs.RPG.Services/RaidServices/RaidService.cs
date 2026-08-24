@@ -932,6 +932,10 @@ namespace Hogs.RPG.Services.RaidServices
                 player.LastRaidAt = DateTimeOffset.UtcNow.ToString("o");
                 player.RaidsCompleted++;
 
+                // 🏆 Achievement tracking
+                if (session.Tier == 6)
+                    player.ClearedT6Raid = true;
+
                 var todayUtc = DateTime.UtcNow.ToString("yyyy-MM-dd");
                 if (player.LastRaidDayReset != todayUtc)
                 {

@@ -63,6 +63,15 @@ namespace Hogs.RPG.Core.Entities.PlayerObjects
         public int RingEnhancementLevel { get; set; } = 0;
         public int AmuletEnhancementLevel { get; set; } = 0;
 
+        // 🏆 Achievement tracking for the enhancement system
+        public int TotalEnhancementAttempts { get; set; } = 0;
+        public int TotalBlackstonesSpentOnEnhancement { get; set; } = 0;
+        public int TotalConcentratedBlackstonesCrafted { get; set; } = 0;
+        public bool ClearedBonecarversDescent { get; set; } = false;
+        public bool ClearedWarcallersSiege { get; set; } = false;
+        public bool ClearedAshenEnd { get; set; } = false;
+        public bool ClearedT6Raid { get; set; } = false;
+
         // Cooldown for gear set swapping — prevents duplication exploits
         public DateTime? LastGearSwapAt { get; set; }
         // Date string of the last Trail Tonic drink — separate from the shop trail reset

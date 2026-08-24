@@ -22,7 +22,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "blackstone",
             Name = "Blackstone",
-            Icon = "🪨", // placeholder — swap for real custom emoji once uploaded
+            Icon = "<:BlackStone:1541556030855577650>",
             Type = "Enhancement",
             SubCategory = "Currency",
             Description = "Consumed to attempt enhancing Global Boss Gear. Cost scales with target level."
@@ -32,7 +32,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "cron_stone",
             Name = "Cron Stone",
-            Icon = "💠", // placeholder
+            Icon = "<:Cronstone:1541556705052074074>", 
             Type = "Enhancement",
             SubCategory = "Currency",
             Description = "Adds +0.1% success chance to a single enhancement attempt, capped at +25% per attempt."
@@ -44,7 +44,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "infuse_crystal",
             Name = "Infuse Crystal",
-            Icon = "🔮", // placeholder
+            Icon = "<:InfusedCrystal:1541557154828521523>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "Drops from the T6 raid. Combined with an Upgrade Piece to craft a Concentrated Blackstone."
@@ -58,7 +58,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "upgrade_piece_helmet",
             Name = "Upgrade Piece (Helmet)",
-            Icon = "🧩", // placeholder
+            Icon = "<:HelmUpgradePiece:1541563026086559824>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "A fragment of overseer craftsmanship. Required to push a Helmet past +15."
@@ -68,7 +68,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "upgrade_piece_body",
             Name = "Upgrade Piece (Body)",
-            Icon = "🧩",
+            Icon = "<:BodyUpgradePiece:1541563085637296238>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "A fragment of overseer craftsmanship. Required to push a Body piece past +15."
@@ -153,7 +153,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "concentrated_blackstone_helmet",
             Name = "Concentrated Blackstone (Helmet)",
-            Icon = "⬛", // placeholder
+            Icon = "<:ConcentratedBlackstone:1541557666390868128>", // placeholder
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "Required to attempt enhancing a Helmet from +15 to PRI."
@@ -163,7 +163,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "concentrated_blackstone_body",
             Name = "Concentrated Blackstone (Body)",
-            Icon = "⬛",
+            Icon = "<:ConcentratedBlackstone:1541557666390868128>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "Required to attempt enhancing a Body piece from +15 to PRI."
@@ -173,7 +173,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "concentrated_blackstone_legs",
             Name = "Concentrated Blackstone (Legs)",
-            Icon = "⬛",
+            Icon = "<:ConcentratedBlackstone:1541557666390868128>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "Required to attempt enhancing Legs from +15 to PRI."
@@ -183,7 +183,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "concentrated_blackstone_gloves",
             Name = "Concentrated Blackstone (Gloves)",
-            Icon = "⬛",
+            Icon = "<:ConcentratedBlackstone:1541557666390868128>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "Required to attempt enhancing Gloves from +15 to PRI."
@@ -203,7 +203,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "concentrated_blackstone_amulet",
             Name = "Concentrated Blackstone (Amulet)",
-            Icon = "⬛",
+            Icon = "<:ConcentratedBlackstone:1541557666390868128>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "Required to attempt enhancing an Amulet from +15 to PRI."
@@ -213,7 +213,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "concentrated_blackstone_ring",
             Name = "Concentrated Blackstone (Ring)",
-            Icon = "⬛",
+            Icon = "<:ConcentratedBlackstone:1541557666390868128>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "Required to attempt enhancing a Ring from +15 to PRI."
@@ -223,7 +223,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "concentrated_blackstone_mainhand",
             Name = "Concentrated Blackstone (Main Hand)",
-            Icon = "⬛",
+            Icon = "<:ConcentratedBlackstone:1541557666390868128>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "Required to attempt enhancing a Main Hand weapon from +15 to PRI."
@@ -233,7 +233,7 @@ namespace Hogs.RPG.Core.GameData.InventoryItems
         {
             Id = "concentrated_blackstone_offhand",
             Name = "Concentrated Blackstone (Off Hand)",
-            Icon = "⬛",
+            Icon = "<:ConcentratedBlackstone:1541557666390868128>",
             Type = "Enhancement",
             SubCategory = "Component",
             Description = "Required to attempt enhancing an Off Hand item from +15 to PRI."

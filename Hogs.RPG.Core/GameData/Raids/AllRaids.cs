@@ -138,15 +138,15 @@ namespace Hogs.RPG.Core.GameData.Raids
         public static readonly RaidDefinition Voidmaw = new()
         {
             Id = "raid_t6",
-            Name = "Voidmaw, the Sovereign Beyond",
-            Description = "Beyond the world-ending flames of Zarokh lies something that was never meant to wake. No relics survive its passage — only Infuse Crystals remain.",
+            Name = "The Demolisher",
+            Description = "His tolerance is extremely low. His patience is lower, He does not need a reason to destroy. Anything unfortunate enough to cross his path simply gives him one.",
             Tier = 6,
             RequiredLevel = 35,
-            ImageUrl = "", // TODO: add permanent image host
+            ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1541556716464898089/Demolisher.png?ex=6a8e0611&is=6a8cb491&hm=d8416bff34587b878a6dc73c80644df68dc1e42fe5f9598e48a557a177e2eb37&", // TODO: add permanent image host
 
-            HpMultiplier = 24f,
-            AttackMultiplier = 1.5f,
-            DefenseMultiplier = 0.9f,
+            HpMultiplier = 30f,
+            AttackMultiplier = 2f,
+            DefenseMultiplier = 1.5f,
             AggroSwapChance = 0.45f,
 
             AbilityPool = new List<BossAbilityType>

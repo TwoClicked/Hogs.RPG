@@ -255,21 +255,21 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
         // =========================
         public static readonly DungeonBossDefinition VrathgarBonecarver = new()
         {
-            Id = "vrathgar_bonecarver",
-            Name = "Vrathgar the Bonecarver",
-            Description = "A butcher of the deep mines, Vrathgar carves trophies from those who linger too long in his tunnels.",
+            Id = "dutchpunk_kong",
+            Name = "Dutchpunk Kong",
+            Description = "Monke",
 
             MaxHealth = 8000,
             Attack = 650,
             Defense = 140,
 
-            ImageUrl = "", // TODO: add permanent image host, not a Discord CDN link
+            ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1541552160922275950/image.png?ex=6a8e01d3&is=6a8cb053&hm=bd38945735cfe591f87635bc6a7c5b132e047664e7e331acdc7a1db634c033e8&", 
 
             BehaviorId = "bleeding_slam",
             AbilitiesText = "Every hit deepens a stacking bleed. Every 5th turn he winds up a crushing slam — watch for the warning.",
 
             UpgradePieceSlots = new List<EquipmentSlot> { EquipmentSlot.Helmet, EquipmentSlot.Body, EquipmentSlot.Legs },
-            UpgradePieceDropChancePercent = 10.0
+            UpgradePieceDropChancePercent = 1.5
         };
 
         // =========================
@@ -277,21 +277,21 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
         // =========================
         public static readonly DungeonBossDefinition KaelgrimWarcaller = new()
         {
-            Id = "kaelgrim_warcaller",
-            Name = "Kaelgrim the Warcaller",
-            Description = "His horn still echoes through the siege camp — every blast calls fresh reinforcements to his side.",
+            Id = "frau_truus",
+            Name = "Frau Truus",
+            Description = "The Clog-Clomping Baroness of the Sunken Mill",
 
             MaxHealth = 12000,
             Attack = 800,
             Defense = 170,
 
-            ImageUrl = "",
+            ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1541552118752878662/image.png?ex=6a8e01c9&is=6a8cb049&hm=9028976fe53501b2f356d5f60293f4159d8eaa4792016ac2acfc7ba1220d6595&",
 
             BehaviorId = "reinforced_berserk",
             AbilitiesText = "Reinforcements empower him every 3rd turn. At half health he abandons the call and goes berserk permanently.",
 
             UpgradePieceSlots = new List<EquipmentSlot> { EquipmentSlot.Gloves, EquipmentSlot.Boots, EquipmentSlot.Amulet },
-            UpgradePieceDropChancePercent = 5.0
+            UpgradePieceDropChancePercent = 1
         };
 
         // =========================
@@ -299,21 +299,21 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
         // =========================
         public static readonly DungeonBossDefinition SkollAshenDevourer = new()
         {
-            Id = "skoll_ashen_devourer",
-            Name = "Skoll, the Ashen Devourer",
-            Description = "A beast out of the old myths, chasing the last light of the world. It does not tire, and it does not stop.",
+            Id = "kevin",
+            Name = "Kevin",
+            Description = "The Fractured Terror",
 
             MaxHealth = 16000,
             Attack = 1000,
             Defense = 200,
 
-            ImageUrl = "",
+            ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1541552009495322725/image.png?ex=6a8e01af&is=6a8cb02f&hm=7e35ecd70eebed9775d84e4d07d07c440467057ebed4ed2077f311c435322760&",
 
             BehaviorId = "voidrift_tyrant",
             AbilitiesText = "Tears a rift through your defenses every 5th turn. Enrages permanently past turn 20. Executes hard below 30% health.",
 
             UpgradePieceSlots = new List<EquipmentSlot> { EquipmentSlot.Ring, EquipmentSlot.MainHand, EquipmentSlot.OffHand },
-            UpgradePieceDropChancePercent = 2.5
+            UpgradePieceDropChancePercent = 0.5
         };
     }
 }

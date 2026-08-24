@@ -187,6 +187,10 @@ namespace Hogs.RPG.Services.EnhancementServices
             if (requiresConcentrated)
                 await _inventoryService.TakeItemAsync(discordId, concentratedId, 1);
 
+            // 🏆 Count every attempt (success or fail) for achievement tracking
+            player.TotalEnhancementAttempts++;
+            player.TotalBlackstonesSpentOnEnhancement += blackstoneCost;
+
             // ===== Roll =====
             bool rollSucceeded = _random.NextDouble() * 100.0 < effectiveRate;
 
@@ -195,7 +199,6 @@ namespace Hogs.RPG.Services.EnhancementServices
             if (rollSucceeded)
             {
                 EnhancementSlotMap.SetEnhancementLevel(player, slot, targetLevel);
-                await _playerRepository.UpdatePlayerAsync(player);
             }
             else if (requiresConcentrated)
             {
@@ -205,6 +208,9 @@ namespace Hogs.RPG.Services.EnhancementServices
                 await _inventoryService.GiveItemAsync(discordId, upgradePieceId, 1);
                 upgradePieceRefunded = true;
             }
+
+            // Single save covering the level change (if any) and the counters above
+            await _playerRepository.UpdatePlayerAsync(player);
 
             return new EnhanceAttemptResult
             {
@@ -242,6 +248,13 @@ namespace Hogs.RPG.Services.EnhancementServices
 
             string concentratedId = EnhancementSlotMap.GetConcentratedBlackstoneItemId(slot);
             await _inventoryService.GiveItemAsync(discordId, concentratedId, 1);
+
+            var player = await _playerRepository.GetByDiscordIdAsync(discordId);
+            if (player != null)
+            {
+                player.TotalConcentratedBlackstonesCrafted++;
+                await _playerRepository.UpdatePlayerAsync(player);
+            }
 
             return (true, null);
         }

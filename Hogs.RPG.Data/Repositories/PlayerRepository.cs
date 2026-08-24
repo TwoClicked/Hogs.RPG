@@ -212,6 +212,24 @@ namespace Hogs.RPG.Data.Repositories
             return await _context.Players.CountAsync(p => p.RaidsCompleted > player.RaidsCompleted) + 1;
         }
 
+        public async Task<List<Player>> GetTopEnhancementAttemptsAsync(int count)
+        {
+            var players = await _context.Players
+                .OrderByDescending(p => p.TotalEnhancementAttempts)
+                .Take(count)
+                .ToListAsync();
+
+            foreach (var p in players) p.DeserializeBuffs();
+            return players;
+        }
+
+        public async Task<int> GetRankByEnhancementAttemptsAsync(ulong discordId)
+        {
+            var player = await GetByDiscordIdAsync(discordId);
+            if (player == null) return 0;
+            return await _context.Players.CountAsync(p => p.TotalEnhancementAttempts > player.TotalEnhancementAttempts) + 1;
+        }
+
         public async Task<int> GetRankByBossDamageAsync(ulong discordId)
         {
             var player = await GetByDiscordIdAsync(discordId);

@@ -559,9 +559,18 @@ namespace Hogs.RPG.Services.Game
                 }
             }
 
+            // 🏆 Achievement tracking — enhancement-gate dungeon clears
+            switch (session.DungeonId)
+            {
+                case "bonecarvers_descent": player.ClearedBonecarversDescent = true; break;
+                case "warcallers_siege": player.ClearedWarcallersSiege = true; break;
+                case "ashen_end": player.ClearedAshenEnd = true; break;
+            }
+
             await playerRepository.UpdatePlayerAsync(player);
 
             var achievementService = scope.ServiceProvider.GetRequiredService<AchievementService>();
+
             await achievementService.CheckAndAwardAsync(userId);
 
             var result = new DungeonResult

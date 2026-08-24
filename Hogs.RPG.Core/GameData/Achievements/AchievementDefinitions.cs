@@ -6,8 +6,19 @@ namespace Hogs.RPG.Core.GameData.Achievements
 {
     public static class AchievementDefinitions
     {
+
+        // Returns all 9 Global Boss Gear enhancement levels — used by the
+        // "any slot" / "all slots" Enhancement achievement conditions below.
+        private static int[] EnhancementLevels(Hogs.RPG.Core.Entities.PlayerObjects.Player p) => new[]
+        {
+            p.MainHandEnhancementLevel, p.OffHandEnhancementLevel, p.HelmetEnhancementLevel,
+            p.BodyEnhancementLevel, p.LegsEnhancementLevel, p.GlovesEnhancementLevel,
+            p.BootsEnhancementLevel, p.RingEnhancementLevel, p.AmuletEnhancementLevel
+        };
         public static readonly List<AchievementDefinition> All = new()
         {
+
+
             // =========================
             // ⚔️ DUNGEONS
             // =========================
@@ -174,6 +185,33 @@ namespace Hogs.RPG.Core.GameData.Achievements
             new() { Id = "tower_duo_25",   Name = "Dynamic Duo",           Icon = "🗼", Category = "Tower", Description = "Reach floor 25 in a duo Tower run.",    Condition = ctx => ctx.Player.BestDuoTowerFloor >= 25,   IsRetroactiveEligible = false },
             new() { Id = "tower_duo_50",   Name = "Unbreakable Bond",      Icon = "🗼", Category = "Tower", Description = "Reach floor 50 in a duo Tower run.",    Condition = ctx => ctx.Player.BestDuoTowerFloor >= 50,   IsRetroactiveEligible = false },
             new() { Id = "tower_duo_100",  Name = "Two at the Summit",     Icon = "🗼", Category = "Tower", Description = "Reach floor 100 in a duo Tower run.",   Condition = ctx => ctx.Player.BestDuoTowerFloor >= 100,  IsRetroactiveEligible = false },
+
+                        // ===== ENHANCEMENT =====
+            new() { Id = "enhance_first",   Name = "First Enhancement", Icon = "🔨", Category = "Enhancement", Description = "Enhance any Global Boss Gear slot to +1.",        Condition = ctx => EnhancementLevels(ctx.Player).Max() >= 1  },
+            new() { Id = "enhance_8",       Name = "Into the Grind",    Icon = "🔨", Category = "Enhancement", Description = "Reach +8 on any slot — the last guaranteed success.", Condition = ctx => EnhancementLevels(ctx.Player).Max() >= 8  },
+            new() { Id = "enhance_9",       Name = "Beyond the Guarantee", Icon = "🔨", Category = "Enhancement", Description = "Reach +9 on any slot — your first real gamble.", Condition = ctx => EnhancementLevels(ctx.Player).Max() >= 9  },
+            new() { Id = "enhance_15",      Name = "Fifteen and Rising", Icon = "🔨", Category = "Enhancement", Description = "Reach +15 on any slot.",                        Condition = ctx => EnhancementLevels(ctx.Player).Max() >= 15 },
+            new() { Id = "enhance_pri",     Name = "PRI'd",             Icon = "🔨", Category = "Enhancement", Description = "Reach PRI on any slot.",                        Condition = ctx => EnhancementLevels(ctx.Player).Max() >= 16 },
+            new() { Id = "enhance_tet",     Name = "TET'd Off",         Icon = "🔨", Category = "Enhancement", Description = "Reach TET on any slot.",                        Condition = ctx => EnhancementLevels(ctx.Player).Max() >= 19 },
+            new() { Id = "enhance_pen",     Name = "PEN Pal",           Icon = "🔨", Category = "Enhancement", Description = "Reach PEN — max enhancement — on any slot.",   Condition = ctx => EnhancementLevels(ctx.Player).Max() >= 20 },
+            new() { Id = "enhance_full_8",  Name = "Fully Loaded",      Icon = "🔨", Category = "Enhancement", Description = "Reach at least +8 on all 9 Global Boss Gear slots.", Condition = ctx => EnhancementLevels(ctx.Player).Min() >= 8  },
+            new() { Id = "enhance_full_pri", Name = "The Nine Pillars", Icon = "🔨", Category = "Enhancement", Description = "Reach PRI on all 9 slots.",                     Condition = ctx => EnhancementLevels(ctx.Player).Min() >= 16 },
+
+            new() { Id = "enhance_attempts_100", Name = "The Long Game",  Icon = "🔨", Category = "Enhancement", Description = "Make 100 enhancement attempts.",              Condition = ctx => ctx.Player.TotalEnhancementAttempts >= 100, IsRetroactiveEligible = false },
+            new() { Id = "enhance_blackstones_1000", Name = "Blackstone Sink", Icon = "🔨", Category = "Enhancement", Description = "Spend 1,000 total Blackstones on enhancement attempts.", Condition = ctx => ctx.Player.TotalBlackstonesSpentOnEnhancement >= 1000, IsRetroactiveEligible = false },
+            new() { Id = "enhance_concentrated_1", Name = "Crystal Clear", Icon = "🔨", Category = "Enhancement", Description = "Craft your first Concentrated Blackstone.",    Condition = ctx => ctx.Player.TotalConcentratedBlackstonesCrafted >= 1, IsRetroactiveEligible = false },
+
+            // ===== NEW DUNGEONS =====
+            new() { Id = "dungeon_bonecarver", Name = "Bonecarver's Bane", Icon = "⚔️", Category = "Dungeons", Description = "Clear Bonecarver's Descent (Lv36).",  Condition = ctx => ctx.Player.ClearedBonecarversDescent, IsRetroactiveEligible = false },
+            new() { Id = "dungeon_warcaller",  Name = "Siegebreaker",      Icon = "⚔️", Category = "Dungeons", Description = "Clear the Warcaller's Siege (Lv38).", Condition = ctx => ctx.Player.ClearedWarcallersSiege,    IsRetroactiveEligible = false },
+            new() { Id = "dungeon_ashen_end",  Name = "Into the Ashes",    Icon = "⚔️", Category = "Dungeons", Description = "Clear the Ashen End (Lv40).",         Condition = ctx => ctx.Player.ClearedAshenEnd,           IsRetroactiveEligible = false },
+            new() { Id = "dungeon_gauntlet",   Name = "The Full Gauntlet", Icon = "⚔️", Category = "Dungeons", Description = "Clear all three enhancement-gate dungeons.", Condition = ctx => ctx.Player.ClearedBonecarversDescent && ctx.Player.ClearedWarcallersSiege && ctx.Player.ClearedAshenEnd, IsRetroactiveEligible = false },
+
+            // ===== T6 RAID =====
+            new() { Id = "raid_t6_clear", Name = "Beyond the Worldburn", Icon = "⚔️", Category = "Raids", Description = "Clear a Tier 6 Raid.", Condition = ctx => ctx.Player.ClearedT6Raid, IsRetroactiveEligible = false },
+
+            // ===== LEGEND =====
+            new() { Id = "enhance_perfection", Name = "Absolute Perfection", Icon = "🌟", Category = "Legend", Description = "Reach PEN on all 9 Global Boss Gear slots.", Condition = ctx => EnhancementLevels(ctx.Player).Min() == 20 },
         };
     }
 }
