@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Hogs.RPG.Core.Entities;
 using Hogs.RPG.Core.Entities.PetObjects;
 using Hogs.RPG.Core.Entities.RaidObjects;
+using Hogs.RPG.Core.Entities.EnhancementObjects;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.Enums.BossEnums;
 using Hogs.RPG.Core.Enums.RaidEnums;

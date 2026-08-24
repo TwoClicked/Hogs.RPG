@@ -1,6 +1,6 @@
 ﻿using Hogs.RPG.Core.Enums;
 
-namespace Hogs.RPG.Services.RaidServices
+namespace Hogs.RPG.Core.Entities.RaidObjects
 {
     public class RaidReward
     {
@@ -11,6 +11,9 @@ namespace Hogs.RPG.Services.RaidServices
         public int PetXp { get; set; }
         public bool ShardDropped { get; set; }
         public int ShardTier { get; set; }
+
+        // T6 only — no relics on T6, Infuse Crystal replaces the shard roll
+        public bool InfuseCrystalDropped { get; set; }
         public string LevelUpMessage { get; set; } = "";
 
         // Potion settlement at raid end
