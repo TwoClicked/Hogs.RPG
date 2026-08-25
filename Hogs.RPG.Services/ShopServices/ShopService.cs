@@ -35,10 +35,13 @@ namespace Hogs.RPG.Services.ShopServices
             _petService = petService;
         }
 
-        public async Task<(bool success, string message)> BuyAsync(ulong userId, string itemId, SocketGuild guild)
+        public async Task<(bool success, string message)> BuyAsync(ulong userId, string itemId, SocketGuild guild, int quantity = 1)
         {
             if (!ShopRegistry.All.TryGetValue(itemId, out var item))
                 return (false, "Item not found.");
+
+            if (quantity < 1)
+                quantity = 1;
 
             if (item.RequiredRoleId.HasValue)
             {
@@ -56,8 +59,10 @@ namespace Hogs.RPG.Services.ShopServices
             if (player == null)
                 return (false, "You need to start your adventure first.");
 
-            if (player.Gold < item.Price)
-                return (false, $"❌ You need **{item.Price:N0} gold** but only have **{player.Gold:N0}**.");
+            long totalPrice = (long)item.Price * quantity;
+
+            if (player.Gold < totalPrice)
+                return (false, $"❌ You need **{totalPrice:N0} gold** but only have **{player.Gold:N0}**.");
 
             // Trail reset — enforce once per day before charging gold
             if (itemId == "rpg_trail_reset")
@@ -70,8 +75,8 @@ namespace Hogs.RPG.Services.ShopServices
                     return (false, "❌ You haven't used any trails today — no need to reset.");
             }
 
-            player.Gold -= item.Price;
-            player.TotalGoldSpent += item.Price;
+            player.Gold -= (int)totalPrice;
+            player.TotalGoldSpent += (int)totalPrice;
             await playerRepo.UpdatePlayerAsync(player);
 
             // Declare before use
@@ -82,25 +87,28 @@ namespace Hogs.RPG.Services.ShopServices
                 || item.Category == ShopCategory.RpgResets
                 || item.Category == ShopCategory.RpgEnhance;
 
+            string logName = quantity > 1 ? $"{item.Name} x{quantity}" : item.Name;
+
             // Log purchase — mark as fulfilled immediately for instant perks
             await shopRepo.AddPurchaseAsync(new ShopPurchase
             {
                 BuyerDiscordId = userId,
                 ItemId = item.Id,
-                ItemName = item.Name,
-                GoldPaid = item.Price,
+                ItemName = logName,
+                GoldPaid = (int)totalPrice,
                 IsFulfilled = isInstant,
                 FulfilledAt = isInstant ? DateTime.UtcNow : null
             });
 
             if (isInstant)
-                await ApplyRpgPerkAsync(userId, itemId, playerRepo);
+                await ApplyRpgPerkAsync(userId, itemId, playerRepo, quantity);
 
-            await PostPurchaseFeedAsync(userId, item, isInstant);
+            await PostPurchaseFeedAsync(userId, item, isInstant, quantity);
 
+            string qtyLabel = quantity > 1 ? $"{quantity}x " : "";
             string confirmation = isInstant
-                ? $"✅ You purchased **{item.Icon} {item.Name}** for **{item.Price:N0} gold**!\nYour perk has been applied."
-                : $"✅ You purchased **{item.Icon} {item.Name}** for **{item.Price:N0} gold**!\nAn admin will fulfil your order soon.";
+                ? $"✅ You purchased **{item.Icon} {qtyLabel}{item.Name}** for **{totalPrice:N0} gold**!\nYour perk has been applied."
+                : $"✅ You purchased **{item.Icon} {qtyLabel}{item.Name}** for **{totalPrice:N0} gold**!\nAn admin will fulfil your order soon.";
 
             return (true, confirmation);
         }
@@ -370,16 +378,18 @@ namespace Hogs.RPG.Services.ShopServices
         // =========================
         // FEED: PURCHASE
         // =========================
-        private async Task PostPurchaseFeedAsync(ulong userId, ShopItemDefinition item, bool isInstant)
+        private async Task PostPurchaseFeedAsync(ulong userId, ShopItemDefinition item, bool isInstant, int quantity = 1)
         {
             var channel = _client.GetChannel(_feedChannelId) as IMessageChannel;
             if (channel == null) return;
 
             var footer = isInstant ? "✅ Applied instantly" : "⏳ Pending admin fulfilment";
+            var qtyLabel = quantity > 1 ? $"{quantity}x " : "";
+            var totalPrice = (long)item.Price * quantity;
 
             var embed = new EmbedBuilder()
                 .WithTitle("🛒 Shop Purchase")
-                .WithDescription($"<@{userId}> purchased **{item.Icon} {item.Name}** for **{item.Price:N0} gold**.")
+                .WithDescription($"<@{userId}> purchased **{item.Icon} {qtyLabel}{item.Name}** for **{totalPrice:N0} gold**.")
                 .WithColor(Color.Gold)
                 .WithFooter(footer)
                 .Build();
@@ -428,8 +438,8 @@ namespace Hogs.RPG.Services.ShopServices
         // =========================
         // RPG PERK INSTANT DELIVERY
         // =========================
-        private async Task ApplyRpgPerkAsync(ulong userId, string itemId, PlayerRepository playerRepo)
-        {
+        private async Task ApplyRpgPerkAsync(ulong userId, string itemId, PlayerRepository playerRepo, int quantity = 1)
+            {
             var player = await playerRepo.GetByDiscordIdAsync(userId);
             if (player == null) return;
 
@@ -599,9 +609,6 @@ namespace Hogs.RPG.Services.ShopServices
                     await playerRepo.UpdatePlayerAsync(player);
                     break;
 
-                // =========================
-                // 🔨 CRON STONE
-                // =========================
                 case "rpg_cron_stone":
                     using (var scope = _scopeFactory.CreateScope())
                     {

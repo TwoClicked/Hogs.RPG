@@ -282,8 +282,8 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
             Description = "The Clog-Clomping Baroness of the Sunken Mill",
 
             MaxHealth = 15000,
-            Attack = 1200,
-            Defense = 270,
+            Attack = 1400,
+            Defense = 400,
 
             ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1541552118752878662/image.png?ex=6a8e01c9&is=6a8cb049&hm=9028976fe53501b2f356d5f60293f4159d8eaa4792016ac2acfc7ba1220d6595&",
 
@@ -305,7 +305,7 @@ namespace Hogs.RPG.Core.GameData.DungeonBosses
 
             MaxHealth = 26000,
             Attack = 1750,
-            Defense = 400,
+            Defense = 500,
 
             ImageUrl = "https://cdn.discordapp.com/attachments/1482007805513699358/1541552009495322725/image.png?ex=6a8e01af&is=6a8cb02f&hm=7e35ecd70eebed9775d84e4d07d07c440467057ebed4ed2077f311c435322760&",
 
