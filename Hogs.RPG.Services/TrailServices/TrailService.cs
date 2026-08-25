@@ -544,7 +544,7 @@ namespace Hogs.RPG.Services.TrailServices
                     itemId = "trail_pet_snack";
                     break;
 
-                case "raid_key":
+                case "raidkey":
                     cost = itemId switch
                     {
                         "raid_key_t1" or "raid_key_t2" or "raid_key_t3" => 200,

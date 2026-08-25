@@ -99,13 +99,15 @@ namespace Hogs.RPG.Bot.Commands
                     "⚔️ **Gear** — Hunter's gear set pieces (shop exclusive)\n" +
                     "🧱 **Craft** — Hunt craft materials in bulk\n" +
                     "★ **Rare** — Rare hunt materials\n" +
-                    "🐾 **Snacks** — Pet snack for your companion");
+                    "🐾 **Snacks** — Pet snack for your companion\n" +
+                    "🗝️ **Raid Keys** — Skip the crafting bench");
 
             var components = new ComponentBuilder()
                 .WithButton("⚔️ Gear", "trail_shop_gear_0", ButtonStyle.Primary, row: 0)
                 .WithButton("🧱 Craft", "trail_shop_craft_0", ButtonStyle.Secondary, row: 0)
                 .WithButton("★ Rare", "trail_shop_rare_0", ButtonStyle.Secondary, row: 0)
-                .WithButton("🐾 Snacks", "trail_shop_snack_0", ButtonStyle.Secondary, row: 0);
+                .WithButton("🐾 Snacks", "trail_shop_snack_0", ButtonStyle.Secondary, row: 0)
+                .WithButton("🗝️ Raid Keys", "trail_shop_raidkey_0", ButtonStyle.Secondary, row: 1);
 
             await FollowupAsync(embed: embed.Build(), components: components.Build(), ephemeral: true);
         }
