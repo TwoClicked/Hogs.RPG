@@ -124,76 +124,6 @@ namespace Hogs.RPG.Bot.Commands
             await FollowupAsync(embed: embed.Build(), components: components.Build(), ephemeral: true);
         }
 
-        [ComponentInteraction("enhance_confirm:*:*")]
-        public async Task ConfirmEnhance(string slot, string cronstonesStr)
-        {
-            if (Context.Interaction is not SocketMessageComponent component)
-                return;
-
-            // Strip the buttons immediately so a second click has nothing to fire —
-            // same anti-double-click pattern used by equip_confirm.
-            await component.UpdateAsync(msg =>
-            {
-                msg.Content = "⏳ Rolling...";
-                msg.Embed = null;
-                msg.Components = new ComponentBuilder().Build();
-            });
-
-            if (!Enum.TryParse<EquipmentSlot>(slot, out var equipSlot) || !int.TryParse(cronstonesStr, out int cronstones))
-            {
-                await component.ModifyOriginalResponseAsync(msg => msg.Content = "⚠️ Something went wrong reading that attempt.");
-                return;
-            }
-
-            var result = await _enhancementService.AttemptEnhanceAsync(Context.User.Id, equipSlot, cronstones);
-
-            if (!result.Success)
-            {
-                await component.ModifyOriginalResponseAsync(msg => msg.Content = $"⚠️ {result.FailureReason}");
-                return;
-            }
-
-            string previousLabel = EnhancementLevelLabels.GetLabel(result.PreviousLevel);
-            string newLabel = EnhancementLevelLabels.GetLabel(result.NewLevel);
-
-            string resultText;
-            if (result.RollSucceeded)
-            {
-                var (atk, def, hp) = EnhancementStatGains.GetGainForLevel(result.NewLevel);
-                resultText =
-                    $"✅ **Success!** {SlotLabel(equipSlot)} is now **{newLabel}**!\n" +
-                    $"+{atk} ATK / +{def} DEF / +{hp} HP\n\n" +
-                    $"Spent {result.BlackstonesSpent} Blackstones" +
-                    (result.CronStonesSpent > 0 ? $", {result.CronStonesSpent} Cron Stones" : "") +
-                    (result.ConcentratedBlackstoneConsumed ? ", 1 Concentrated Blackstone" : "") + ".";
-            }
-            else
-            {
-                resultText =
-                    $"❌ **Failed.** {SlotLabel(equipSlot)} remains at {(string.IsNullOrEmpty(previousLabel) ? "Base" : previousLabel)}.\n\n" +
-                    $"Spent {result.BlackstonesSpent} Blackstones" +
-                    (result.CronStonesSpent > 0 ? $", {result.CronStonesSpent} Cron Stones" : "") +
-                    (result.ConcentratedBlackstoneConsumed ? ", 1 Concentrated Blackstone" : "") + "." +
-                    (result.UpgradePieceRefunded ? "\n🧩 Your Upgrade Piece has been refunded." : "");
-            }
-
-            await component.ModifyOriginalResponseAsync(msg => msg.Content = resultText);
-        }
-
-        [ComponentInteraction("enhance_cancel")]
-        public async Task CancelEnhance()
-        {
-            if (Context.Interaction is SocketMessageComponent component)
-            {
-                await component.UpdateAsync(msg =>
-                {
-                    msg.Content = "❌ Enhancement cancelled.";
-                    msg.Embed = null;
-                    msg.Components = new ComponentBuilder().Build();
-                });
-            }
-        }
-
         // =========================
         // BAG
         // =========================
@@ -280,6 +210,108 @@ namespace Hogs.RPG.Bot.Commands
                 .WithButton("❌ Cancel", "enhance_cancel", ButtonStyle.Secondary);
 
             await FollowupAsync(embed: embed.Build(), components: components.Build(), ephemeral: true);
+        }
+    }
+
+    // =========================
+    // ENHANCE INTERACTION MODULE
+    // Component interactions must NOT be in a [Group] module — this is
+    // why Confirm/Cancel buttons weren't firing. Same split TrailModule
+    // already uses (TrailModule + TrailInteractionModule).
+    // =========================
+    public class EnhanceInteractionModule : InteractionModuleBase<SocketInteractionContext>
+    {
+        private readonly EnhancementService _enhancementService;
+
+        public EnhanceInteractionModule(EnhancementService enhancementService)
+        {
+            _enhancementService = enhancementService;
+        }
+
+        private static readonly Dictionary<EquipmentSlot, (string Icon, string Name)> SlotDisplay = new()
+        {
+            { EquipmentSlot.MainHand, ("🗡", "Main Hand") },
+            { EquipmentSlot.OffHand, ("🏹", "Off Hand") },
+            { EquipmentSlot.Helmet, ("🪖", "Helmet") },
+            { EquipmentSlot.Body, ("🛡", "Body") },
+            { EquipmentSlot.Legs, ("👖", "Legs") },
+            { EquipmentSlot.Gloves, ("🧤", "Gloves") },
+            { EquipmentSlot.Boots, ("🥾", "Boots") },
+            { EquipmentSlot.Ring, ("💍", "Ring") },
+            { EquipmentSlot.Amulet, ("📿", "Amulet") }
+        };
+
+        private static string SlotLabel(EquipmentSlot slot) =>
+            $"{SlotDisplay[slot].Icon} {SlotDisplay[slot].Name}";
+
+        [ComponentInteraction("enhance_confirm:*:*")]
+        public async Task ConfirmEnhance(string slot, string cronstonesStr)
+        {
+            if (Context.Interaction is not SocketMessageComponent component)
+                return;
+
+            // Strip the buttons immediately so a second click has nothing to fire —
+            // same anti-double-click pattern used by equip_confirm.
+            await component.UpdateAsync(msg =>
+            {
+                msg.Content = "⏳ Rolling...";
+                msg.Embed = null;
+                msg.Components = new ComponentBuilder().Build();
+            });
+
+            if (!Enum.TryParse<EquipmentSlot>(slot, out var equipSlot) || !int.TryParse(cronstonesStr, out int cronstones))
+            {
+                await component.ModifyOriginalResponseAsync(msg => msg.Content = "⚠️ Something went wrong reading that attempt.");
+                return;
+            }
+
+            var result = await _enhancementService.AttemptEnhanceAsync(Context.User.Id, equipSlot, cronstones);
+
+            if (!result.Success)
+            {
+                await component.ModifyOriginalResponseAsync(msg => msg.Content = $"⚠️ {result.FailureReason}");
+                return;
+            }
+
+            string previousLabel = EnhancementLevelLabels.GetLabel(result.PreviousLevel);
+            string newLabel = EnhancementLevelLabels.GetLabel(result.NewLevel);
+
+            string resultText;
+            if (result.RollSucceeded)
+            {
+                var (atk, def, hp) = EnhancementStatGains.GetGainForLevel(result.NewLevel);
+                resultText =
+                    $"✅ **Success!** {SlotLabel(equipSlot)} is now **{newLabel}**!\n" +
+                    $"+{atk} ATK / +{def} DEF / +{hp} HP\n\n" +
+                    $"Spent {result.BlackstonesSpent} Blackstones" +
+                    (result.CronStonesSpent > 0 ? $", {result.CronStonesSpent} Cron Stones" : "") +
+                    (result.ConcentratedBlackstoneConsumed ? ", 1 Concentrated Blackstone" : "") + ".";
+            }
+            else
+            {
+                resultText =
+                    $"❌ **Failed.** {SlotLabel(equipSlot)} remains at {(string.IsNullOrEmpty(previousLabel) ? "Base" : previousLabel)}.\n\n" +
+                    $"Spent {result.BlackstonesSpent} Blackstones" +
+                    (result.CronStonesSpent > 0 ? $", {result.CronStonesSpent} Cron Stones" : "") +
+                    (result.ConcentratedBlackstoneConsumed ? ", 1 Concentrated Blackstone" : "") + "." +
+                    (result.UpgradePieceRefunded ? "\n🧩 Your Upgrade Piece has been refunded." : "");
+            }
+
+            await component.ModifyOriginalResponseAsync(msg => msg.Content = resultText);
+        }
+
+        [ComponentInteraction("enhance_cancel")]
+        public async Task CancelEnhance()
+        {
+            if (Context.Interaction is SocketMessageComponent component)
+            {
+                await component.UpdateAsync(msg =>
+                {
+                    msg.Content = "❌ Enhancement cancelled.";
+                    msg.Embed = null;
+                    msg.Components = new ComponentBuilder().Build();
+                });
+            }
         }
 
         [ComponentInteraction("enhance_craft_confirm:*")]
