@@ -88,7 +88,7 @@ public class LeaderboardUpdater
         var dungeons = await service.GetTopDungeonRuns(5);
         var raids = await service.GetTopRaidsCompleted(5);
         var bossDmg = await service.GetTopBossDamage(5);
-        var petGear = await service.GetTopPetGearScore(5);
+        var enhanceAttempts = await service.GetTopEnhancementAttempts(5);
         var deaths = await service.GetTopDeaths(5);
         var trails = await service.GetTopTrails(5);
         var smithing = await service.GetTopSmithingLevel(5);
@@ -117,7 +117,7 @@ public class LeaderboardUpdater
         embed.AddField("💥 Boss Damage", FormatBossDmg(bossDmg), true);
 
         // Row 3
-        embed.AddField("🐾 Pet Power", FormatPetGear(petGear), true);
+        embed.AddField("🔨 Enhance Attempts", FormatEnhanceAttempts(enhanceAttempts), true);
         embed.AddField("💀 Deaths", FormatDeaths(deaths), true);
         embed.AddField("🏕️ Trails", FormatTrails(trails), true);
 
@@ -217,16 +217,11 @@ public class LeaderboardUpdater
             $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.TotalBossDamage:N0}**"));
     }
 
-    private string FormatPetGear(List<(Player player, Hogs.RPG.Core.Entities.PlayerPet pet, int score)> data)
+    private string FormatEnhanceAttempts(List<Player> players)
     {
-        if (!data.Any()) return "*No data yet*";
-        return string.Join("\n", data.Select((x, i) =>
-        {
-            PetDefinition petDef = null;
-            Hogs.RPG.Core.GameData.Registries.PetRegistry.All.TryGetValue(x.pet.PetId, out petDef);
-            var petName = x.pet.CustomName ?? petDef?.Name ?? "Unknown";
-            return $"{GetMedal(i + 1)} {GetDisplayName(x.player.DiscordId, x.player.Username)} ({petName}) — **{x.score}**";
-        }));
+        if (!players.Any()) return "*No data yet*";
+        return string.Join("\n", players.Select((p, i) =>
+            $"{GetMedal(i + 1)} {GetDisplayName(p.DiscordId, p.Username)} — **{p.TotalEnhancementAttempts:N0}**"));
     }
 
     private string FormatDeaths(List<Player> players)
