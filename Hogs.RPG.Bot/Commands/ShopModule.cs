@@ -46,7 +46,7 @@ namespace Hogs.RPG.Bot.Commands
         public async Task Shop()
         {
             await DeferAsync(ephemeral: true);
-            await ShowCategory(ShopCategory.VikingRiseResources);
+            await ShowCategory(ShopCategory.RpgPerks);
         }
 
         // =========================
@@ -164,7 +164,7 @@ namespace Hogs.RPG.Bot.Commands
                 .Build();
 
             var components = new ComponentBuilder()
-                .WithButton("🔙 Back to Shop", "shop_tab_VikingRiseResources", ButtonStyle.Secondary)
+                .WithButton("🔙 Back to Shop", "shop_tab_RpgPerks", ButtonStyle.Secondary)
                 .Build();
 
             await ModifyOriginalResponseAsync(m =>
@@ -181,7 +181,7 @@ namespace Hogs.RPG.Bot.Commands
         public async Task Cancel()
         {
             await DeferAsync();
-            await ShowCategory(ShopCategory.VikingRiseResources);
+            await ShowCategory(ShopCategory.RpgPerks);
         }
 
         // =========================
@@ -507,14 +507,14 @@ namespace Hogs.RPG.Bot.Commands
                 .Build();
 
             var builder = new ComponentBuilder()
-                .WithButton("⚔️ VR Resources", "shop_tab_VikingRiseResources",
-                    category == ShopCategory.VikingRiseResources ? ButtonStyle.Primary : ButtonStyle.Secondary, row: 0)
-                .WithButton("🏆 VR Ranks", "shop_tab_VikingRiseRanks",
-                    category == ShopCategory.VikingRiseRanks ? ButtonStyle.Primary : ButtonStyle.Secondary, row: 0)
                 .WithButton("🎭 Discord", "shop_tab_DiscordRewards",
                     category == ShopCategory.DiscordRewards ? ButtonStyle.Primary : ButtonStyle.Secondary, row: 0)
                 .WithButton("🎮 RPG Perks", "shop_tab_RpgPerks",
-                    category == ShopCategory.RpgPerks ? ButtonStyle.Primary : ButtonStyle.Secondary, row: 0);
+                    category == ShopCategory.RpgPerks ? ButtonStyle.Primary : ButtonStyle.Secondary, row: 0)
+                .WithButton("🔄 Resets", "shop_tab_RpgResets",
+                    category == ShopCategory.RpgResets ? ButtonStyle.Primary : ButtonStyle.Secondary, row: 0)
+                .WithButton("🔨 Enhance Items", "shop_tab_RpgEnhance",
+                    category == ShopCategory.RpgEnhance ? ButtonStyle.Primary : ButtonStyle.Secondary, row: 0);
 
             int row = 1;
             int count = 0;
@@ -527,7 +527,7 @@ namespace Hogs.RPG.Bot.Commands
                 if (count > 0 && count % 5 == 0)
                     row++;
 
-                if (row > 3) break;
+                if (row > 4) break;
 
                 if (item.Type == ShopItemType.Auction)
                 {

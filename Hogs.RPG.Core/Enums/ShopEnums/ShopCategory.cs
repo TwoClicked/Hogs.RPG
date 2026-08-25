@@ -11,6 +11,8 @@ namespace Hogs.RPG.Core.Enums.ShopEnums
         VikingRiseResources,
         VikingRiseRanks,
         DiscordRewards,
-        RpgPerks
+        RpgPerks,
+        RpgResets,
+        RpgEnhance
     }
 }

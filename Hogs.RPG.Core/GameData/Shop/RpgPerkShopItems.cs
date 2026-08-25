@@ -104,13 +104,15 @@ namespace Hogs.RPG.Core.GameData.Shop
             Price = 1_500
         };
 
+        // ===== RESETS =====
+
         public static readonly ShopItemDefinition DungeonReset = new()
         {
             Id = "rpg_dungeon_reset",
             Name = "Dungeon Reset",
             Description = "Clear your dungeon cooldown and enter again immediately.",
             Icon = "🏰",
-            Category = ShopCategory.RpgPerks,
+            Category = ShopCategory.RpgResets,
             Type = ShopItemType.FixedPrice,
             Price = 3_000
         };
@@ -121,7 +123,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Name = "Pet Dungeon Reset",
             Description = "Clear your pet dungeon cooldown and enter again immediately.",
             Icon = "🐾",
-            Category = ShopCategory.RpgPerks,
+            Category = ShopCategory.RpgResets,
             Type = ShopItemType.FixedPrice,
             Price = 3_000
         };
@@ -132,7 +134,7 @@ namespace Hogs.RPG.Core.GameData.Shop
             Name = "Raid Cooldown Reset",
             Description = "Grants 1 additional raid attempt for today.",
             Icon = "⚔️",
-            Category = ShopCategory.RpgPerks,
+            Category = ShopCategory.RpgResets,
             Type = ShopItemType.FixedPrice,
             Price = 6_000
         };
@@ -143,17 +145,18 @@ namespace Hogs.RPG.Core.GameData.Shop
             Name = "Trail Reset",
             Description = "Reset your 3 daily trails instantly. Once per day.",
             Icon = "🏃",
-            Category = ShopCategory.RpgPerks,
+            Category = ShopCategory.RpgResets,
             Type = ShopItemType.FixedPrice,
             Price = 5_000
         };
+
         public static readonly ShopItemDefinition SoloTowerReset = new()
         {
             Id = "rpg_solo_tower_reset",
             Name = "Tower reset - Solo",
             Description = "Grants 1 additional solo tower of doom attempt for today.",
             Icon = "🗼",
-            Category = ShopCategory.RpgPerks,
+            Category = ShopCategory.RpgResets,
             Type = ShopItemType.FixedPrice,
             Price = 3_000
         };
@@ -164,18 +167,31 @@ namespace Hogs.RPG.Core.GameData.Shop
             Name = "Tower reset - Duo",
             Description = "Grants 1 additional duo tower of doom attempt for today.",
             Icon = "🗼",
-            Category = ShopCategory.RpgPerks,
+            Category = ShopCategory.RpgResets,
             Type = ShopItemType.FixedPrice,
             Price = 3_000
         };
+
+        public static readonly ShopItemDefinition SoloRaidReset = new()
+        {
+            Id = "rpg_solo_raid_reset",
+            Name = "Solo Raid Cooldown Reset",
+            Description = "Grants 1 additional solo raid attempt for today.",
+            Icon = "⚔️",
+            Category = ShopCategory.RpgResets,
+            Type = ShopItemType.FixedPrice,
+            Price = 6_000
+        };
+
+        // ===== ENHANCEMENT ITEMS =====
 
         public static readonly ShopItemDefinition CronStone = new()
         {
             Id = "rpg_cron_stone",
             Name = "Cron Stone",
             Description = "Adds +0.1% success chance to a single enhancement attempt.",
-            Icon = "<:Cronstone:1541556705052074074>",
-            Category = ShopCategory.RpgPerks,
+            Icon = "💠",
+            Category = ShopCategory.RpgEnhance,
             Type = ShopItemType.FixedPrice,
             Price = 2_500
         };
@@ -185,22 +201,10 @@ namespace Hogs.RPG.Core.GameData.Shop
             Id = "rpg_blackstone",
             Name = "Blackstone",
             Description = "Consumed to attempt enhancing Global Boss Gear.",
-            Icon = "<:BlackStone:1541556030855577650>",
-            Category = ShopCategory.RpgPerks,
+            Icon = "🪨",
+            Category = ShopCategory.RpgEnhance,
             Type = ShopItemType.FixedPrice,
             Price = 250
         };
-
-        public static readonly ShopItemDefinition SoloRaidReset = new()
-        {
-            Id = "rpg_solo_raid_reset",
-            Name = "Solo Raid Cooldown Reset",
-            Description = "Grants 1 additional solo raid attempt for today.",
-            Icon = "⚔️",
-            Category = ShopCategory.RpgPerks,
-            Type = ShopItemType.FixedPrice,
-            Price = 6_000
-        };
-
     }
 }
