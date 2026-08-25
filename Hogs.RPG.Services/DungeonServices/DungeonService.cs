@@ -789,7 +789,7 @@ namespace Hogs.RPG.Services.Game
             {
                 session.BleedingSlamWarned = false;
                 session.BleedingSlamTurnCounter = 0;
-                enemyDamage = (int)(enemyDamage * 2.5);
+                enemyDamage = (int)(enemyDamage * 3.5);
                 return $"💥 **{boss.Name} unleashes the crushing slam!**";
             }
 
@@ -804,7 +804,7 @@ namespace Hogs.RPG.Services.Game
             if (session.BleedingSlamStacks < 5)
                 session.BleedingSlamStacks++;
 
-            int bleedDamage = session.BleedingSlamStacks * 15;
+            int bleedDamage = session.BleedingSlamStacks * 50;
             enemyDamage += bleedDamage;
 
             return $"🩸 **{boss.Name}'s wounds carve deeper — bleed +{bleedDamage} ({session.BleedingSlamStacks} stacks)**";
@@ -816,7 +816,7 @@ namespace Hogs.RPG.Services.Game
             if (!session.ReinforcedBerserkTriggered && session.EnemyHealth <= boss.MaxHealth * 0.5)
             {
                 session.ReinforcedBerserkTriggered = true;
-                enemyDamage = (int)(enemyDamage * 1.6);
+                enemyDamage = (int)(enemyDamage * 2);
                 return $"😡 **{boss.Name} abandons the call and goes BERSERK! Damage sharply increased!**";
             }
 
