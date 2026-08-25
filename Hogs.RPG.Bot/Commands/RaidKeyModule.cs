@@ -62,7 +62,7 @@ namespace Hogs.RPG.Bot.Commands
             var raidKeyIds = new[]
             {
                 "raid_key_t1", "raid_key_t2", "raid_key_t3",
-                "raid_key_t4", "raid_key_t5"
+                "raid_key_t4", "raid_key_t5", "raid_key_t6"
             };
 
             var inventory = await _inventoryService.GetInventoryAsync(Context.User.Id);
