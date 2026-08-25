@@ -75,7 +75,12 @@ namespace Hogs.RPG.Services.ShopServices
             await playerRepo.UpdatePlayerAsync(player);
 
             // Declare before use
-            bool isInstant = item.Category == ShopCategory.RpgPerks;
+            // All three RPG categories are bot-internal effects (gold/materials/perks),
+            // so they auto-apply instantly. Only VR Resources/Ranks and Discord Rewards
+            // need a human admin to actually deliver something outside the bot.
+            bool isInstant = item.Category == ShopCategory.RpgPerks
+                || item.Category == ShopCategory.RpgResets
+                || item.Category == ShopCategory.RpgEnhance;
 
             // Log purchase — mark as fulfilled immediately for instant perks
             await shopRepo.AddPurchaseAsync(new ShopPurchase
