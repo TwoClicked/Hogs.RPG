@@ -1,9 +1,11 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
 using Hogs.RPG.Bot.Preconditions;
 using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.Registries;
 using Hogs.RPG.Data.Repositories;
+using Hogs.RPG.Services.GameplayServices;
 using Hogs.RPG.Services.InventoryServices;
 using Hogs.RPG.Services.SmithingServices;
 using System.Text;
@@ -20,17 +22,20 @@ namespace Hogs.RPG.Bot.Commands
         private readonly SmithingShopRepository _shopRepository;
         private readonly PlayerRepository _playerRepository;
         private readonly InventoryService _inventoryService;
+        private readonly SalvageService _salvageService;
 
         public BlacksmithModule(
             SmithingService smithingService,
             SmithingShopRepository shopRepository,
             PlayerRepository playerRepository,
-            InventoryService inventoryService)
+            InventoryService inventoryService,
+            SalvageService salvageService)
         {
             _smithingService = smithingService;
             _shopRepository = shopRepository;
             _playerRepository = playerRepository;
             _inventoryService = inventoryService;
+            _salvageService = salvageService;
         }
 
         // =========================
@@ -76,6 +81,80 @@ namespace Hogs.RPG.Bot.Commands
 
             var result = await _smithingService.CraftAsync(Context.User.Id, item.Trim().ToLower(), qty);
             await FollowupAsync(result, ephemeral: true);
+        }
+
+        // =========================
+        // /blacksmith salvage
+        // Breaks down spare Global/Dungeon Boss Gear into Blackstones.
+        // Equipped pieces are never at risk — equipping removes an item
+        // from inventory entirely, so only true spares ever show up here.
+        // =========================
+        [SlashCommand("salvage", "Destroy spare Global/Dungeon Boss Gear for Blackstones")]
+        public async Task Salvage(
+            [Autocomplete(typeof(SalvageGearAutocompleteHandler))] string item,
+            [Autocomplete(typeof(SmithQuantityAutocompleteHandler))] string quantity = "1")
+        {
+            int qty;
+
+            if (quantity.ToLower() == "max")
+                qty = -1;
+            else if (!int.TryParse(quantity, out qty) || qty <= 0)
+            {
+                await RespondAsync("❌ Invalid quantity.", ephemeral: true);
+                return;
+            }
+
+            var (preview, validItemId, resolvedQuantity) =
+                await _salvageService.GetSalvagePreviewAsync(Context.User.Id, item, qty);
+
+            if (validItemId == null)
+            {
+                await RespondAsync(preview, ephemeral: true);
+                return;
+            }
+
+            var components = new ComponentBuilder()
+                .WithButton("✅ Confirm", $"salvage_confirm:{validItemId}:{resolvedQuantity}", ButtonStyle.Danger)
+                .WithButton("❌ Cancel", "salvage_cancel", ButtonStyle.Secondary);
+
+            await RespondAsync(preview, components: components.Build(), ephemeral: true);
+        }
+
+        // =========================
+        // SALVAGE CONFIRM / CANCEL
+        // =========================
+        [ComponentInteraction("salvage_confirm:*:*")]
+        public async Task ConfirmSalvage(string itemId, string quantityStr)
+        {
+            if (Context.Interaction is SocketMessageComponent component)
+            {
+                await component.UpdateAsync(msg =>
+                {
+                    msg.Content = "⏳ Salvaging gear...";
+                    msg.Components = new ComponentBuilder().Build();
+                });
+
+                int quantity = int.Parse(quantityStr);
+                var result = await _salvageService.SalvageAsync(Context.User.Id, itemId, quantity);
+
+                await component.ModifyOriginalResponseAsync(msg =>
+                {
+                    msg.Content = result;
+                });
+            }
+        }
+
+        [ComponentInteraction("salvage_cancel")]
+        public async Task CancelSalvage()
+        {
+            if (Context.Interaction is SocketMessageComponent component)
+            {
+                await component.UpdateAsync(msg =>
+                {
+                    msg.Content = "❌ Salvage cancelled.";
+                    msg.Components = new ComponentBuilder().Build();
+                });
+            }
         }
 
         // =========================

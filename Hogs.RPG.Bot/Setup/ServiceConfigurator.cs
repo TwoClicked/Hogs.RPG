@@ -110,6 +110,7 @@ namespace Hogs.RPG.Bot.Setup
             services.AddScoped<ColosseumCombatService>();
             services.AddScoped<ColosseumBracketService>();
             services.AddScoped<ColosseumService>();
+            services.AddScoped<SalvageService>();
 
 
 
