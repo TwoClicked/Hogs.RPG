@@ -24,6 +24,27 @@ namespace Hogs.RPG.Bot.Commands
         }
 
         // =========================
+        // ACTION LABEL LOOKUP
+        // Shared between the public status message (group raids) and the
+        // solo in-place message edit, so the two stay in sync.
+        // =========================
+        private static string ActionLabel(string action) => action switch
+        {
+            "attack" => "⚔️ Attack",
+            "reckless" => "💀 Reckless",
+            "focus" => "🎯 Focus",
+            "hold" => "🛡️ Hold",
+            "taunt" => "📣 Taunt",
+            "shatter" => "💥 Shatter",
+            "heal" => "💚 Heal",
+            "party_heal" => "🌿 Party Heal",
+            "emergency_heal" => "⚡ Emergency Heal",
+            "empower_attack" => "✨ Empower ATK",
+            "empower_defense" => "✨ Empower DEF",
+            _ => action
+        };
+
+        // =========================
         // ACTION BUTTON HANDLER
         // =========================
         [ComponentInteraction("raid_action:*:*:*")]
@@ -76,69 +97,71 @@ namespace Hogs.RPG.Bot.Commands
 
             if (roundResult == null)
             {
+                var freshSession = await _raidService.GetSessionAsync(sessionId);
+
+                if (freshSession != null && freshSession.IsSolo)
+                {
+                    // =========================
+                    // SOLO: edit the clicked message in place instead of
+                    // posting a new tagged status message. Buttons stay
+                    // clickable (re-select is still allowed) — the chosen
+                    // one just recolors to Primary so it's trackable at a
+                    // glance. No new messages, nothing to clear.
+                    // =========================
+                    var freshParticipant = freshSession.Participants.FirstOrDefault(p => p.Id == participant.Id);
+                    if (freshParticipant != null)
+                    {
+                        var recoloredComponents = BuildActionButtonsForRole(
+                            sessionId, freshSession.CurrentRound, freshParticipant, action);
+
+                        var clickedMessage = (Context.Interaction as SocketMessageComponent)?.Message;
+                        if (clickedMessage != null)
+                        {
+                            await clickedMessage.ModifyAsync(props =>
+                            {
+                                props.Content = $"<@{Context.User.Id}> — Round {freshSession.CurrentRound} actions ({freshParticipant.Role}): ✅ **{ActionLabel(action)}** selected";
+                                props.Components = recoloredComponents;
+                            });
+                        }
+                    }
+
+                    await FollowupAsync(message, ephemeral: true);
+                    return;
+                }
+
                 // =========================
-                // POST STATUS TO BOTTOM OF CHAT
-                // Shows the current round state after each action or re-selection.
+                // GROUP: post status to bottom of chat, unchanged.
+                // Shows the current round state after each action or
+                // re-selection so every participant can see where the
+                // party stands.
                 // =========================
                 var thread = Context.Channel as IThreadChannel;
-                if (thread != null)
+                if (thread != null && freshSession != null)
                 {
-                    var freshSession = await _raidService.GetSessionAsync(sessionId);
-                    if (freshSession != null)
+                    string actionLabel = ActionLabel(action);
+
+                    var statusLines = freshSession.Participants.Select(p =>
                     {
-                        string actionLabel = action switch
+                        string roleIcon = p.Role switch
                         {
-                            "attack" => "⚔️ Attack",
-                            "reckless" => "💀 Reckless",
-                            "focus" => "🎯 Focus",
-                            "hold" => "🛡️ Hold",
-                            "taunt" => "📣 Taunt",
-                            "shatter" => "💥 Shatter",
-                            "heal" => "💚 Heal",
-                            "party_heal" => "🌿 Party Heal",
-                            "emergency_heal" => "⚡ Emergency Heal",
-                            "empower_attack" => "✨ Empower ATK",
-                            "empower_defense" => "✨ Empower DEF",
-                            _ => action
+                            RaidRole.Tank => "🛡️",
+                            RaidRole.Dps => "⚔️",
+                            RaidRole.Healer => "💚",
+                            _ => "❓"
                         };
 
-                        var statusLines = freshSession.Participants.Select(p =>
-                        {
-                            string roleIcon = p.Role switch
-                            {
-                                RaidRole.Tank => "🛡️",
-                                RaidRole.Dps => "⚔️",
-                                RaidRole.Healer => "💚",
-                                _ => "❓"
-                            };
+                        string pActionLabel = p.PendingAction != null ? ActionLabel(p.PendingAction) : "...";
 
-                            string pActionLabel = p.PendingAction switch
-                            {
-                                "attack" => "⚔️ Attack",
-                                "reckless" => "💀 Reckless",
-                                "focus" => "🎯 Focus",
-                                "hold" => "🛡️ Hold",
-                                "taunt" => "📣 Taunt",
-                                "shatter" => "💥 Shatter",
-                                "heal" => "💚 Heal",
-                                "party_heal" => "🌿 Party Heal",
-                                "emergency_heal" => "⚡ Emergency Heal",
-                                "empower_attack" => "✨ Empower ATK",
-                                "empower_defense" => "✨ Empower DEF",
-                                _ => "..."
-                            };
+                        return p.HasActedThisRound
+                            ? $"{roleIcon} **{p.Role}** — {pActionLabel} ✅"
+                            : $"{roleIcon} **{p.Role}** — ⏳ Waiting...";
+                    });
 
-                            return p.HasActedThisRound
-                                ? $"{roleIcon} **{p.Role}** — {pActionLabel} ✅"
-                                : $"{roleIcon} **{p.Role}** — ⏳ Waiting...";
-                        });
+                    string prefix = isReselect ? "🔄 Action changed" : "✅ Action selected";
 
-                        string prefix = isReselect ? "🔄 Action changed" : "✅ Action selected";
-
-                        await thread.SendMessageAsync(
-                            $"{prefix} — <@{Context.User.Id}> chose **{actionLabel}**\n\n" +
-                            string.Join("\n", statusLines));
-                    }
+                    await thread.SendMessageAsync(
+                        $"{prefix} — <@{Context.User.Id}> chose **{actionLabel}**\n\n" +
+                        string.Join("\n", statusLines));
                 }
 
                 await FollowupAsync(message, ephemeral: true);
@@ -182,37 +205,23 @@ namespace Hogs.RPG.Bot.Commands
                         _ => "❓"
                     };
 
-                    sb.AppendLine($"{roleIcon} <@{reward.DiscordId}>");
-                    sb.AppendLine($"  💰 +{reward.Gold} Gold | ⭐ +{reward.PlayerXp} XP | 🐾 +{reward.PetXp} Pet XP");
-                    if (reward.ShardDropped)
-                        sb.AppendLine($"  💎 Relic Shard (Tier {reward.ShardTier}) dropped!");
-                    if (reward.InfuseCrystalDropped)
-                        sb.AppendLine($"  🔮 Infuse Crystal dropped!");
-                    if (!string.IsNullOrEmpty(reward.LevelUpMessage))
-                        sb.AppendLine($"  🎊 {reward.LevelUpMessage}");
+                    sb.Append($"{roleIcon} <@{reward.DiscordId}> — 💰 +{reward.Gold} gold | 📈 +{reward.PlayerXp} XP | 🐾 +{reward.PetXp} Pet XP");
 
-                    // Potion settlement line
-                    if (reward.PotionsPaid > 0 && reward.PotionDebt > 0)
-                        sb.AppendLine($"  🧪 {reward.PotionsPaid} potion(s) contributed · {reward.PotionDebt} short → **-{reward.GoldChargedForPotions:N0}g**");
-                    else if (reward.PotionsPaid > 0)
-                        sb.AppendLine($"  🧪 {reward.PotionsPaid} potion(s) contributed");
-                    else if (reward.PotionDebt > 0)
-                        sb.AppendLine($"  🧪 No potions — **-{reward.GoldChargedForPotions:N0}g** ({reward.PotionDebt} owed)");
+                    if (reward.ShardDropped)
+                        sb.Append($"\n  💎 **Tier {reward.ShardTier} Relic Shard dropped!**");
+                    if (reward.InfuseCrystalDropped)
+                        sb.Append($"\n  🔮 **Infuse Crystal dropped!**");
 
                     sb.AppendLine();
                 }
 
-                var raidDef = RaidRegistry.GetByTier(result.Session?.Tier ?? 1);
-                string bossName = raidDef?.Name ?? "Boss";
-
                 var victoryEmbed = new EmbedBuilder()
-                    .WithTitle($"🏆 {bossName} Defeated!")
+                    .WithTitle("🎉 Raid Complete!")
                     .WithDescription(sb.ToString().Trim())
                     .WithColor(Color.Gold)
                     .Build();
 
                 await thread.SendMessageAsync(embed: victoryEmbed);
-
                 await PostRaidVictoryFeedAsync(result);
                 return;
             }
@@ -364,41 +373,48 @@ namespace Hogs.RPG.Bot.Commands
 
         // =========================
         // BUILD ACTION BUTTONS PER ROLE
+        // selectedAction, when provided, recolors that button to Primary
+        // (blurple) so the player can see their current pick at a glance.
+        // All buttons remain enabled — re-selecting is still allowed.
         // =========================
         private MessageComponent BuildActionButtonsForRole(
             int sessionId, int round,
-            Hogs.RPG.Core.Entities.RaidParticipant participant)
+            Hogs.RPG.Core.Entities.RaidParticipant participant,
+            string? selectedAction = null)
         {
             var builder = new ComponentBuilder();
             string prefix = $"raid_action:{sessionId}:{round}";
+
+            ButtonStyle StyleFor(string action, ButtonStyle defaultStyle) =>
+                selectedAction == action ? ButtonStyle.Primary : defaultStyle;
 
             switch (participant.Role)
             {
                 case RaidRole.Dps:
                     builder
-                        .WithButton("⚔️ Attack", $"{prefix}:attack", ButtonStyle.Danger)
-                        .WithButton("💀 Reckless", $"{prefix}:reckless", ButtonStyle.Danger,
+                        .WithButton("⚔️ Attack", $"{prefix}:attack", StyleFor("attack", ButtonStyle.Danger))
+                        .WithButton("💀 Reckless", $"{prefix}:reckless", StyleFor("reckless", ButtonStyle.Danger),
                             disabled: participant.RecklessCooldownRoundsRemaining > 0)
-                        .WithButton("🎯 Focus", $"{prefix}:focus", ButtonStyle.Danger,
+                        .WithButton("🎯 Focus", $"{prefix}:focus", StyleFor("focus", ButtonStyle.Danger),
                             disabled: participant.FocusStacks >= 2);
                     break;
 
                 case RaidRole.Tank:
                     builder
-                        .WithButton("🛡️ Hold", $"{prefix}:hold", ButtonStyle.Secondary)
-                        .WithButton("📣 Taunt", $"{prefix}:taunt", ButtonStyle.Secondary)
-                        .WithButton("💥 Shatter", $"{prefix}:shatter", ButtonStyle.Secondary,
+                        .WithButton("🛡️ Hold", $"{prefix}:hold", StyleFor("hold", ButtonStyle.Secondary))
+                        .WithButton("📣 Taunt", $"{prefix}:taunt", StyleFor("taunt", ButtonStyle.Secondary))
+                        .WithButton("💥 Shatter", $"{prefix}:shatter", StyleFor("shatter", ButtonStyle.Secondary),
                             disabled: participant.ShatterCooldownRoundsRemaining > 0);
                     break;
 
                 case RaidRole.Healer:
                     builder
-                        .WithButton("💚 Heal", $"{prefix}:heal", ButtonStyle.Success)
-                        .WithButton("🌿 Party Heal", $"{prefix}:party_heal", ButtonStyle.Success)
-                        .WithButton("⚡ Emergency", $"{prefix}:emergency_heal", ButtonStyle.Success,
+                        .WithButton("💚 Heal", $"{prefix}:heal", StyleFor("heal", ButtonStyle.Success))
+                        .WithButton("🌿 Party Heal", $"{prefix}:party_heal", StyleFor("party_heal", ButtonStyle.Success))
+                        .WithButton("⚡ Emergency", $"{prefix}:emergency_heal", StyleFor("emergency_heal", ButtonStyle.Success),
                             disabled: participant.EmergencyHealCooldownRoundsRemaining > 0)
-                        .WithButton("✨ Empower ATK", $"{prefix}:empower_attack", ButtonStyle.Success, row: 1)
-                        .WithButton("✨ Empower DEF", $"{prefix}:empower_defense", ButtonStyle.Success, row: 1);
+                        .WithButton("✨ Empower ATK", $"{prefix}:empower_attack", StyleFor("empower_attack", ButtonStyle.Success), row: 1)
+                        .WithButton("✨ Empower DEF", $"{prefix}:empower_defense", StyleFor("empower_defense", ButtonStyle.Success), row: 1);
                     break;
             }
 
