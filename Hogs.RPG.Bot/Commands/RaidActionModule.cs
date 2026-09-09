@@ -125,7 +125,11 @@ namespace Hogs.RPG.Bot.Commands
                         }
                     }
 
-                    await FollowupAsync(message, ephemeral: true);
+                    // Resolve the deferred ephemeral interaction without a
+                    // visible followup — the in-place edit above already
+                    // showed the selection, so just clear the "thinking"
+                    // placeholder instead of adding another message.
+                    await DeleteOriginalResponseAsync();
                     return;
                 }
 
@@ -170,7 +174,15 @@ namespace Hogs.RPG.Bot.Commands
 
             // Round resolved — post results publicly
             await PostRoundResultAsync(roundResult, sessionId);
-            await FollowupAsync("✅ Round resolved!", ephemeral: true);
+
+            if (!currentSession.IsSolo)
+            {
+                await FollowupAsync("✅ Round resolved!", ephemeral: true);
+            }
+            else
+            {
+                await DeleteOriginalResponseAsync();
+            }
         }
 
         // =========================
