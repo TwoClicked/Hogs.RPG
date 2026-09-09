@@ -125,11 +125,9 @@ namespace Hogs.RPG.Bot.Commands
                         }
                     }
 
-                    // Resolve the deferred ephemeral interaction without a
-                    // visible followup — the in-place edit above already
-                    // showed the selection, so just clear the "thinking"
-                    // placeholder instead of adding another message.
-                    await DeleteOriginalResponseAsync();
+                    // DeferAsync above already satisfies Discord's response
+                    // requirement, and the raw message edit already cleared
+                    // the loading state — nothing further to send.
                     return;
                 }
 
@@ -179,10 +177,10 @@ namespace Hogs.RPG.Bot.Commands
             {
                 await FollowupAsync("✅ Round resolved!", ephemeral: true);
             }
-            else
-            {
-                await DeleteOriginalResponseAsync();
-            }
+
+            // Solo: DeferAsync already satisfied Discord's response
+            // requirement; PostRoundResultAsync already posted the public
+            // result, so nothing further is needed here.
         }
 
         // =========================
