@@ -123,7 +123,7 @@ namespace Hogs.RPG.Bot.Commands
         // =========================
         // SALVAGE CONFIRM / CANCEL
         // =========================
-        [ComponentInteraction("salvage_confirm:*:*")]
+        [ComponentInteraction("salvage_confirm:*:*", true)]
         public async Task ConfirmSalvage(string itemId, string quantityStr)
         {
             if (Context.Interaction is SocketMessageComponent component)
@@ -144,7 +144,7 @@ namespace Hogs.RPG.Bot.Commands
             }
         }
 
-        [ComponentInteraction("salvage_cancel")]
+        [ComponentInteraction("salvage_cancel", true)]
         public async Task CancelSalvage()
         {
             if (Context.Interaction is SocketMessageComponent component)
