@@ -12,6 +12,9 @@ namespace Hogs.RPG.Core.Entities.RaidObjects
         public bool ShardDropped { get; set; }
         public int ShardTier { get; set; }
 
+        // Flat 10 per tier on victory (T1 = 10 ... T6 = 60)
+        public int Blackstones { get; set; }
+
         // T6 only — no relics on T6, Infuse Crystal replaces the shard roll
         public bool InfuseCrystalDropped { get; set; }
         public string LevelUpMessage { get; set; } = "";

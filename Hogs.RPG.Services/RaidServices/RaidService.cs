@@ -8,6 +8,7 @@ using Hogs.RPG.Core.Entities.EnhancementObjects;
 using Hogs.RPG.Core.Enums;
 using Hogs.RPG.Core.Enums.BossEnums;
 using Hogs.RPG.Core.Enums.RaidEnums;
+using Hogs.RPG.Core.GameData.InventoryItems;
 using Hogs.RPG.Core.GameData.Pets;
 using Hogs.RPG.Core.GameData.Registries;
 using Hogs.RPG.Data.Repositories;
@@ -42,6 +43,7 @@ namespace Hogs.RPG.Services.RaidServices
         private const int RaidGoldReward = 1000;
         private const int RaidPlayerXpReward = 1500;
         private const int RaidPetXpReward = 100;
+        private const int RaidBlackstonesPerTier = 10;
         private const int WipeGoldPenalty = 1000;
         private const int PotionGoldFallback = 500;
 
@@ -957,6 +959,13 @@ namespace Hogs.RPG.Services.RaidServices
                 await _petService.AddXPAsync(p.DiscordId, petXp);
 
                 // =========================
+                // 🔨 Blackstones — flat 10 per tier, not scaled by relics/sigils
+                // =========================
+                int blackstones = session.Tier * RaidBlackstonesPerTier;
+                if (blackstones > 0)
+                    await _inventoryRepo.AddItemAsync(p.DiscordId, EnhancementItems.Blackstone.Id, blackstones);
+
+                // =========================
                 // 🔨 T6: no relics — Infuse Crystal instead
                 // =========================
                 if (session.Tier == 6)
@@ -981,6 +990,7 @@ namespace Hogs.RPG.Services.RaidServices
                         PlayerXp = xp,
                         PetXp = petXp,
                         InfuseCrystalDropped = infuseCrystalDropped,
+                        Blackstones = blackstones,
                         LevelUpMessage = levelMessage
                     });
                 }
@@ -1000,6 +1010,7 @@ namespace Hogs.RPG.Services.RaidServices
                         PetXp = petXp,
                         ShardDropped = shardDropped,
                         ShardTier = session.Tier,
+                        Blackstones = blackstones,
                         LevelUpMessage = levelMessage
                     });
                 }

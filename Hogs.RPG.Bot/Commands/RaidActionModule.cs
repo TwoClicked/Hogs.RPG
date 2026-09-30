@@ -217,6 +217,9 @@ namespace Hogs.RPG.Bot.Commands
 
                     sb.Append($"{roleIcon} <@{reward.DiscordId}> — 💰 +{reward.Gold} gold | 📈 +{reward.PlayerXp} XP | 🐾 +{reward.PetXp} Pet XP");
 
+                    if (reward.Blackstones > 0)
+                        sb.Append($"\n  <:BlackStone:1541556030855577650> +{reward.Blackstones} Blackstones");
+
                     if (reward.ShardDropped)
                         sb.Append($"\n  💎 **Tier {reward.ShardTier} Relic Shard dropped!**");
                     if (reward.InfuseCrystalDropped)
@@ -363,6 +366,9 @@ namespace Hogs.RPG.Bot.Commands
                 };
 
                 sb.Append($"{roleIcon} <@{reward.DiscordId}> — 💰 +{reward.Gold} gold | 📈 +{reward.PlayerXp} XP | 🐾 +{reward.PetXp} Pet XP");
+
+                if (reward.Blackstones > 0)
+                    sb.Append($"\n  <:BlackStone:1541556030855577650> +{reward.Blackstones} Blackstones");
 
                 if (reward.ShardDropped)
                     sb.Append($"\n  💎 **Tier {reward.ShardTier} Relic Shard dropped!**");
